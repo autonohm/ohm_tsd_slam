@@ -1,4 +1,5 @@
 #include "Localization.h"
+#include "SlamNode.h"
 
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
@@ -155,9 +156,11 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     sensor->transform(&T);
     obvious::Matrix curPose = sensor->getTransformation();
     double curTheta = this->calcAngle(&curPose);
+    double posX=curPose(0, 2) + std::cos(curTheta) * LAS_OFFS_X -_grid->getCellsX()*_grid->getCellSize()*S_X_F;   //toDo: Member variables and launch file parameters
+    double posY=curPose(1, 2) + std::sin(curTheta) * LAS_OFFS_X -_grid->getCellsY()*_grid->getCellSize()*S_Y_F;
     _poseStamped.header.stamp = ros::Time::now();
-    _poseStamped.pose.position.x = curPose(0, 2);
-    _poseStamped.pose.position.y = curPose(1, 2);
+    _poseStamped.pose.position.x = posX;
+    _poseStamped.pose.position.y = posY;
     _poseStamped.pose.position.z = 0.0;
     tf::Quaternion quat(0.0, 0.0, curTheta);  //toDo: make change in obvious::estimator -> obsolete
     _poseStamped.pose.orientation.w = quat.w();
@@ -166,7 +169,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _poseStamped.pose.orientation.z = quat.z();
 
     _tf.stamp_ = ros::Time::now();
-    _tf.setOrigin(tf::Vector3(curPose(0, 2), curPose(1, 2), 0.0));
+    _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
     _tf.setRotation(quat);
 
     _pubMutex->lock();

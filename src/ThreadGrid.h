@@ -7,6 +7,7 @@
 
 #include <ros/ros.h>
 #include <nav_msgs/OccupancyGrid.h>
+#include <nav_msgs/GetMap.h>
 
 namespace ohm_tsd_slam
 {
@@ -30,7 +31,11 @@ protected:
 
 private:
 
+  bool getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res);
+
   nav_msgs::OccupancyGrid* _occGrid;
+
+  ros::ServiceServer _getMapServ;
 
   char* _occGridContent;
 
@@ -47,6 +52,8 @@ private:
   obvious::TsdGrid* _grid;
 
   boost::mutex* _pubMutex;
+
+  unsigned int _objInflateFactor; //< Factor to inflate the objects 0 = no inflation, 1 = 1 cell radius
 };
 
 } /* namespace */

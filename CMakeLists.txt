@@ -114,7 +114,8 @@ link_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(ohm_tsd_slam_node src/tsd_slam_node.cpp
+add_executable(slam_node src/slam_node.cpp
+                                 src/SlamNode.cpp
                                  src/Localization.cpp
                                  src/ThreadSLAM.cpp
                                  src/ThreadMapping.cpp
@@ -129,7 +130,7 @@ add_executable(ohm_tsd_slam_node src/tsd_slam_node.cpp
 # target_link_libraries(ohm_tsd_slam_node
 #   ${catkin_LIBRARIES}
 # )
-target_link_libraries(ohm_tsd_slam_node
+target_link_libraries(slam_node
                                         ${catkin_LIBRARIES}
                                         obgraphic
                                         glut
@@ -158,7 +159,7 @@ target_link_libraries(ohm_tsd_slam_node
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS ohm_tsd_slam_node
+install(TARGETS slam_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

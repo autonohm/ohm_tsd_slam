@@ -32,7 +32,7 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;
   _occGrid->info.origin.position.x=0.0-_grid->getCellsX()*_grid->getCellSize()*S_X_F;
-    _occGrid->info.origin.position.y=0.0-_grid->getCellsY()*_grid->getCellSize()*S_Y_F;
+  _occGrid->info.origin.position.y=0.0-_grid->getCellsY()*_grid->getCellSize()*S_Y_F;
   _occGrid->info.origin.position.z = 0.0;
   _occGrid->data.resize(_grid->getCellsX() * _grid->getCellsY());
 
@@ -42,9 +42,9 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   prvNh.param("map_topic", strVar, std::string("map"));
   _gridPub = nh.advertise<nav_msgs::OccupancyGrid>(strVar, 1);
   prvNh.param("get_map_topic", strVar, std::string("map"));
-   _getMapServ=nh.advertiseService(strVar, &ThreadGrid::getMapServCallBack, this);
-   prvNh.param<int>("object_inflation_factor", intVar, 2);
-   _objInflateFactor=static_cast<unsigned int>(intVar);
+  _getMapServ=nh.advertiseService(strVar, &ThreadGrid::getMapServCallBack, this);
+  prvNh.param<int>("object_inflation_factor", intVar, 2);
+  _objInflateFactor=static_cast<unsigned int>(intVar);
 }
 
 ThreadGrid::~ThreadGrid()
@@ -87,14 +87,14 @@ void ThreadGrid::eventLoop(void)
       {
         _occGrid->data[v * _width + u] = 100;               //set grid cell to occupied
         for(unsigned int i=v-_objInflateFactor; i<v+_objInflateFactor; i++)
-                {
-                  for(unsigned int j=u-_objInflateFactor; j<u+_objInflateFactor; j++)
-                  {
-                    if((u>=_width)||(v>=_height))
-                      continue;
-                    _occGrid->data[i*_width+j]=100;
-                  }
-                }
+        {
+          for(unsigned int j=u-_objInflateFactor; j<u+_objInflateFactor; j++)
+          {
+            if((u>=_width)||(v>=_height))
+              continue;
+            _occGrid->data[i*_width+j]=100;
+          }
+        }
       }
     }
     _pubMutex->lock();

@@ -1,6 +1,8 @@
 <launch>
 	<node name = "slam_node" pkg = "ohm_tsd_slam" type = "slam_node">
-		<param name = "laser_topic" type = "string" value = "/simon/scan"/>
+		<param name = "laser_topic" type = "string" value = "scan"/>
 		<param name = "object_inflation_factor" type = "int" value = "2"/>
+		<param name = "x_off_factor" type = "double" value = "0.8"/>
+		<param name = "y_off_factor" type = "double" value = "0.5"/>
 	</node>
 </launch>

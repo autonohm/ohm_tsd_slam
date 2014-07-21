@@ -11,7 +11,7 @@ using namespace std;
 namespace ohm_tsd_slam
 {
 
-ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex)
+ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, SlamNode& parentNode)
 {
   _pubMutex       = pubMutex;
   _grid           = grid;
@@ -31,8 +31,8 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   _occGrid->info.origin.orientation.x = 0.0;
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;
-  _occGrid->info.origin.position.x=0.0-_grid->getCellsX()*_grid->getCellSize()*S_X_F;
-  _occGrid->info.origin.position.y=0.0-_grid->getCellsY()*_grid->getCellSize()*S_Y_F;
+  _occGrid->info.origin.position.x=0.0-_grid->getCellsX()*_grid->getCellSize()*parentNode.xOffFactor();
+  _occGrid->info.origin.position.y=0.0-_grid->getCellsY()*_grid->getCellSize()*parentNode.yOffFactor();
   _occGrid->info.origin.position.z = 0.0;
   _occGrid->data.resize(_grid->getCellsX() * _grid->getCellsY());
 

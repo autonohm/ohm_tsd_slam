@@ -2,6 +2,7 @@
 #define THREADGRID_H_
 
 #include "ThreadSLAM.h"
+#include "SlamNode.h"
 
 #include "obvision/reconstruct/grid/TsdGrid.h"
 
@@ -21,7 +22,7 @@ class ThreadGrid : public ThreadSLAM
 {
 public:
 
-  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex);
+  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, SlamNode& parentNode);
 
   virtual ~ThreadGrid();
 

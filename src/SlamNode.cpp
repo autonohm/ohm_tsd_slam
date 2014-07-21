@@ -6,6 +6,9 @@
  */
 
 #include "SlamNode.h"
+#include "Localization.h"
+#include "ThreadMapping.h"
+#include "ThreadGrid.h"
 
 namespace ohm_tsd_slam
 {
@@ -15,7 +18,7 @@ SlamNode::SlamNode()
   _initialized=false;
   _mask=NULL;
 
-  _grid=new obvious::TsdGrid(CELLSIZE, obvious::LAYOUT_32x32, obvious::LAYOUT_1024x1024);   //LAYOUT_8192x8192
+  _grid=new obvious::TsdGrid(CELLSIZE, obvious::LAYOUT_32x32, obvious::LAYOUT_8192x8192);   //LAYOUT_8192x8192 1024x1024
   _grid->setMaxTruncation(TRUNCATION_RADIUS * CELLSIZE);
   _sensor=NULL;
   _mask=NULL;
@@ -28,6 +31,8 @@ SlamNode::SlamNode()
   std::string strVar;
   prvNh.param("laser_topic", strVar, std::string("scan"));
   _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
+  prvNh.param<double>("x_off_factor", _xOffFactor, 0.0);
+  prvNh.param<double>("y_off_factor", _yOffFactor, 0.0);
 }
 
 SlamNode::~SlamNode()
@@ -55,6 +60,16 @@ void SlamNode::start(void)
   this->run();
 }
 
+double SlamNode::xOffFactor(void)const
+{
+  return _xOffFactor;
+}
+
+double SlamNode::yOffFactor(void)const
+{
+  return _yOffFactor;
+}
+
 void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
 {
   _mask=new bool[initScan.ranges.size()];
@@ -71,21 +86,21 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
   double phi       =THETA_INIT * M_PI / 180.0;
   double gridWidth =_grid->getCellsX()*_grid->getCellSize();
   double gridHeight=_grid->getCellsY()*_grid->getCellSize();
-  double tf[9]     ={cos(phi), -sin(phi), gridWidth*S_X_F,
-                     sin(phi),  cos(phi), gridHeight*S_Y_F,
-                            0,         0,               1};
+  double tf[9]     ={cos(phi), -sin(phi), gridWidth*_xOffFactor,
+      sin(phi),  cos(phi), gridHeight*_yOffFactor,
+      0,         0,               1};
   obvious::Matrix Tinit(3, 3);
   Tinit.setData(tf);
   _sensor->transform(&Tinit);
 
   _threadMapping=new ThreadMapping(_grid);
 
-  _localizer=new Localization(_grid, _threadMapping, _nh, &_pubMutex);
+  _localizer=new Localization(_grid, _threadMapping, _nh, &_pubMutex, *this);
 
   for(int i=0; i<INIT_PSHS; i++)
     _threadMapping->queuePush(_sensor);
 
-  _threadGrid=new ThreadGrid(_grid, _nh, &_pubMutex);
+  _threadGrid=new ThreadGrid(_grid, _nh, &_pubMutex, *this);
 
   _initialized=true;
 }

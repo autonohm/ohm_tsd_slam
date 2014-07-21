@@ -2,6 +2,7 @@
 #define THREADMAPPING_H_
 
 #include "ThreadSLAM.h"
+#include "SlamNode.h"
 
 #include "sensor_msgs/LaserScan.h"
 
@@ -39,7 +40,6 @@ private:
   std::queue<obvious::SensorPolar2D*> _sensors;
 
   boost::mutex _pushMutex;
-
 };
 
 } /* namespace */

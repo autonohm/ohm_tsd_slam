@@ -15,19 +15,14 @@
 
 #include "obvision/reconstruct/grid/TsdGrid.h"
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
-
-#include "Localization.h"
-#include "ThreadSLAM.h"
-#include "ThreadMapping.h"
-#include "ThreadGrid.h"
 #include "obcore/base/Logger.h"
+
+#include <boost/thread.hpp>
 
 #define CELLSIZE 0.025   //toDo: Launch file parameters
 #define TRUNCATION_RADIUS 3.0
 #define MAX_RANGE 30.0
 #define MIN_RANGE 0.01
-#define S_X_F 0.2                  //start point in x (S_F_X * sizeX)
-#define S_Y_F 0.5                  //start point in y (S_F_Y * sizeY)
 #define THETA_INIT 0.0  //used in degrees
 #define MAP_T 2.0      //time between map generations
 #define INIT_PSHS 50//number of initial puhses into the grid
@@ -35,7 +30,10 @@
 
 namespace ohm_tsd_slam
 {
-
+class Localization;
+class ThreadSLAM;
+class ThreadMapping;
+class ThreadGrid;
 class SlamNode
 {
 public:
@@ -44,6 +42,10 @@ public:
   virtual ~SlamNode();
 
   void start(void);
+
+  double xOffFactor(void)const;
+
+  double yOffFactor(void)const;
 
 private:
   void initialize(const sensor_msgs::LaserScan& initScan);
@@ -71,6 +73,10 @@ private:
   ThreadGrid* _threadGrid;
 
   boost::mutex _pubMutex;
+
+  double _xOffFactor;
+
+  double _yOffFactor;
 
 };
 

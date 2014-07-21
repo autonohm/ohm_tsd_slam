@@ -1,5 +1,6 @@
 #include "Localization.h"
 #include "SlamNode.h"
+#include "ThreadMapping.h"
 
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
@@ -15,7 +16,7 @@
 namespace ohm_tsd_slam
 {
 
-Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex)
+Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex, SlamNode& parentNode)
 {
   _pubMutex         = pubMutex;
   _mapper           = mapper;
@@ -34,6 +35,8 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _trnsMax          = TRNS_THRESH;
   _rotMax           = ROT_THRESH;
   _lastPose         = new obvious::Matrix(3, 3);
+  _xOffFactor       = parentNode.xOffFactor();
+  _yOffFactor       = parentNode.yOffFactor();
 
   //configure ICP
   _filterBounds     = new obvious::OutOfBoundsFilter2D(grid->getMinX(), grid->getMaxX(), grid->getMinY(), grid->getMaxY());
@@ -156,8 +159,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     sensor->transform(&T);
     obvious::Matrix curPose = sensor->getTransformation();
     double curTheta = this->calcAngle(&curPose);
-    double posX=curPose(0, 2) + std::cos(curTheta) * LAS_OFFS_X -_grid->getCellsX()*_grid->getCellSize()*S_X_F;   //toDo: Member variables and launch file parameters
-    double posY=curPose(1, 2) + std::sin(curTheta) * LAS_OFFS_X -_grid->getCellsY()*_grid->getCellSize()*S_Y_F;
+    double posX=curPose(0, 2) + std::cos(curTheta) * LAS_OFFS_X -_grid->getCellsX()*_grid->getCellSize()*_xOffFactor;   //toDO: launch file parameter for laser offset
+    double posY=curPose(1, 2) + std::sin(curTheta) * LAS_OFFS_X -_grid->getCellsY()*_grid->getCellSize()*_yOffFactor;
     _poseStamped.header.stamp = ros::Time::now();
     _poseStamped.pose.position.x = posX;
     _poseStamped.pose.position.y = posY;

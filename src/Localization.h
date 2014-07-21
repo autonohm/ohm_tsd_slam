@@ -6,8 +6,6 @@
 #include "obvision/reconstruct/grid/RayCastPolar2D.h"
 #include "obvision/icp/icp_def.h"
 
-#include "ThreadMapping.h"
-
 #include <boost/signal.hpp>
 #include <boost/thread.hpp>
 
@@ -24,6 +22,8 @@
 namespace ohm_tsd_slam
 {
 
+class SlamNode;
+class ThreadMapping;
 /**
  * @class Localization
  * @author Philipp Koch, Stefan May
@@ -33,7 +33,7 @@ class Localization
 {
 public:
 
-  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex);
+  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex, SlamNode& parentNode);
 
   virtual ~Localization();
 
@@ -94,6 +94,10 @@ private:
   tf::StampedTransform _tf;
 
   boost::mutex* _pubMutex;
+
+  double _xOffFactor;
+
+  double _yOffFactor;
 };
 
 } /* namespace */

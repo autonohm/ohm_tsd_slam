@@ -132,9 +132,9 @@ add_executable(slam_node src/slam_node.cpp
 # )
 target_link_libraries(slam_node
                                         ${catkin_LIBRARIES}
-                                        obgraphic
-                                        glut
-                                        GL
+#                                        obgraphic
+#                                        glut
+#                                        GL
                                         obvision
                                         obcore
                                         gsl

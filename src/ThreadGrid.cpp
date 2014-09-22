@@ -6,7 +6,6 @@
 #include "obvision/reconstruct/grid/RayCastAxisAligned2D.h"
 #include "obcore/base/Logger.h"
 
-using namespace std;
 
 namespace ohm_tsd_slam
 {

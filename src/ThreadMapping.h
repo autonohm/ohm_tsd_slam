@@ -16,29 +16,54 @@ namespace ohm_tsd_slam
 
 /**
  * @class ThreadMapping
+ * @brief Implements a thread updating an obvious::TsdGrid
  * @author Philipp Koch, Stefan May
- * @date 08.06.2014
  */
 class ThreadMapping : public ThreadSLAM
 {
 public:
 
+  /**
+   * Constructor
+   * @param grid Representation
+   */
   ThreadMapping(obvious::TsdGrid* grid);
 
+  /**
+   * Destructor
+   */
   virtual ~ThreadMapping();
 
+  /**
+   * queuePush
+   * Method to add a top be pushed sensor to the queue (synchronized)
+   * @param sensor New data
+   */
   void queuePush(obvious::SensorPolar2D* sensor);
 
 protected:
 
+  /**
+   * eventLoop
+   * Thread event loop
+   */
   virtual void eventLoop(void);
 
 private:
 
+  /**
+   * Representation
+   */
   obvious::TsdGrid* _grid;
 
+  /**
+   * Sensor queue
+   */
   std::queue<obvious::SensorPolar2D*> _sensors;
 
+  /**
+   * Push mutex for queue
+   */
   boost::mutex _pushMutex;
 };
 

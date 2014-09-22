@@ -34,50 +34,157 @@ class Localization;
 class ThreadSLAM;
 class ThreadMapping;
 class ThreadGrid;
+
+/**
+ * @class SlamNode
+ * @brief Main node management of the 2D SLAM
+ * @author Philipp Koch
+ */
 class SlamNode
 {
 public:
-  SlamNode();
 
+  /**
+   * Default constructor
+   */
+  SlamNode(void);
+
+  /**
+   * Destructor
+   */
   virtual ~SlamNode();
 
+  /**
+   * start
+   * Method to start the SLAM
+   */
   void start(void);
 
+  /**
+   * xOffFactor
+   * Method to read out x off set factor
+   * @return x offset
+   */
   double xOffFactor(void)const;
 
+  /**
+   * yOffFactor
+   * Method to read out y off set factor
+   * @return y offset
+   */
   double yOffFactor(void)const;
 
 private:
+
+  /**
+   * initialize
+   * Method to initialize the necessary parameters with the first received scan
+   * @param initScan Initial scan
+   */
   void initialize(const sensor_msgs::LaserScan& initScan);
 
+  /**
+   * run
+   * Main SLAM method
+   */
   void run(void);
 
+  /**
+   * laserScanCallBack
+   * Callback method to laser subscriber
+   * @param scan Laser scan
+   */
   void laserScanCallBack(const sensor_msgs::LaserScan& scan);
 
+  /**
+   * Main node handle
+   */
   ros::NodeHandle _nh;
 
+  /**
+   * Laser subscriber
+   */
   ros::Subscriber _laserSubs;
 
+  /**
+   * Initilized flag
+   */
   bool _initialized;
 
+  /**
+   * Representation
+   */
   obvious::TsdGrid* _grid;
 
+  /**
+   * obvious::Sensor instance containing data and pose
+   */
   obvious::SensorPolar2D* _sensor;
 
+  /**
+   * Mask for lasr data
+   */
   bool* _mask;
 
+  /**
+   * Localization instance
+   */
   Localization* _localizer;
 
+  /**
+   * Mapping thread instance
+   */
   ThreadMapping* _threadMapping;
 
+  /**
+   * Grid thread instance
+   */
   ThreadGrid* _threadGrid;
 
+  /**
+   * Publishing mutex
+   */
   boost::mutex _pubMutex;
 
+  /**
+   * X starting offset factor
+   */
   double _xOffFactor;
 
+  /**
+   * Y starting offset factor
+   */
   double _yOffFactor;
 
+  /**
+   * Starting yaw angle
+   */
+  double _yawOffset;
+
+  /**
+   * True in case laser input is range filtered
+   */
+  bool _rangeFilter;
+
+  /**
+   * Minimum range threshold
+   */
+  float _minRange;
+
+  /**
+   * Maximum range threshold
+   */
+  float _maxRange;
+
+  /**
+   * Time interval between occupancy grid
+   */
+  double _gridPublishInterval;
+
+  /**
+   * Desired loop rate
+   */
+  double _loopRate;
 };
 
 } /* namespace ohm_tsdSlam */

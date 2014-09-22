@@ -15,48 +15,102 @@ namespace ohm_tsd_slam
 
 /**
  * @class ThreadGrid
+ * @brief Class implementing a thread generating an occupancy grid
  * @author Philipp Koch, Stefan May
- * @date 08.06.2014
  */
 class ThreadGrid : public ThreadSLAM
 {
 public:
 
+  /**
+   * Constructor
+   * @param grid Representation
+   * @param nh Ros nodehandle
+   * @param pubMutex Publising mutex publishing mutex
+   * @param parentNode Pointer to main mapping instance
+   */
   ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, SlamNode& parentNode);
 
+  /**
+   * Destructor
+   */
   virtual ~ThreadGrid();
 
 protected:
 
+  /**
+   * eventLoop
+   * Thread event loop
+   */
   virtual void eventLoop(void);
 
 private:
 
+  /**
+   * getMapServCallBack
+   * Ros service callback method for the get map service
+   * @param req Request
+   * @param res Response
+   * @return success
+   */
   bool getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res);
 
+  /**
+   * Occupancy grid
+   */
   nav_msgs::OccupancyGrid* _occGrid;
 
+  /**
+   * Ros get map service
+   */
   ros::ServiceServer _getMapServ;
 
+  /**
+   * Buffer for occupancy grid content
+   */
   char* _occGridContent;
 
+  /**
+   * Buffer for grid coordinates
+   */
   double* _gridCoords;
 
+  /**
+   * Grid dimension
+   */
   unsigned int _width;
 
+  /**
+   * Grid dimension
+   */
   unsigned int _height;
 
+  /**
+   * Grid resolution
+   */
   double _cellSize;
 
+  /**
+   * Occupancy grid publisher
+   */
   ros::Publisher _gridPub;
 
+  /**
+   * Representation
+   */
   obvious::TsdGrid* _grid;
 
+  /**
+   * Publishing mutex
+   */
   boost::mutex* _pubMutex;
 
-  unsigned int _objInflateFactor; //< Factor to inflate the objects 0 = no inflation, 1 = 1 cell radius
+  /**
+   * Object inflation factor
+   */
+  unsigned int _objInflateFactor;
 };
 
-} /* namespace */
+} /* namespace ohm_tsd_slam */
 
 #endif /* THREADGRID_H_ */

@@ -21,7 +21,7 @@ SlamNode::SlamNode(void)
   double dVar      = 0;
   int iVar         = 0;
   double truncationRadius = 0.0;
-  prvNh.param("laser_topic", strVar, std::string("scan"));
+  prvNh.param("laser_topic", strVar, std::string("simon/scan"));
   _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
   prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
   prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
@@ -37,20 +37,6 @@ SlamNode::SlamNode(void)
   _maxRange = static_cast<float>(dVar);
   prvNh.param<double>("occ_grid_time_interval", _gridPublishInterval, 2.0);
   prvNh.param<double>("loop_rate", _loopRate, 40.0);
-
-
-
-  //#define CELLSIZE 0.025   //toDo: Launch file parameters
-  //#define TRUNCATION_RADIUS 3.0
-  //#define MAX_RANGE 30.0
-  //#define MIN_RANGE 0.01
-  //#define THETA_INIT 0.0  //used in degrees
-  //#define MAP_T 2.0      //time between map generations
-  //#define INIT_PSHS 50//number of initial puhses into the grid
-  //#define LAS_OFFS_X -0.19 //offset of the laser scanner to the base footprint
-
-
-
 
   unsigned int uiVar = static_cast<unsigned int>(octaveFactor);
   if(uiVar > 15)

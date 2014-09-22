@@ -30,10 +30,9 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _assigner         = new obvious::FlannPairAssignment(2);
   _filterDist       = new obvious::DistanceFilter(2.0, 0.01, ITERATIONS - 3);
   _filterReciprocal = new obvious::ReciprocalFilter();
-  //_estimator        = new obvious::PointToLine2DEstimator();
   _estimator        = new obvious::ClosedFormEstimator2D();
-  _trnsMax          = TRNS_THRESH;
-  _rotMax           = ROT_THRESH;
+  _trnsMax          = TRNS_THRESH;   //toDo: config file
+  _rotMax           = ROT_THRESH;    //toDo: config file
   _lastPose         = new obvious::Matrix(3, 3);
   _xOffFactor       = parentNode.xOffFactor();
   _yOffFactor       = parentNode.yOffFactor();
@@ -49,15 +48,21 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _icp->setConvergenceCounter(ITERATIONS);
   _icp->activateTrace();
 
-  std::string strVar;
+  std::string poseTopic;
+  std::string tfBaseFrameId;
+  std::string tfChildFrameId;
   ros::NodeHandle prvNh("~");
-  prvNh.param("pose_topic", strVar, std::string("pose"));
-  _posePub = nh.advertise<geometry_msgs::PoseStamped>(strVar, 1);
+  prvNh.param("pose_topic", poseTopic, std::string("pose"));
+  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
+  prvNh.param("tf_child_frame", tfChildFrameId, std::string("base_footprint"));
+  prvNh.param<double>("sensor_static_offset_x", _lasXOffset, -0.19);
 
-  _poseStamped.header.frame_id = "/map";
+  _posePub = nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
 
-  _tf.frame_id_       = "/map";    //toDo: launch parameters
-  _tf.child_frame_id_ = "base_footprint";
+  _poseStamped.header.frame_id = tfBaseFrameId;
+
+  _tf.frame_id_                = tfBaseFrameId;
+  _tf.child_frame_id_          = tfChildFrameId;
 }
 
 Localization::~Localization()
@@ -70,10 +75,12 @@ Localization::~Localization()
   delete _estimator;
   delete _icp;
   delete _lastPose;
-
-  if(_modelCoords) delete [] _modelCoords;
-  if(_modelNormals) delete [] _modelNormals;
-  if(_scene) delete [] _scene;
+  if(_modelCoords)
+    delete [] _modelCoords;
+  if(_modelNormals)
+    delete [] _modelNormals;
+  if(_scene)
+    delete [] _scene;
 }
 
 void Localization::localize(obvious::SensorPolar2D* sensor)
@@ -125,15 +132,6 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
 
   if(deltaY > 0.1 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
   {
-    /*LOGMSG(DBG_DEBUG, "invalid transformation dX: " << deltaX << " dY: " << deltaY << " dPhi: " << deltaPhi);
-    cout << "Pose: " << endl;
-    P.print();
-    cout << "T_icp: " << endl;
-    T.print();
-    _icp->serializeTrace("trace", 50);
-
-    abort();*/
-
     // localization error broadcast invalid tf
     _poseStamped.header.stamp = ros::Time::now();
     _poseStamped.pose.position.x = NAN;
@@ -159,13 +157,13 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     sensor->transform(&T);
     obvious::Matrix curPose = sensor->getTransformation();
     double curTheta = this->calcAngle(&curPose);
-    double posX=curPose(0, 2) + std::cos(curTheta) * LAS_OFFS_X -_grid->getCellsX()*_grid->getCellSize()*_xOffFactor;   //toDO: launch file parameter for laser offset
-    double posY=curPose(1, 2) + std::sin(curTheta) * LAS_OFFS_X -_grid->getCellsY()*_grid->getCellSize()*_yOffFactor;
+    double posX=curPose(0, 2) + std::cos(curTheta) * _lasXOffset -_grid->getCellsX()*_grid->getCellSize()*_xOffFactor;
+    double posY=curPose(1, 2) + std::sin(curTheta) * _lasXOffset -_grid->getCellsY()*_grid->getCellSize()*_yOffFactor;
     _poseStamped.header.stamp = ros::Time::now();
     _poseStamped.pose.position.x = posX;
     _poseStamped.pose.position.y = posY;
     _poseStamped.pose.position.z = 0.0;
-    tf::Quaternion quat(0.0, 0.0, curTheta);  //toDo: make change in obvious::estimator -> obsolete
+    tf::Quaternion quat(0.0, 0.0, curTheta);
     _poseStamped.pose.orientation.w = quat.w();
     _poseStamped.pose.orientation.x = quat.x();
     _poseStamped.pose.orientation.y = quat.y();
@@ -175,16 +173,12 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
     _tf.setRotation(quat);
 
-    _pubMutex->lock();
-    LOGMSG(DBG_DEBUG, "publish");
+    _pubMutex->lock();   //toDo: test if this mutex is necessary
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);
-    LOGMSG(DBG_DEBUG, "publishing done");
     _pubMutex->unlock();
-
     if(this->isPoseChangeSignificant(_lastPose, &curPose))
     {
- //     std::cout << "pose change is significant ... initiating push" << std::endl;
       *_lastPose = curPose;
       _mapper->queuePush(sensor);
     }
@@ -201,7 +195,6 @@ double Localization::calcAngle(obvious::Matrix* T)
     angle = ARCOS;
   else if((ARCSIN < 0.0) && (ARCSINEG > 0.0))
     angle = 2.0 * M_PI - ARCOS;
-
   return(angle);
 }
 

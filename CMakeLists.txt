@@ -132,9 +132,6 @@ add_executable(slam_node src/slam_node.cpp
 # )
 target_link_libraries(slam_node
                                         ${catkin_LIBRARIES}
-#                                        obgraphic
-#                                        glut
-#                                        GL
                                         obvision
                                         obcore
                                         gsl
@@ -173,11 +170,11 @@ install(TARGETS slam_node
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
+ install(FILES
+    launch/slam.launch
 #   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+ )
 
 #############
 ## Testing ##

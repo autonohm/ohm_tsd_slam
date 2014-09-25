@@ -23,7 +23,7 @@ SlamNode::SlamNode(void)
   double truncationRadius = 0.0;
   prvNh.param("laser_topic", strVar, std::string("simon/scan"));
   _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
-  prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
+  prvNh.param<double>("x_off_factor", _xOffFactor, 0.2);
   prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
   prvNh.param<double>("yaw_start_offset", _yawOffset, 0.0);
   prvNh.param<int>("cell_octave_factor", octaveFactor, 10);
@@ -123,18 +123,13 @@ SlamNode::~SlamNode()
   {
     _threadMapping->terminateThread();
     _threadGrid->terminateThread();
-    while(_threadMapping->alive(1) && _threadGrid->alive(1))
-    {
-      std::cout << __PRETTY_FUNCTION__ << "Waiting for threads to terminate...\n";
-      usleep(1000 * 500);
-    }
-    delete _sensor;
-    delete _mask;
-    delete _localizer;
-    delete _threadMapping;
     delete _threadGrid;
+    delete _threadMapping;
   }
+  delete _localizer;
   delete _grid;
+  delete _sensor;
+  delete _mask;
 }
 
 void SlamNode::start(void)
@@ -160,7 +155,7 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
     _mask[i]=!isnan(initScan.ranges[i])&&!isinf(initScan.ranges[i])&&(fabs(initScan.ranges[i])>10e-6);
   }
 
-  _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, MAX_RANGE);
+  _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange));
   _sensor->setRealMeasurementData(initScan.ranges, 1.0);
   _sensor->setRealMeasurementMask(_mask);
 

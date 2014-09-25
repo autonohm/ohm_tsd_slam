@@ -11,7 +11,7 @@ ThreadMapping::ThreadMapping(obvious::TsdGrid* grid)
 
 ThreadMapping::~ThreadMapping()
 {
-
+  _thread->join();
 }
 
 void ThreadMapping::eventLoop(void)
@@ -19,19 +19,13 @@ void ThreadMapping::eventLoop(void)
   while(_stayActive)
   {
     _sleepCond.wait(_sleepMutex);
-
-    LOGMSG(DBG_DEBUG, "thread awake");
     while(_stayActive && !_sensors.empty())
     {
-      LOGMSG(DBG_DEBUG, "push");
       obvious::SensorPolar2D* sensor = _sensors.front();
       _grid->push(sensor);
-      LOGMSG(DBG_DEBUG, "pushing done");
       _pushMutex.lock();
-      LOGMSG(DBG_DEBUG, "remove from queue");
       delete _sensors.front();
       _sensors.pop();
-      LOGMSG(DBG_DEBUG, "removing done");
       _pushMutex.unlock();
     }
   }

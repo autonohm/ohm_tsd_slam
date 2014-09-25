@@ -85,8 +85,6 @@ Localization::~Localization()
 
 void Localization::localize(obvious::SensorPolar2D* sensor)
 {
-  LOGMSG(DBG_DEBUG, "localize");
-
   unsigned int size = sensor->getRealMeasurementSize();
 
   if(!_scene)
@@ -173,7 +171,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
     _tf.setRotation(quat);
 
-    _pubMutex->lock();   //toDo: test if this mutex is necessary
+    _pubMutex->lock();   //toDo: test if this mutex is necessary (other threads use this too)
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);
     _pubMutex->unlock();

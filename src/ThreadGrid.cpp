@@ -48,6 +48,7 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
 
 ThreadGrid::~ThreadGrid()
 {
+  _thread->join();
   delete _occGrid;
   delete _occGridContent;
   delete _gridCoords;
@@ -59,8 +60,6 @@ void ThreadGrid::eventLoop(void)
   while(_stayActive)
   {
     _sleepCond.wait(_sleepMutex);
-
-    LOGMSG(DBG_DEBUG, "thread awake");
     unsigned int mapSize = 0;
     obvious::RayCastAxisAligned2D raycasterMap;
     raycasterMap.calcCoords(_grid, _gridCoords, NULL, &mapSize, _occGridContent);
@@ -97,9 +96,7 @@ void ThreadGrid::eventLoop(void)
       }
     }
     _pubMutex->lock();
-    LOGMSG(DBG_DEBUG, "publish");
     _gridPub.publish(*_occGrid);
-    LOGMSG(DBG_DEBUG, "publishing done");
     _pubMutex->unlock();
   }
 }

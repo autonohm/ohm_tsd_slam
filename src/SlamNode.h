@@ -23,9 +23,9 @@
 #define TRUNCATION_RADIUS 3.0
 #define MAX_RANGE 30.0
 #define MIN_RANGE 0.01
-#define THETA_INIT 0.0  //used in degrees
-#define MAP_T 2.0      //time between map generations
-#define INIT_PSHS 50//number of initial puhses into the grid
+#define THETA_INIT 0.0   //used in degrees
+#define MAP_T 2.0        //time between map generations
+#define INIT_PSHS 1      //number of initial puhses into the grid
 #define LAS_OFFS_X -0.19 //offset of the laser scanner to the base footprint
 
 namespace ohm_tsd_slam

@@ -41,7 +41,7 @@ SlamNode::SlamNode(void)
   unsigned int uiVar = static_cast<unsigned int>(octaveFactor);
   if(uiVar > 15)
   {
-    std::cout << __PRETTY_FUNCTION__ << " error! Unknown cell_octave_factor -> set to default!\n";
+    std::cout << __PRETTY_FUNCTION__ << " error! Unknown cell_octave_factor -> set to default!" << std::endl;
     uiVar = 10;
   }
   _initialized=false;
@@ -49,65 +49,10 @@ SlamNode::SlamNode(void)
   _grid=new obvious::TsdGrid(cellside, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(uiVar));  //obvious::LAYOUT_8192x8192
   _grid->setMaxTruncation(truncationRadius * cellside);
 
-  std::cout << __PRETTY_FUNCTION__ << " creating representation with ";
-  unsigned int cellsPerSide = 0;
-  switch(uiVar)
-  {
-  case 0:  std::cout << "1x1";
-  cellsPerSide = 1;
-  break;
-  case 1:  std::cout << "2x2";
-  cellsPerSide = 2;
-  break;
-  case 2:  std::cout << "4x4";
-  cellsPerSide = 4;
-  break;
-  case 3:  std::cout << "8x8";
-  cellsPerSide = 8;
-  break;
-  case 4:  std::cout << "16x16";
-  cellsPerSide = 16;
-  break;
-  case 5:  std::cout << "32x32";
-  cellsPerSide = 32;
-  break;
-  case 6:  std::cout << "64x64";
-  cellsPerSide = 64;
-  break;
-  case 7:  std::cout << "128x128";
-  cellsPerSide = 128;
-  break;
-  case 8:  std::cout << "256x256";
-  cellsPerSide = 256;
-  break;
-  case 9:  std::cout << "512x512";
-  cellsPerSide = 512;
-  break;
-  case 10: std::cout << "1024x1024";
-  cellsPerSide = 1024;
-  break;
-  case 11: std::cout << "2048x2048";
-  cellsPerSide = 2048;
-  break;
-  case 12: std::cout << "4096x4096";
-  cellsPerSide = 4096;
-  break;
-  case 13: std::cout << "8192x8192";
-  cellsPerSide = 8192;
-  break;
-  case 14: std::cout << "16384x16384";
-  cellsPerSide = 16384;
-  break;
-  case 15: std::cout << "36768x36768";
-  cellsPerSide = 36768;
-  break;
-  default: std::cout << "ERROR!";
-  cellsPerSide = 0;
-  break;
-  }
+  unsigned int cellsPerSide = pow(2, uiVar);
+  std::cout << __PRETTY_FUNCTION__ << " creating representation with " << cellsPerSide << "x" << cellsPerSide;
   double sideLength = static_cast<double>(cellsPerSide) * cellside;
-  std::cout << " cells, representating "<< sideLength << "x" << sideLength << "m^2\n";
-
+  std::cout << " cells, representating "<< sideLength << "x" << sideLength << "m^2" << std::endl;
 
   _sensor=NULL;
   _mask=NULL;

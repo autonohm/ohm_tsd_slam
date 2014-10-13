@@ -46,7 +46,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _icp->setMaxRMS(0.0);
   _icp->setMaxIterations(ITERATIONS);
   _icp->setConvergenceCounter(ITERATIONS);
-  _icp->activateTrace();
+  //_icp->activateTrace();
 
   std::string poseTopic;
   std::string tfBaseFrameId;

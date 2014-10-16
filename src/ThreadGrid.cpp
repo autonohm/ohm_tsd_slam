@@ -36,14 +36,28 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   _occGrid->data.resize(_grid->getCellsX() * _grid->getCellsY());
 
   ros::NodeHandle prvNh("~");
-  std::string strVar;
-  int intVar=0;
-  prvNh.param("map_topic", strVar, std::string("map"));
-  _gridPub = nh.advertise<nav_msgs::OccupancyGrid>(strVar, 1);
-  prvNh.param("get_map_topic", strVar, std::string("map"));
-  _getMapServ=nh.advertiseService(strVar, &ThreadGrid::getMapServCallBack, this);
+  std::string mapTopic;
+  std::string getMapTopic;
+  int intVar         = 0;
+  double robotLength = 0.0;
+  double robotWidth  = 0.0;
+
+  prvNh.param("map_topic", mapTopic, std::string("map"));
+  prvNh.param("get_map_topic", getMapTopic, std::string("map"));
   prvNh.param<int>("object_inflation_factor", intVar, 2);
-  _objInflateFactor=static_cast<unsigned int>(intVar);
+  prvNh.param<bool>("use_object_inflation", _objectInflation, false);
+  prvNh.param<double>("robot_length", robotLength, 0.40);
+  prvNh.param<double>("robot_width",  robotWidth,  0.40);
+
+  _gridPub          = nh.advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
+  _getMapServ       = nh.advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
+  _objInflateFactor = static_cast<unsigned int>(intVar);
+
+  _robotLength = static_cast<unsigned int>(robotLength / _cellSize + 0.5);
+  _robotWidth  = static_cast<unsigned int>(robotWidth  / _cellSize + 0.5);
+
+  _initialX = static_cast<unsigned int>(static_cast<double>(_width)  * parentNode.xOffFactor());
+  _initialY = static_cast<unsigned int>(static_cast<double>(_height) * parentNode.yOffFactor());
 }
 
 ThreadGrid::~ThreadGrid()
@@ -67,30 +81,35 @@ void ThreadGrid::eventLoop(void)
     {
       std::cout << __PRETTY_FUNCTION__ << " error! Raycasting returned with no coordinates!\n";
     }
-    _occGrid->header.stamp = ros::Time::now();
-    _occGrid->header.seq = frameId++;
+    _occGrid->header.stamp       = ros::Time::now();
+    _occGrid->header.seq         = frameId++;
     _occGrid->info.map_load_time = ros::Time::now();
-    unsigned int gridSize = _width * _height;
+    unsigned int gridSize        = _width * _height;
+
     for(unsigned int i = 0; i < gridSize ; ++i)
     {
       _occGrid->data[i] = _occGridContent[i];
     }
-    for(unsigned int i=0; i<mapSize/2; i++)
+    this->freeInitialArea();
+    for(unsigned int i = 0; i < mapSize / 2; i++)
     {
-      double x = _gridCoords[2*i];
-      double y = _gridCoords[2*i+1];
+      double x       = _gridCoords[2*i];
+      double y       = _gridCoords[2*i+1];
       unsigned int u = static_cast<int>(x / _cellSize);
       unsigned int v = static_cast<int>(y / _cellSize);
       if(u > 0 && u < _width && v > 0 && v < _height)
       {
         _occGrid->data[v * _width + u] = 100;               //set grid cell to occupied
-        for(unsigned int i=v-_objInflateFactor; i<v+_objInflateFactor; i++)
+        if(_objectInflation)
         {
-          for(unsigned int j=u-_objInflateFactor; j<u+_objInflateFactor; j++)
+          for(unsigned int i = v-_objInflateFactor; i < v + _objInflateFactor; i++)
           {
-            if((u>=_width)||(v>=_height))
-              continue;
-            _occGrid->data[i*_width+j]=100;
+            for(unsigned int j = u - _objInflateFactor; j < u + _objInflateFactor; j++)
+            {
+              if((u >= _width) || (v >= _height))
+                continue;
+              _occGrid->data[i * _width + j] = 100;
+            }
           }
         }
       }
@@ -109,6 +128,20 @@ bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::Ge
   _occGrid->header.seq=frameId++;
   _occGrid->info.map_load_time=ros::Time::now();
   return(true);
+}
+
+void ThreadGrid::freeInitialArea(void)
+{
+  unsigned int yBorder = _initialY + _robotLength / 2;
+  unsigned int xBorder = _initialX + _robotWidth  / 2;
+
+  for(unsigned int i = _initialY - _robotLength / 2; i < yBorder; ++i)
+  {
+    for(unsigned int j = _initialX - _robotWidth / 2; j < xBorder; ++j)
+    {
+      _occGrid->data[i * _width + j] = 0;
+    }
+  }
 }
 
 } /* namespace */

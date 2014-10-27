@@ -45,7 +45,7 @@ SlamNode::SlamNode(void)
     uiVar = 10;
   }
   _initialized=false;
-  _mask=NULL;
+
   _grid=new obvious::TsdGrid(cellside, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(uiVar));  //obvious::LAYOUT_8192x8192
   _grid->setMaxTruncation(truncationRadius * cellside);
 
@@ -56,8 +56,8 @@ SlamNode::SlamNode(void)
 
   _sensor=NULL;
   _mask=NULL;
-
   _localizer=NULL;
+
   _threadMapping=NULL;
   _threadGrid=NULL;
 }
@@ -71,10 +71,10 @@ SlamNode::~SlamNode()
     delete _threadGrid;
     delete _threadMapping;
   }
-  delete _localizer;
-  delete _grid;
-  delete _sensor;
-  delete _mask;
+  if(_localizer) delete _localizer;
+  if(_grid) delete _grid;
+  if(_sensor) delete _sensor;
+  if(_mask) delete [] _mask;
 }
 
 void SlamNode::start(void)
@@ -94,7 +94,7 @@ double SlamNode::yOffFactor(void)const
 
 void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
 {
-  _mask=new bool[initScan.ranges.size()];
+  if(!_mask) _mask=new bool[initScan.ranges.size()];
   for(unsigned int i=0;i<initScan.ranges.size();i++)
   {
     _mask[i]=!isnan(initScan.ranges[i])&&!isinf(initScan.ranges[i])&&(fabs(initScan.ranges[i])>10e-6);

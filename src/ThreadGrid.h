@@ -56,6 +56,12 @@ private:
   bool getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res);
 
   /**
+   * freeInitialArea
+   * Method to empty footprint of robot
+   */
+  void freeInitialArea(void);
+
+  /**
    * Occupancy grid
    */
   nav_msgs::OccupancyGrid* _occGrid;
@@ -109,6 +115,31 @@ private:
    * Object inflation factor
    */
   unsigned int _objInflateFactor;
+
+  /**
+   * Object inflation control flag
+   */
+  bool _objectInflation;
+
+  /**
+   * Length of area marked as free around start position (cells)
+   */
+  unsigned int _robotLength;
+
+  /**
+   * Width of area marked as free around start position (cells)
+   */
+  unsigned int _robotWidth;
+
+  /**
+   * X-coordinate of initial position (cells)
+   */
+  unsigned int _initialX;
+
+  /**
+   * Y-coordinate of initial position (cells)
+   */
+  unsigned int _initialY;
 };
 
 } /* namespace ohm_tsd_slam */

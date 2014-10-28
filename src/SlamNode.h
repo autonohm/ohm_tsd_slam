@@ -122,11 +122,6 @@ private:
   obvious::SensorPolar2D* _sensor;
 
   /**
-   * Mask for lasr data
-   */
-  bool* _mask;
-
-  /**
    * Localization instance
    */
   Localization* _localizer;
@@ -175,6 +170,12 @@ private:
    * Maximum range threshold
    */
   float _maxRange;
+
+  /**
+   * Maximum range threshold
+   */
+  float _lowReflectivityRange;
+
 
   /**
    * Time interval between occupancy grid

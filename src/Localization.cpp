@@ -115,7 +115,6 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   size = sensor->dataToCartesianVector(_scene);
   obvious::Matrix S(size / 2, 2, _scene);
   _icp->setScene(&S);
-
   double rms = 0.0;
   unsigned int pairs = 0;
   unsigned int it = 0;

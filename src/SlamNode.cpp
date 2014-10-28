@@ -35,6 +35,8 @@ SlamNode::SlamNode(void)
   _minRange = static_cast<float>(dVar);
   prvNh.param<double>("max_range", dVar, 30.0);
   _maxRange = static_cast<float>(dVar);
+  prvNh.param<double>("low_reflectivity_range", dVar, 2.0);
+  _lowReflectivityRange = static_cast<float>(dVar);
   prvNh.param<double>("occ_grid_time_interval", _gridPublishInterval, 2.0);
   prvNh.param<double>("loop_rate", _loopRate, 40.0);
 
@@ -55,7 +57,6 @@ SlamNode::SlamNode(void)
   std::cout << " cells, representating "<< sideLength << "x" << sideLength << "m^2" << std::endl;
 
   _sensor=NULL;
-  _mask=NULL;
   _localizer=NULL;
 
   _threadMapping=NULL;
@@ -74,7 +75,6 @@ SlamNode::~SlamNode()
   if(_localizer) delete _localizer;
   if(_grid) delete _grid;
   if(_sensor) delete _sensor;
-  if(_mask) delete [] _mask;
 }
 
 void SlamNode::start(void)
@@ -94,15 +94,8 @@ double SlamNode::yOffFactor(void)const
 
 void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
 {
-  if(!_mask) _mask=new bool[initScan.ranges.size()];
-  for(unsigned int i=0;i<initScan.ranges.size();i++)
-  {
-    _mask[i]=!isnan(initScan.ranges[i])&&!isinf(initScan.ranges[i])&&(fabs(initScan.ranges[i])>10e-6);
-  }
-
-  _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange));
+  _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange), static_cast<double>(_minRange), static_cast<double>(_lowReflectivityRange));
   _sensor->setRealMeasurementData(initScan.ranges, 1.0);
-  _sensor->setRealMeasurementMask(_mask);
 
   double phi       = _yawOffset;
   double gridWidth =_grid->getCellsX()*_grid->getCellSize();
@@ -161,17 +154,8 @@ void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
     std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
     return;
   }
-  for(unsigned int i=0;i<scan.ranges.size();i++)
-  {
-
-    _mask[i]=!isnan(scan.ranges[i])&&!isinf(scan.ranges[i])&&(fabs(scan.ranges[i])>10e-6);
-    if((_rangeFilter)&&_mask[i])
-      _mask[i]=(scan.ranges[i]>_minRange)&&(scan.ranges[i]<_maxRange);
-  }
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
-  _sensor->setRealMeasurementMask(_mask);
   _localizer->localize(_sensor);
-
 }
 
 } /* namespace ohm_tsdSlam2 */

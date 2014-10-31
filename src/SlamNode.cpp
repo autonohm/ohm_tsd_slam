@@ -9,6 +9,7 @@
 #include "Localization.h"
 #include "ThreadMapping.h"
 #include "ThreadGrid.h"
+#include "obcore/math/mathbase.h"
 
 namespace ohm_tsd_slam
 {
@@ -149,12 +150,15 @@ void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
 {
   if(!_initialized)
   {
-    std::cout << __PRETTY_FUNCTION__ << " received first scan. Initailize node...\n";
+    std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";
     this->initialize(scan);
     std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
     return;
   }
+
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
+  _sensor->resetMask();
+  _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _localizer->localize(_sensor);
 }
 

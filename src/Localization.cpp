@@ -1,5 +1,5 @@
 #include "Localization.h"
-#include "SlamNode.h"
+#include "MultiSlamNode.h"
 #include "ThreadMapping.h"
 
 #include "obcore/math/linalg/linalg.h"
@@ -16,7 +16,7 @@
 namespace ohm_tsd_slam
 {
 
-Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex, SlamNode& parentNode)
+Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, MultiSlamNode& parentNode, std::string nameSpace)
 {
   _pubMutex         = pubMutex;
   _mapper           = mapper;
@@ -48,16 +48,38 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _icp->setConvergenceCounter(ITERATIONS);
   //_icp->activateTrace();
 
-  std::string poseTopic;
-  std::string tfBaseFrameId;
-  std::string tfChildFrameId;
+//  std::string poseTopic;
+//  std::string tfBaseFrameId;
+//  std::string tfChildFrameId;
   ros::NodeHandle prvNh("~");
-  prvNh.param("pose_topic", poseTopic, std::string("pose"));
-  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
-  prvNh.param("tf_child_frame", tfChildFrameId, std::string("base_footprint"));
-  prvNh.param<double>("sensor_static_offset_x", _lasXOffset, -0.19);
 
-  _posePub = nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
+  if(nameSpace.size())   //given namespace
+    nameSpace = "/" + nameSpace;
+
+  std::string poseParamServer;
+  poseParamServer = nameSpace + "pose_topic";
+  std::string poseTopic;
+  prvNh.param(poseParamServer, poseTopic, std::string("default_ns/pose"));
+
+  std::string tfBaseFrameId;
+  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
+
+  std::string tfChildParamServer;
+  tfChildParamServer = nameSpace + "/tf_child_frame";
+  std::string tfChildFrameId;
+  prvNh.param(tfChildParamServer, tfChildFrameId, std::string("default_ns/base_footprint"));
+
+  //double sensorStaticXoffset = 0.0;
+  std::string sensorStaticXoffsetParamServer;
+  sensorStaticXoffsetParamServer = nameSpace + "sensor_static_offset_x";
+  prvNh.param<double>(sensorStaticXoffsetParamServer, _lasXOffset, -0.19);
+
+//  prvNh.param("pose_topic", poseTopic, std::string("pose"));
+//  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
+//  prvNh.param("tf_child_frame", tfChildFrameId, std::string("base_footprint"));
+//  prvNh.param<double>("sensor_static_offset_x", _lasXOffset, -0.19);
+
+  _posePub = _nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
 
   _poseStamped.header.frame_id = tfBaseFrameId;
 

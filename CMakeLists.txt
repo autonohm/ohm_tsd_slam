@@ -99,6 +99,8 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${PROJECT_SOURCE_DIR}/src
+  ${PROJECT_SOURCE_DIR}/src/multi
   $ENV{OBVIOUSLY_ROOT}
 )
 
@@ -114,13 +116,22 @@ link_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(slam_node src/slam_node.cpp
-                                 src/SlamNode.cpp
-                                 src/Localization.cpp
-                                 src/ThreadSLAM.cpp
-                                 src/ThreadMapping.cpp
-                                 src/ThreadGrid.cpp
-                                 )
+#add_executable(slam_node src/slam_node.cpp
+#                                 src/SlamNode.cpp
+#                                 src/Localization.cpp
+#                                 src/ThreadSLAM.cpp
+#                                 src/ThreadMapping.cpp
+#                                 src/ThreadGrid.cpp
+#                                 )
+
+add_executable(multi_slam_node src/multi/multi_slam_node.cpp
+                               src/multi/MultiSlamNode.cpp
+                               src/Localization.cpp
+                               src/multi/ThreadLocalize.cpp
+                               src/ThreadSLAM.cpp
+                               src/ThreadMapping.cpp
+                               src/ThreadGrid.cpp
+                               )
                                   
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -130,7 +141,18 @@ add_executable(slam_node src/slam_node.cpp
 # target_link_libraries(ohm_tsd_slam_node
 #   ${catkin_LIBRARIES}
 # )
-target_link_libraries(slam_node
+#target_link_libraries(slam_node
+#                                        ${catkin_LIBRARIES}
+#                                        obvision
+#                                        obcore
+#                                        gsl
+#                                        gslcblas
+#                                        ann
+#                                        flann
+#                                        ${Boost_LIBRARIES}
+#                                        )
+#                                        
+target_link_libraries(multi_slam_node
                                         ${catkin_LIBRARIES}
                                         obvision
                                         obcore
@@ -139,7 +161,7 @@ target_link_libraries(slam_node
                                         ann
                                         flann
                                         ${Boost_LIBRARIES}
-                                        )
+                                        ) 
 
 #############
 ## Install ##
@@ -156,11 +178,11 @@ target_link_libraries(slam_node
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS slam_node
+#install(TARGETS slam_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+#  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+#)
 
 ## Mark cpp header files for installation
 # install(DIRECTORY include/${PROJECT_NAME}/

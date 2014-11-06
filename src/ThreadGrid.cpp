@@ -10,7 +10,7 @@
 namespace ohm_tsd_slam
 {
 
-ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, SlamNode& parentNode)
+ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, MultiSlamNode& parentNode)
 {
   _pubMutex       = pubMutex;
   _grid           = grid;

@@ -2,7 +2,7 @@
 #define THREADGRID_H_
 
 #include "ThreadSLAM.h"
-#include "SlamNode.h"
+#include "MultiSlamNode.h"
 
 #include "obvision/reconstruct/grid/TsdGrid.h"
 
@@ -29,7 +29,7 @@ public:
    * @param pubMutex Publising mutex publishing mutex
    * @param parentNode Pointer to main mapping instance
    */
-  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, SlamNode& parentNode);
+  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, MultiSlamNode& parentNode);
 
   /**
    * Destructor

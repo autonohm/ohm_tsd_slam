@@ -16,6 +16,8 @@
 #include <strstream>
 #include <iostream>
 
+#define INIT_PSHS 1
+
 namespace ohm_tsd_slam
 {
 
@@ -33,7 +35,7 @@ MultiSlamNode::MultiSlamNode()
   //    _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
 
 
-  prvNh.param<double>("x_off_factor", _xOffFactor, 0.2);
+  prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
   prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
   //prvNh.param<double>("yaw_start_offset", _yawOffset, 0.0);
   prvNh.param<int>("cell_octave_factor", octaveFactor, 10);
@@ -82,8 +84,10 @@ MultiSlamNode::MultiSlamNode()
   {
     std::stringstream sstream;
     sstream << "robot";
-    sstream << i << "_namespace";
-    prvNh.param(sstream.str(), nameSpace, std::string("default_ns"));
+    sstream << i << "/namespace";
+    std::cout << __PRETTY_FUNCTION__ << " looking up " << sstream.str() << std::endl;
+    std::string dummy = sstream.str();
+    prvNh.param(dummy, nameSpace, std::string("default_ns"));
     threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_pubMutex, *this, nameSpace);
     _localizers.push_back(threadLocalize);
     std::cout << __PRETTY_FUNCTION__ << " started thread for " << nameSpace << std::endl;
@@ -124,5 +128,13 @@ void MultiSlamNode::run(void)
   }
 }
 
+void MultiSlamNode::initPush(obvious::SensorPolar2D* sensor)
+{
+  for(unsigned int i = 0; i < INIT_PSHS; i++)
+  {
+    _threadMapping->queuePush(sensor);
+  }
+
+}
 
 } //end namespace

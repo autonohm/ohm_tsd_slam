@@ -54,7 +54,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   ros::NodeHandle prvNh("~");
 
   if(nameSpace.size())   //given namespace
-    nameSpace = "/" + nameSpace;
+    nameSpace += "/";
 
   std::string poseParamServer;
   poseParamServer = nameSpace + "pose_topic";
@@ -65,13 +65,15 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
 
   std::string tfChildParamServer;
-  tfChildParamServer = nameSpace + "/tf_child_frame";
+  tfChildParamServer = nameSpace + "tf_child_frame";
   std::string tfChildFrameId;
+  std::cout << __PRETTY_FUNCTION__ << " looking up " << tfChildParamServer << std::endl;
   prvNh.param(tfChildParamServer, tfChildFrameId, std::string("default_ns/base_footprint"));
+  std::cout << __PRETTY_FUNCTION__ << " found " << tfChildFrameId << std::endl;
 
   //double sensorStaticXoffset = 0.0;
   std::string sensorStaticXoffsetParamServer;
-  sensorStaticXoffsetParamServer = nameSpace + "sensor_static_offset_x";
+  sensorStaticXoffsetParamServer = nameSpace + "/sensor_static_offset_x";
   prvNh.param<double>(sensorStaticXoffsetParamServer, _lasXOffset, -0.19);
 
 //  prvNh.param("pose_topic", poseTopic, std::string("pose"));
@@ -84,7 +86,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   _poseStamped.header.frame_id = tfBaseFrameId;
 
   _tf.frame_id_                = tfBaseFrameId;
-  _tf.child_frame_id_          = tfChildFrameId;
+  _tf.child_frame_id_          = nameSpace + tfChildFrameId;
 }
 
 Localization::~Localization()

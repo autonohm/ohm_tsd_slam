@@ -42,6 +42,8 @@ protected:
 private:
   void laserCallBack(const sensor_msgs::LaserScan& scan);
   void init(const sensor_msgs::LaserScan& scan);
+  ros::NodeHandle _nh;
+  ros::Subscriber _lasSubs;
 
   obvious::SensorPolar2D* _sensor;
   bool _newScan;
@@ -56,6 +58,7 @@ private:
   double _xOffFactor;
   double _yOffFactor;
   bool _initialized;
+  MultiSlamNode& _parentNode;
 
 
 };

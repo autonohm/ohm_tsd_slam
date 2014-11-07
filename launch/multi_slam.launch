@@ -1,0 +1,12 @@
+<launch>
+  <node name = "multi_slam_node" pkg = "ohm_tsd_slam" type = "multi_slam_node" output = "screen">
+  	<param name = "robot_nbr" type = "int" value = "2"/>
+  	<param name = "robot0/namespace" type = "string" value = "heini"/>
+  	<param name = "/heini/tf_child_frame" type = "string" value = "base_footprint"/>
+  	<param name = "/heini/pose_topic" type = "string" value = "pose"/>
+	
+  	<param name = "robot1/namespace" type = "string" value = "theo"/>
+	<param name = "/theo/tf_child_frame" type = "string" value = "base_footprint"/>
+	<param name = "/theo/pose_topic" type = "string" value = "pose"/> 
+  </node>
+</launch>

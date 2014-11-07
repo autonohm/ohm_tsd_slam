@@ -33,6 +33,7 @@ public:
   void start(void);
   double xOffFactor(void)const{return _xOffFactor;}
   double yOffFactor(void)const{return _yOffFactor;}
+  void initPush(obvious::SensorPolar2D* sensor);
 private:
   void run(void);
   void init(void);

@@ -28,7 +28,8 @@ namespace ohm_tsd_slam
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, MultiSlamNode& parentNode, std::string nameSpace):
         _sensor(NULL),
         _newScan(false),
-        _initialized(false)
+        _initialized(false),
+        _parentNode(parentNode)
 {
   /**
    * width
@@ -95,6 +96,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, bo
 
   _localizer = new Localization(grid, mapper, pubMutex, parentNode, nameSpace);
   _sensor = NULL;
+
+  _lasSubs = _nh.subscribe(laserTopic, 1, &ThreadLocalize::laserCallBack, this);
 }
 
 ThreadLocalize::~ThreadLocalize()
@@ -129,21 +132,24 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   //    _mask[i] = !isnan(scan.ranges[i]) && !isinf(scan.ranges[i])&&(std::abs(scan.ranges[i])>10e-6);
   //  }
 
-  _sensor=new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, static_cast<double>(_maxRange));
+  _sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, static_cast<double>(_maxRange));
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   //_sensor->setRealMeasurementMask(_mask);
 
   double phi    = _yawOffset;
   double startX = _gridWidth*_xOffFactor; //toDo: add offset from this zero point from lauch
   double startY = _gridWidth*_yOffFactor;
-  double tf[9]  = {std::cos(phi), -std::sin(phi), _gridWidth*_xOffFactor,
-                   std::sin(phi),  std::cos(phi), _gridHeight*_yOffFactor,
-                               0,              0,                      1};
+  double tf[9]  = {std::cos(phi), -std::sin(phi), startX,
+                   std::sin(phi),  std::cos(phi), startY,
+                               0,              0,      1};
+
 
   obvious::Matrix Tinit(3, 3);
   Tinit.setData(tf);
+  std::cout << __PRETTY_FUNCTION__ << "Tinit = \n" << Tinit << std::endl;
   _sensor->transform(&Tinit);
-
+  _parentNode.initPush(_sensor);
+  _initialized = true;
 
 }
 
@@ -151,7 +157,7 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 {
   if(!_initialized)
   {
-    std::cout << __PRETTY_FUNCTION__ << " received first scan. Initailize node...\n";   //toDo: print ID of referring robot
+    std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";   //toDo: print ID of referring robot
     this->init(scan);
     std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
   }

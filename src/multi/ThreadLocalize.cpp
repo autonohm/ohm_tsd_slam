@@ -45,19 +45,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, bo
 
   ros::NodeHandle prvNh("~");
 
-  std::string poseParamServer;
-  std::string poseTopic;
-  poseParamServer = nameSpace + "/pose_topic";
-  prvNh.param(poseParamServer, poseTopic, std::string("default_ns/pose"));
-  //
-  //  std::string tfBaseFrameId;
-  //  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
-  //
-  //  std::string tfChildFrameId;
-  //  std::string tfChildParamServer;
-  //  tfChildParamServer = nameSpace + "/tf_child_frame";
-  //  prvNh.param(tfChildParamServer, tfChildFrameId, std::string("default_ns/base_footprint"));
-
   std::string laserTopic;
   prvNh.param("laser_topic", laserTopic, std::string("scan"));
   laserTopic = nameSpace + "/" + laserTopic;
@@ -73,11 +60,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, bo
   std::string yawOffParamServer;
   yOffParamServer = nameSpace + "/yaw_offset";
   prvNh.param<double>(yOffParamServer, _yawOffset, 0.0);
-
-  //  double sensorStaticXoffset = 0.0;
-  //  std::string sensorStaticXoffsetParamServer;
-  //  sensorStaticXoffsetParamServer = nameSpace + "sensor_static_offset_x";
-  //  prvNh.param<double>(sensorStaticXoffsetParamServer, sensorStaticXoffset, -0.19);
 
   std::string maxRangeParamServer;
   maxRangeParamServer = nameSpace + "/max_range";

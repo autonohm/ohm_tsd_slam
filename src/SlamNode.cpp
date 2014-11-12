@@ -10,6 +10,7 @@
 #include "ThreadMapping.h"
 #include "ThreadGrid.h"
 #include "obcore/math/mathbase.h"
+#include <unistd.h>
 
 namespace ohm_tsd_slam
 {
@@ -111,6 +112,9 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
   _threadMapping=new ThreadMapping(_grid);
   for(int i=0; i<INIT_PSHS; i++)
     _threadMapping->queuePush(_sensor);
+  while(!_threadMapping->initialized())
+    usleep(1000 * 100);
+
 
   _localizer=new Localization(_grid, _threadMapping, _nh, &_pubMutex, *this);
 

@@ -8,11 +8,21 @@ namespace ohm_tsd_slam
 ThreadMapping::ThreadMapping(obvious::TsdGrid* grid)
 {
   _grid = grid;
+  _initialized = false;
 }
 
 ThreadMapping::~ThreadMapping()
 {
   _thread->join();
+}
+
+bool ThreadMapping::initialized(void)
+{
+  bool var = false;
+  _pushMutex.lock();
+  var =  _initialized;
+  _pushMutex.unlock();
+  return var;
 }
 
 void ThreadMapping::eventLoop(void)
@@ -27,6 +37,7 @@ void ThreadMapping::eventLoop(void)
       _pushMutex.lock();
       delete _sensors.front();
       _sensors.pop();
+      _initialized = true;
       _pushMutex.unlock();
     }
   }

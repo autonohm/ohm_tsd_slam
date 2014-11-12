@@ -19,3 +19,7 @@
 *.exe
 *.out
 *.app
+
+#eclipse hidden files
+.cproject
+.project

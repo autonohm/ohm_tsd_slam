@@ -41,6 +41,8 @@ public:
    */
   void queuePush(obvious::SensorPolar2D* sensor);
 
+  bool initialized(void)const;
+
 protected:
 
   /**
@@ -65,6 +67,8 @@ private:
    * Push mutex for queue
    */
   boost::mutex _pushMutex;
+
+  bool _initialized;
 };
 
 } /* namespace */

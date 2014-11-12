@@ -41,7 +41,14 @@ public:
    */
   void queuePush(obvious::SensorPolar2D* sensor);
 
-  bool initialized(void)const;
+  bool initialized(void);
+
+  /**
+   * initPush
+   * method to init the grid from a certain pose. Is done by the CALLING thread
+   * @param sensor
+   */
+  void initPush(obvious::SensorPolar2D* sensor);
 
 protected:
 

@@ -18,6 +18,7 @@
 
 #include <cstring>
 #include <string>
+#include <unistd.h>
 
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/tf.h>
@@ -25,11 +26,12 @@
 namespace ohm_tsd_slam
 {
 
-ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, MultiSlamNode& parentNode, std::string nameSpace):
+ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, std::string nameSpace,
+                               const double xOffFactor, const double yOffFactor):
         _sensor(NULL),
         _newScan(false),
         _initialized(false),
-        _parentNode(parentNode)
+        _mapper(*mapper)
 {
   /**
    * width
@@ -73,10 +75,10 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, bo
   _gridHeight = grid->getCellsY() * grid->getCellSize();
   double _gridHeight;
 
-  _xOffFactor = parentNode.xOffFactor();
-  _yOffFactor = parentNode.yOffFactor();
+  _xOffFactor = xOffFactor;
+  _yOffFactor = yOffFactor;
 
-  _localizer = new Localization(grid, mapper, pubMutex, parentNode, nameSpace);
+  _localizer = new Localization(grid, mapper, pubMutex, _xOffFactor, _yOffFactor, nameSpace);
   _sensor = NULL;
 
   _lasSubs = _nh.subscribe(laserTopic, 1, &ThreadLocalize::laserCallBack, this);
@@ -108,19 +110,12 @@ void ThreadLocalize::eventLoop(void)
 
 void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
 {
-  //  _mask = new bool[scan.ranges.size()];
-  //  for(unsigned int i=0; i < scan.ranges.size(); i++)
-  //  {
-  //    _mask[i] = !isnan(scan.ranges[i]) && !isinf(scan.ranges[i])&&(std::abs(scan.ranges[i])>10e-6);
-  //  }
-
   _sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, static_cast<double>(_maxRange));
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
-  //_sensor->setRealMeasurementMask(_mask);
 
   double phi    = _yawOffset;
-  double startX = _gridWidth*_xOffFactor; //toDo: add offset from this zero point from lauch
-  double startY = _gridWidth*_yOffFactor;
+  double startX = _gridWidth * _xOffFactor + _xOffset;
+  double startY = _gridWidth * _yOffFactor + _yOffset;
   double tf[9]  = {std::cos(phi), -std::sin(phi), startX,
                    std::sin(phi),  std::cos(phi), startY,
                                0,              0,      1};
@@ -130,7 +125,13 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   Tinit.setData(tf);
   std::cout << __PRETTY_FUNCTION__ << "Tinit = \n" << Tinit << std::endl;
   _sensor->transform(&Tinit);
-  _parentNode.initPush(_sensor);
+  //if(!_mapper.initialized())
+  _mapper.initPush(_sensor);
+//  _parentNode.initPush(_sensor);
+//  usleep(1000 * 1000);   //wait 1000ms for mapping thread to finish init push
+  //while(!_mapper.initialized())
+
+
   _initialized = true;
 
 }

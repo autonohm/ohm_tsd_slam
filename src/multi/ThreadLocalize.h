@@ -35,7 +35,8 @@ class Localization;
 class ThreadLocalize: public ThreadSLAM
 {
 public:
-  ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, MultiSlamNode& parentNode, std::string nameSpace);
+  ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, std::string nameSpace,
+                 const double xOffFactor, const double yOffFactor);
   virtual ~ThreadLocalize();
 protected:
   virtual void eventLoop(void);
@@ -48,6 +49,7 @@ private:
   obvious::SensorPolar2D* _sensor;
   bool _newScan;
   Localization* _localizer;
+  ThreadMapping& _mapper;
   double _maxRange;
   double _minRange;
   double _yawOffset;
@@ -58,7 +60,7 @@ private:
   double _xOffFactor;
   double _yOffFactor;
   bool _initialized;
-  MultiSlamNode& _parentNode;
+  //MultiSlamNode& _parentNode;
 
 
 };

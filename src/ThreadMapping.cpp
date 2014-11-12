@@ -15,9 +15,21 @@ ThreadMapping::~ThreadMapping()
   _thread->join();
 }
 
-bool ThreadMapping::initialized(void)const
+bool ThreadMapping::initialized(void)
 {
-  return _initialized;
+  bool var = false;
+  _pushMutex.lock();
+  var = _initialized;
+  _pushMutex.unlock();
+  return var;
+}
+
+void ThreadMapping::initPush(obvious::SensorPolar2D* sensor)
+{
+  _pushMutex.lock();
+  for(unsigned int i = 0; i < INIT_PSHS; i++)
+    _grid->push(sensor);
+  _pushMutex.unlock();
 }
 
 void ThreadMapping::eventLoop(void)

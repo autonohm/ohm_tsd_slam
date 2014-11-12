@@ -88,7 +88,7 @@ MultiSlamNode::MultiSlamNode()
     std::cout << __PRETTY_FUNCTION__ << " looking up " << sstream.str() << std::endl;
     std::string dummy = sstream.str();
     prvNh.param(dummy, nameSpace, std::string("default_ns"));
-    threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_pubMutex, *this, nameSpace);
+    threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_pubMutex, nameSpace, _xOffFactor, _yOffFactor);
     _localizers.push_back(threadLocalize);
     std::cout << __PRETTY_FUNCTION__ << " started thread for " << nameSpace << std::endl;
   }
@@ -113,12 +113,12 @@ void MultiSlamNode::start(void)
 
 void MultiSlamNode::run(void)
 {
-  ros::Time lastMap=ros::Time::now();
-  ros::Duration durLastMap=ros::Duration(_gridPublishInterval);
-  std::cout << __PRETTY_FUNCTION__ << " waiting for first laser scan to initialize node...\n";
+  ros::Time lastMap        = ros::Time::now();
+  ros::Duration durLastMap = ros::Duration(_gridPublishInterval);
+  //std::cout << __PRETTY_FUNCTION__ << " waiting for first laser scan to initialize node...\n";
   while(ros::ok())
   {
-    ros::Time curTime=ros::Time::now();
+    ros::Time curTime = ros::Time::now();
     if((curTime-lastMap).toSec()>durLastMap.toSec())
     {
       _threadGrid->unblock();

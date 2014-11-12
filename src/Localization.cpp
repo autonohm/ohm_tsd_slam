@@ -16,7 +16,7 @@
 namespace ohm_tsd_slam
 {
 
-Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, MultiSlamNode& parentNode, std::string nameSpace)
+Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor, std::string nameSpace)
 {
   _pubMutex         = pubMutex;
   _mapper           = mapper;
@@ -34,8 +34,8 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   _trnsMax          = TRNS_THRESH;   //toDo: config file
   _rotMax           = ROT_THRESH;    //toDo: config file
   _lastPose         = new obvious::Matrix(3, 3);
-  _xOffFactor       = parentNode.xOffFactor();
-  _yOffFactor       = parentNode.yOffFactor();
+  _xOffFactor       = xOffFactor;
+  _yOffFactor       = yOffFactor;
 
   //configure ICP
   _filterBounds     = new obvious::OutOfBoundsFilter2D(grid->getMinX(), grid->getMaxX(), grid->getMinY(), grid->getMaxY());
@@ -57,6 +57,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   poseParamServer = nameSpace + "pose_topic";
   std::string poseTopic;
   prvNh.param(poseParamServer, poseTopic, std::string("default_ns/pose"));
+  poseTopic = nameSpace + poseTopic;
 
   std::string tfBaseFrameId;
   prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));

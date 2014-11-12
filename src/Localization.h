@@ -13,7 +13,6 @@
 #include "obvision/reconstruct/grid/RayCastPolar2D.h"
 #include "obvision/icp/icp_def.h"
 
-#include <boost/signal.hpp>
 #include <boost/thread.hpp>
 
 #include <ros/ros.h>
@@ -49,7 +48,8 @@ public:
    * @param pubMutex Mutex synchronizing ros publishing
    * @param parentNode Pointer to main node instance
    */
-  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, MultiSlamNode& parentNode, std::string nameSpace = "");
+  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor,
+               std::string nameSpace = "");
 
   /**
    * Destructor

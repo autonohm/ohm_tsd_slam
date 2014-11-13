@@ -31,22 +31,14 @@ MultiSlamNode::MultiSlamNode()
   int iVar         = 0;
   double truncationRadius = 0.0;
   double rateVar = 0.0;
-  //    prvNh.param("laser_topic", strVar, std::string("simon/scan"));
-  //    _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
-
 
   prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
   prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
-  //prvNh.param<double>("yaw_start_offset", _yawOffset, 0.0);
+
   prvNh.param<int>("cell_octave_factor", octaveFactor, 10);
   prvNh.param<double>("cellsize", cellsize, 0.025);
   prvNh.param<int>("truncation_radius", iVar, 3);
   truncationRadius = static_cast<double>(iVar);
-  //    prvNh.param<bool>("range_filter", _rangeFilter, false);
-  //prvNh.param<double>("min_range", dVar, 0.01);
-  //_minRange = static_cast<float>(dVar);
-  //    prvNh.param<double>("max_range", dVar, 30.0);
-  //    _maxRange = static_cast<float>(dVar);
   prvNh.param<double>("occ_grid_time_interval", _gridPublishInterval, 2.0);
   prvNh.param<double>("loop_rate", rateVar, 40.0);
 

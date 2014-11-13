@@ -90,7 +90,7 @@ void ThreadGrid::eventLoop(void)
     {
       _occGrid->data[i] = _occGridContent[i];
     }
-    this->freeInitialArea();
+    //this->freeInitialArea();
     for(unsigned int i = 0; i < mapSize / 2; i++)
     {
       double x       = _gridCoords[2*i];

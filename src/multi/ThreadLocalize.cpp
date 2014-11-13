@@ -27,11 +27,12 @@ namespace ohm_tsd_slam
 {
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, std::string nameSpace,
-                               const double xOffFactor, const double yOffFactor):
-        _sensor(NULL),
-        _newScan(false),
-        _initialized(false),
-        _mapper(*mapper)
+    const double xOffFactor, const double yOffFactor):
+            _sensor(NULL),
+            _newScan(false),
+            _initialized(false),
+            _mapper(*mapper),
+            _grid(*grid)
 {
   /**
    * width
@@ -70,6 +71,16 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, bo
   std::string minRangeParamServer;
   maxRangeParamServer = nameSpace + "/min_range";
   prvNh.param<double>(maxRangeParamServer, _minRange, 0.001);
+
+  std::string footPrintWidthParamServer;
+  footPrintWidthParamServer = nameSpace + "/footprint_width";
+  prvNh.param<double>(footPrintWidthParamServer, _footPrintWidth, 0.0);
+
+
+  std::string footPrintHeightParamServer;
+  footPrintHeightParamServer = nameSpace + "/footprint_height";
+  prvNh.param<double>(footPrintHeightParamServer, _footPrintHeight, 0.0);
+  double _footPrintHeight;
 
   _gridWidth = grid->getCellsX() * grid->getCellSize();
   _gridHeight = grid->getCellsY() * grid->getCellSize();
@@ -117,19 +128,18 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   double startX = _gridWidth * _xOffFactor + _xOffset;
   double startY = _gridWidth * _yOffFactor + _yOffset;
   double tf[9]  = {std::cos(phi), -std::sin(phi), startX,
-                   std::sin(phi),  std::cos(phi), startY,
-                               0,              0,      1};
+      std::sin(phi),  std::cos(phi), startY,
+      0,              0,      1};
 
 
   obvious::Matrix Tinit(3, 3);
   Tinit.setData(tf);
   std::cout << __PRETTY_FUNCTION__ << "Tinit = \n" << Tinit << std::endl;
   _sensor->transform(&Tinit);
-  //if(!_mapper.initialized())
+  obfloat t[2] = {startX, startY};
+  if(!_grid.freeFootprint(t, _footPrintWidth, _footPrintHeight))
+    std::cout << __PRETTY_FUNCTION__ << " warning! Footprint could not be freed!\n";
   _mapper.initPush(_sensor);
-//  _parentNode.initPush(_sensor);
-//  usleep(1000 * 1000);   //wait 1000ms for mapping thread to finish init push
-  //while(!_mapper.initialized())
 
 
   _initialized = true;
@@ -144,13 +154,13 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
     this->init(scan);
     std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
   }
-//  for(unsigned int i=0;i<scan.ranges.size();i++)
-//  {
-//
-//    _mask[i] = !isnan(scan.ranges[i]) && !isinf(scan.ranges[i]) && (fabs(scan.ranges[i]) > 10e-6);
-//    if((_rangeFilter)&&_mask[i])
-//      _mask[i]=(scan.ranges[i]>_minRange)&&(scan.ranges[i]<_maxRange);
-//  }
+  //  for(unsigned int i=0;i<scan.ranges.size();i++)
+  //  {
+  //
+  //    _mask[i] = !isnan(scan.ranges[i]) && !isinf(scan.ranges[i]) && (fabs(scan.ranges[i]) > 10e-6);
+  //    if((_rangeFilter)&&_mask[i])
+  //      _mask[i]=(scan.ranges[i]>_minRange)&&(scan.ranges[i]<_maxRange);
+  //  }
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   //_sensor->setRealMeasurementMask(_mask);
   _newScan = true;

@@ -146,6 +146,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   if(deltaY > 0.1 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
   {
     // localization error broadcast invalid tf
+    std::cout << __PRETTY_FUNCTION__ << "regError!\n";
     _poseStamped.header.stamp = ros::Time::now();
     _poseStamped.pose.position.x = NAN;
     _poseStamped.pose.position.y = NAN;
@@ -170,8 +171,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     sensor->transform(&T);
     obvious::Matrix curPose = sensor->getTransformation();
     double curTheta = this->calcAngle(&curPose);
-    double posX=curPose(0, 2) + std::cos(curTheta) * _lasXOffset -_grid->getCellsX()*_grid->getCellSize()*_xOffFactor;
-    double posY=curPose(1, 2) + std::sin(curTheta) * _lasXOffset -_grid->getCellsY()*_grid->getCellSize()*_yOffFactor;
+    double posX=curPose(0, 2) + std::cos(curTheta) * _lasXOffset -_grid->getCellsX() * _grid->getCellSize() * _xOffFactor;
+    double posY=curPose(1, 2) + std::sin(curTheta) * _lasXOffset -_grid->getCellsY() * _grid->getCellSize() * _yOffFactor;
     _poseStamped.header.stamp = ros::Time::now();
     _poseStamped.pose.position.x = posX;
     _poseStamped.pose.position.y = posY;

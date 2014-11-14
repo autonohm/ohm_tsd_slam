@@ -116,11 +116,11 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
     usleep(1000 * 100);
 
 
-  _localizer=new Localization(_grid, _threadMapping, _nh, &_pubMutex, *this);
+  _localizer = new Localization(_grid, _threadMapping, _nh, &_pubMutex, *this);
 
-  _threadGrid=new ThreadGrid(_grid, _nh, &_pubMutex, *this);
+  _threadGrid = new ThreadGrid(_grid, _nh, &_pubMutex, *this);
 
-  _initialized=true;
+  _initialized = true;
 }
 
 void SlamNode::run(void)
@@ -147,15 +147,20 @@ void SlamNode::run(void)
 
 void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
 {
+  sensor_msgs::LaserScan tmpScan = scan;
+  for(std::vector<float>::iterator iter = tmpScan.ranges.begin(); iter != tmpScan.ranges.end(); iter++)
+    if(isnan(*iter))
+    {
+      *iter = 0.0;
+    }
   if(!_initialized)
   {
     std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";
-    this->initialize(scan);
+    this->initialize(tmpScan);
     std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
     return;
   }
-
-  _sensor->setRealMeasurementData(scan.ranges, 1.0);
+  _sensor->setRealMeasurementData(tmpScan.ranges, 1.0);
   _sensor->resetMask();
   _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _localizer->localize(_sensor);

@@ -31,15 +31,12 @@ public:
   MultiSlamNode();
   virtual ~MultiSlamNode();
   void start(void);
-  double xOffFactor(void)const{return _xOffFactor;}
-  double yOffFactor(void)const{return _yOffFactor;}
-  void initPush(obvious::SensorPolar2D* sensor);
 private:
   void run(void);
   void init(void);
   std::vector<ThreadLocalize*> _localizers;
-  ThreadGrid* _threadGrid;
-  ThreadMapping* _threadMapping;
+  ThreadGrid*                  _threadGrid;
+  ThreadMapping*               _threadMapping;
   obvious::TsdGrid*            _grid;
 
   double _xOffFactor;
@@ -47,8 +44,8 @@ private:
   double _gridPublishInterval;
 
   ros::NodeHandle _nh;
-  ros::Rate* _loopRate;
-  boost::mutex _pubMutex;
+  ros::Rate*      _loopRate;
+  boost::mutex    _pubMutex;
 
 
 };

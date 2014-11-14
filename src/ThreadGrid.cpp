@@ -10,7 +10,7 @@
 namespace ohm_tsd_slam
 {
 
-ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, MultiSlamNode& parentNode)
+ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor)
 {
   _pubMutex       = pubMutex;
   _grid           = grid;
@@ -22,17 +22,17 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   for(unsigned int i = 0; i < _grid->getCellsX() * _grid->getCellsY(); ++i)
     _occGridContent[i] = -1;
 
-  _occGrid = new nav_msgs::OccupancyGrid;
-  _occGrid->info.resolution = static_cast<double>(_grid->getCellSize());
-  _occGrid->info.width = _grid->getCellsX();
-  _occGrid->info.height = _grid->getCellsY();
+  _occGrid                            = new nav_msgs::OccupancyGrid;
+  _occGrid->info.resolution           = static_cast<double>(_grid->getCellSize());
+  _occGrid->info.width                = _grid->getCellsX();
+  _occGrid->info.height               = _grid->getCellsY();
   _occGrid->info.origin.orientation.w = 0.0;
   _occGrid->info.origin.orientation.x = 0.0;
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;
-  _occGrid->info.origin.position.x=0.0-_grid->getCellsX()*_grid->getCellSize()*parentNode.xOffFactor();
-  _occGrid->info.origin.position.y=0.0-_grid->getCellsY()*_grid->getCellSize()*parentNode.yOffFactor();
-  _occGrid->info.origin.position.z = 0.0;
+  _occGrid->info.origin.position.x    = 0.0 - _grid->getCellsX() * _grid->getCellSize() * xOffFactor;
+  _occGrid->info.origin.position.y    = 0.0 - _grid->getCellsY() * _grid->getCellSize() * yOffFactor;
+  _occGrid->info.origin.position.z    = 0.0;
   _occGrid->data.resize(_grid->getCellsX() * _grid->getCellsY());
 
   ros::NodeHandle prvNh("~");
@@ -56,8 +56,8 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   _robotLength = static_cast<unsigned int>(robotLength / _cellSize + 0.5);
   _robotWidth  = static_cast<unsigned int>(robotWidth  / _cellSize + 0.5);
 
-  _initialX = static_cast<unsigned int>(static_cast<double>(_width)  * parentNode.xOffFactor());
-  _initialY = static_cast<unsigned int>(static_cast<double>(_height) * parentNode.yOffFactor());
+  _initialX = static_cast<unsigned int>(static_cast<double>(_width)  * xOffFactor);
+  _initialY = static_cast<unsigned int>(static_cast<double>(_height) * yOffFactor);
 }
 
 ThreadGrid::~ThreadGrid()

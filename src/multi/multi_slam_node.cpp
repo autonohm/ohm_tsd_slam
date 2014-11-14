@@ -17,5 +17,6 @@ int main(int argc, char** argv)
   LOGMSG_CONF("slamlog.log", obvious::Logger::file_off|obvious::Logger::screen_off, DBG_DEBUG, DBG_ERROR);
 
   ohm_tsd_slam::MultiSlamNode multiSlamNode;
+  multiSlamNode.start();
 
 }

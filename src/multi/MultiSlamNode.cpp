@@ -13,10 +13,12 @@
 #include <ros/ros.h>
 
 #include <string>
-#include <strstream>
+#include <sstream>
 #include <iostream>
+#include <unistd.h>
 
 #define INIT_PSHS 1
+#define THREAD_TERM_MS 1   //time in ms waiting for thread to terminate
 
 namespace ohm_tsd_slam
 {
@@ -25,12 +27,12 @@ MultiSlamNode::MultiSlamNode()
 {
   ros::NodeHandle prvNh("~");
   std::string strVar;
-  int octaveFactor = 0;
-  double cellsize = 0.0;
-  double dVar      = 0;
-  int iVar         = 0;
+  int octaveFactor        = 0;
+  double cellsize         = 0.0;
+  double dVar             = 0;
+  int iVar                = 0;
   double truncationRadius = 0.0;
-  double rateVar = 0.0;
+  double rateVar          = 0.0;
 
   prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
   prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
@@ -51,8 +53,7 @@ MultiSlamNode::MultiSlamNode()
     uiVar = 10;
   }
 
-
-  _grid=new obvious::TsdGrid(cellsize, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(uiVar));  //obvious::LAYOUT_8192x8192
+  _grid=new obvious::TsdGrid(cellsize, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(uiVar));
   _grid->setMaxTruncation(truncationRadius * cellsize);
 
   unsigned int cellsPerSide = pow(2, uiVar);
@@ -60,12 +61,8 @@ MultiSlamNode::MultiSlamNode()
   double sideLength = static_cast<double>(cellsPerSide) * cellsize;
   std::cout << " cells, representating "<< sideLength << "x" << sideLength << "m^2" << std::endl;
 
-  //    _sensor=NULL;
-  //    _mask=NULL;
-  //    _localizer=NULL;
-
   _threadMapping = new ThreadMapping(_grid);
-  _threadGrid    = new ThreadGrid(_grid,_nh, &_pubMutex, *this);
+  _threadGrid    = new ThreadGrid(_grid,_nh, &_pubMutex, _xOffFactor, _yOffFactor);
 
   prvNh.param<int>("robot_nbr", iVar, 1);
   unsigned int robotNbr = static_cast<unsigned int>(iVar);
@@ -77,7 +74,6 @@ MultiSlamNode::MultiSlamNode()
     std::stringstream sstream;
     sstream << "robot";
     sstream << i << "/namespace";
-    std::cout << __PRETTY_FUNCTION__ << " looking up " << sstream.str() << std::endl;
     std::string dummy = sstream.str();
     prvNh.param(dummy, nameSpace, std::string("default_ns"));
     threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_pubMutex, nameSpace, _xOffFactor, _yOffFactor);
@@ -92,15 +88,23 @@ MultiSlamNode::~MultiSlamNode()
   for(std::vector<ThreadLocalize*>::iterator iter = _localizers.begin(); iter < _localizers.end(); iter++)
   {
     (*iter)->terminateThread();
+    while((*iter)->alive(THREAD_TERM_MS))
+      usleep(THREAD_TERM_MS);
     delete *iter;
   }
   _threadGrid->terminateThread();
+  while(_threadGrid->alive(THREAD_TERM_MS))
+     usleep(THREAD_TERM_MS);
+  delete _threadGrid;
   _threadMapping->terminateThread();
+  while(_threadMapping->alive(THREAD_TERM_MS))
+    usleep(THREAD_TERM_MS);
+  delete _threadMapping;
 }
 
 void MultiSlamNode::start(void)
 {
-
+  this->run();
 }
 
 void MultiSlamNode::run(void)
@@ -118,15 +122,6 @@ void MultiSlamNode::run(void)
     }
     _loopRate->sleep();
   }
-}
-
-void MultiSlamNode::initPush(obvious::SensorPolar2D* sensor)
-{
-  for(unsigned int i = 0; i < INIT_PSHS; i++)
-  {
-    _threadMapping->queuePush(sensor);
-  }
-
 }
 
 } //end namespace

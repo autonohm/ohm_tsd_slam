@@ -120,12 +120,12 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
     _threadMapping->queuePush(_sensor);
 
 
-  _localizer=new Localization(_grid, _threadMapping, _nh, &_pubMutex, *this);
+  _localizer=new Localization(_grid, _threadMapping, &_pubMutex, _xOffFactor, _yOffFactor);
 
   for(int i=0; i<INIT_PSHS; i++)
     _threadMapping->queuePush(_sensor);
 
-  _threadGrid=new ThreadGrid(_grid, _nh, &_pubMutex, *this);
+  _threadGrid=new ThreadGrid(_grid, _nh, &_pubMutex, _xOffFactor, _yOffFactor);
 
   _initialized=true;
 }

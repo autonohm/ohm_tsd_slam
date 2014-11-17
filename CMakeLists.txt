@@ -116,13 +116,13 @@ link_directories(
 # )
 
 ## Declare a cpp executable
-#add_executable(slam_node src/slam_node.cpp
-#                                 src/SlamNode.cpp
-#                                 src/Localization.cpp
-#                                 src/ThreadSLAM.cpp
-#                                 src/ThreadMapping.cpp
-#                                 src/ThreadGrid.cpp
-#                                 )
+add_executable(slam_node src/slam_node.cpp
+                                 src/SlamNode.cpp
+                                 src/Localization.cpp
+                                 src/ThreadSLAM.cpp
+                                 src/ThreadMapping.cpp
+                                 src/ThreadGrid.cpp
+                                 )
 
 add_executable(multi_slam_node src/multi/multi_slam_node.cpp
                                src/multi/MultiSlamNode.cpp
@@ -141,17 +141,17 @@ add_executable(multi_slam_node src/multi/multi_slam_node.cpp
 # target_link_libraries(ohm_tsd_slam_node
 #   ${catkin_LIBRARIES}
 # )
-#target_link_libraries(slam_node
-#                                        ${catkin_LIBRARIES}
-#                                        obvision
-#                                        obcore
-#                                        gsl
-#                                        gslcblas
-#                                        ann
-#                                        flann
-#                                        ${Boost_LIBRARIES}
-#                                        )
-#                                        
+target_link_libraries(slam_node
+                                        ${catkin_LIBRARIES}
+                                        obvision
+                                        obcore
+                                        gsl
+                                        gslcblas
+                                        ann
+                                        flann
+                                        ${Boost_LIBRARIES}
+                                        )
+                                        
 target_link_libraries(multi_slam_node
                                         ${catkin_LIBRARIES}
                                         obvision

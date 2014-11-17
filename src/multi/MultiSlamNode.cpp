@@ -80,7 +80,6 @@ MultiSlamNode::MultiSlamNode()
     _localizers.push_back(threadLocalize);
     std::cout << __PRETTY_FUNCTION__ << " started thread for " << nameSpace << std::endl;
   }
-  this->run();
 }
 
 MultiSlamNode::~MultiSlamNode()
@@ -111,7 +110,6 @@ void MultiSlamNode::run(void)
 {
   ros::Time lastMap        = ros::Time::now();
   ros::Duration durLastMap = ros::Duration(_gridPublishInterval);
-  //std::cout << __PRETTY_FUNCTION__ << " waiting for first laser scan to initialize node...\n";
   while(ros::ok())
   {
     ros::Time curTime = ros::Time::now();

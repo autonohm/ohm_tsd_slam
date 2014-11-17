@@ -72,10 +72,6 @@ void ThreadLocalize::eventLoop(void)
     {
       _localizer->localize(_sensor);
     }
-    else
-    {
-      //toDo: maybe publish pose only ?
-    }
     _newScan = false;
   }
 }

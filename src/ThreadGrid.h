@@ -2,7 +2,6 @@
 #define THREADGRID_H_
 
 #include "ThreadSLAM.h"
-#include "MultiSlamNode.h"
 
 #include "obvision/reconstruct/grid/TsdGrid.h"
 

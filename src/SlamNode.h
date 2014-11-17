@@ -8,12 +8,13 @@
 #ifndef SLAMNODE_H_
 #define SLAMNODE_H_
 
+#include "SlamBase.h"
+
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 
 #include <vector>
 
-#include "obvision/reconstruct/grid/TsdGrid.h"
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obcore/base/Logger.h"
 
@@ -40,7 +41,7 @@ class ThreadGrid;
  * @brief Main node management of the 2D SLAM
  * @author Philipp Koch
  */
-class SlamNode
+class SlamNode : public SlamBase
 {
 public:
 
@@ -59,20 +60,6 @@ public:
    * Method to start the SLAM
    */
   void start(void);
-
-  /**
-   * xOffFactor
-   * Method to read out x off set factor
-   * @return x offset
-   */
-  double xOffFactor(void)const;
-
-  /**
-   * yOffFactor
-   * Method to read out y off set factor
-   * @return y offset
-   */
-  double yOffFactor(void)const;
 
 private:
 
@@ -99,7 +86,7 @@ private:
   /**
    * Main node handle
    */
-  ros::NodeHandle _nh;
+  //ros::NodeHandle _nh;
 
   /**
    * Laser subscriber
@@ -114,7 +101,7 @@ private:
   /**
    * Representation
    */
-  obvious::TsdGrid* _grid;
+  //obvious::TsdGrid* _grid;
 
   /**
    * obvious::Sensor instance containing data and pose
@@ -134,57 +121,52 @@ private:
   /**
    * Mapping thread instance
    */
-  ThreadMapping* _threadMapping;
+  //ThreadMapping* _threadMapping;
 
   /**
    * Grid thread instance
    */
-  ThreadGrid* _threadGrid;
+  //ThreadGrid* _threadGrid;
 
   /**
    * Publishing mutex
    */
-  boost::mutex _pubMutex;
+  //boost::mutex _pubMutex;
 
   /**
    * X starting offset factor
    */
-  double _xOffFactor;
+  //double _xOffFactor;
 
   /**
    * Y starting offset factor
    */
-  double _yOffFactor;
+  //double _yOffFactor;
 
   /**
    * Starting yaw angle
    */
-  double _yawOffset;
-
-  /**
-   * True in case laser input is range filtered
-   */
-  bool _rangeFilter;
+  //double _yawOffset;
 
   /**
    * Minimum range threshold
    */
-  float _minRange;
+  //float _minRange;
 
   /**
    * Maximum range threshold
    */
-  float _maxRange;
+  double _maxRange;
 
   /**
    * Time interval between occupancy grid
    */
-  double _gridPublishInterval;
+  //double _gridPublishInterval;
 
   /**
    * Desired loop rate
    */
-  double _loopRate;
+  //double _loopRate;
 };
 
 } /* namespace ohm_tsdSlam */

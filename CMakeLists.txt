@@ -118,6 +118,7 @@ link_directories(
 ## Declare a cpp executable
 add_executable(slam_node src/slam_node.cpp
                                  src/SlamNode.cpp
+                                 src/SlamBase.cpp
                                  src/Localization.cpp
                                  src/ThreadSLAM.cpp
                                  src/ThreadMapping.cpp
@@ -126,6 +127,7 @@ add_executable(slam_node src/slam_node.cpp
 
 add_executable(multi_slam_node src/multi/multi_slam_node.cpp
                                src/multi/MultiSlamNode.cpp
+                               src/SlamBase.cpp
                                src/Localization.cpp
                                src/multi/ThreadLocalize.cpp
                                src/ThreadSLAM.cpp

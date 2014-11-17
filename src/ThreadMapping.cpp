@@ -1,5 +1,6 @@
 #include "ThreadMapping.h"
 #include "obcore/base/Logger.h"
+#include "SlamNode.h"
 
 namespace ohm_tsd_slam
 {

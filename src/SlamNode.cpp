@@ -16,80 +16,41 @@ SlamNode::SlamNode(void)
 {
   ros::NodeHandle prvNh("~");
   std::string strVar;
-  int octaveFactor = 0;
-  double cellside = 0.0;
-  double dVar      = 0;
-  int iVar         = 0;
-  double truncationRadius = 0.0;
   prvNh.param("laser_topic", strVar, std::string("simon/scan"));
   _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
-  prvNh.param<double>("x_off_factor", _xOffFactor, 0.2);
-  prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
-  prvNh.param<double>("yaw_start_offset", _yawOffset, 0.0);
-  prvNh.param<int>("cell_octave_factor", octaveFactor, 10);
-  prvNh.param<double>("cellsize", cellside, 0.025);
-  prvNh.param<int>("truncation_radius", iVar, 3);
-  truncationRadius = static_cast<double>(iVar);
-  prvNh.param<bool>("range_filter", _rangeFilter, false);
-  prvNh.param<double>("min_range", dVar, 0.01);
-  _minRange = static_cast<float>(dVar);
-  prvNh.param<double>("max_range", dVar, 30.0);
-  _maxRange = static_cast<float>(dVar);
-  prvNh.param<double>("occ_grid_time_interval", _gridPublishInterval, 2.0);
-  prvNh.param<double>("loop_rate", _loopRate, 40.0);
-
-  unsigned int uiVar = static_cast<unsigned int>(octaveFactor);
-  if(uiVar > 15)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " error! Unknown cell_octave_factor -> set to default!" << std::endl;
-    uiVar = 10;
-  }
+  prvNh.param<double>("max_range", _maxRange, 30.0);
   _initialized=false;
-
-  _grid=new obvious::TsdGrid(cellside, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(uiVar));  //obvious::LAYOUT_8192x8192
-  _grid->setMaxTruncation(truncationRadius * cellside);
-
-  unsigned int cellsPerSide = pow(2, uiVar);
-  std::cout << __PRETTY_FUNCTION__ << " creating representation with " << cellsPerSide << "x" << cellsPerSide;
-  double sideLength = static_cast<double>(cellsPerSide) * cellside;
-  std::cout << " cells, representating "<< sideLength << "x" << sideLength << "m^2" << std::endl;
-
   _sensor=NULL;
   _mask=NULL;
   _localizer=NULL;
-
-  _threadMapping=NULL;
-  _threadGrid=NULL;
 }
 
 SlamNode::~SlamNode()
 {
   if(_initialized)
   {
-    _threadMapping->terminateThread();
     _threadGrid->terminateThread();
+    while(_threadGrid->alive(THREAD_TERM_MS))
+      usleep(THREAD_TERM_MS);
     delete _threadGrid;
+    _threadMapping->terminateThread();
+    while(_threadMapping->alive(THREAD_TERM_MS))
+      usleep(THREAD_TERM_MS);
     delete _threadMapping;
   }
-  if(_localizer) delete _localizer;
-  if(_grid) delete _grid;
-  if(_sensor) delete _sensor;
-  if(_mask) delete [] _mask;
+  if(_localizer)
+    delete _localizer;
+  if(_grid)
+    delete _grid;
+  if(_sensor)
+    delete _sensor;
+  if(_mask)
+    delete [] _mask;
 }
 
 void SlamNode::start(void)
 {
   this->run();
-}
-
-double SlamNode::xOffFactor(void)const
-{
-  return _xOffFactor;
-}
-
-double SlamNode::yOffFactor(void)const
-{
-  return _yOffFactor;
 }
 
 void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
@@ -134,7 +95,6 @@ void SlamNode::run(void)
 {
   ros::Time lastMap=ros::Time::now();
   ros::Duration durLastMap=ros::Duration(_gridPublishInterval);
-  ros::Rate rate(_loopRate);
   std::cout << __PRETTY_FUNCTION__ << " waiting for first laser scan to initialize node...\n";
   while(ros::ok())
   {
@@ -148,7 +108,7 @@ void SlamNode::run(void)
         lastMap=ros::Time::now();
       }
     }
-    rate.sleep();
+    _loopRate->sleep();
   }
 }
 
@@ -163,10 +123,7 @@ void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
   }
   for(unsigned int i=0;i<scan.ranges.size();i++)
   {
-
-    _mask[i]=!isnan(scan.ranges[i])&&!isinf(scan.ranges[i])&&(fabs(scan.ranges[i])>10e-6);
-    if((_rangeFilter)&&_mask[i])
-      _mask[i]=(scan.ranges[i]>_minRange)&&(scan.ranges[i]<_maxRange);
+    _mask[i]=!isnan(scan.ranges[i]);
   }
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   _sensor->setRealMeasurementMask(_mask);

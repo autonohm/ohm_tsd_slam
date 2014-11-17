@@ -2,17 +2,19 @@
 #define THREADMAPPING_H_
 
 #include "ThreadSLAM.h"
-#include "SlamNode.h"
 
 #include "sensor_msgs/LaserScan.h"
 
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
+#include "obvision/reconstruct/grid/TsdGrid.h"
 
 #include <boost/thread.hpp>
 #include <queue>
 
 namespace ohm_tsd_slam
 {
+
+class SlamNode;
 
 /**
  * @class ThreadMapping

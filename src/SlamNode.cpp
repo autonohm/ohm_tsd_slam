@@ -12,6 +12,8 @@
 #include "obcore/math/mathbase.h"
 #include <unistd.h>
 
+#define DEBUG
+
 namespace ohm_tsd_slam
 {
 SlamNode::SlamNode(void)
@@ -58,11 +60,11 @@ SlamNode::SlamNode(void)
   double sideLength = static_cast<double>(cellsPerSide) * cellside;
   std::cout << " cells, representating "<< sideLength << "x" << sideLength << "m^2" << std::endl;
 
-  _sensor=NULL;
-  _localizer=NULL;
-
-  _threadMapping=NULL;
-  _threadGrid=NULL;
+  _sensor        = NULL;
+  _mask          = NULL;
+  _localizer     = NULL;
+  _threadMapping = NULL;
+  _threadGrid    = NULL;
 }
 
 SlamNode::~SlamNode()
@@ -74,9 +76,12 @@ SlamNode::~SlamNode()
     delete _threadGrid;
     delete _threadMapping;
   }
-  if(_localizer) delete _localizer;
-  if(_grid) delete _grid;
-  if(_sensor) delete _sensor;
+  if(_localizer)
+    delete _localizer;
+  if(_grid)
+    delete _grid;
+  if(_sensor)
+    delete _sensor;
 }
 
 void SlamNode::start(void)
@@ -96,8 +101,18 @@ double SlamNode::yOffFactor(void)const
 
 void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
 {
-  _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange), static_cast<double>(_minRange), static_cast<double>(_lowReflectivityRange));
+  _sensor = new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange), static_cast<double>(_minRange), static_cast<double>(_lowReflectivityRange));
   _sensor->setRealMeasurementData(initScan.ranges, 1.0);
+  _mask = new bool[initScan.ranges.size()];
+
+  for(unsigned int i = 0; i < initScan.ranges.size(); i++)
+  {
+    if(isnan(initScan.ranges[i]))
+      _mask[i] = false;
+    else
+      _mask[i] = true;
+  }
+  _sensor->setRealMeasurementMask(_mask);
 
   double phi       = _yawOffset;
   double gridWidth =_grid->getCellsX()*_grid->getCellSize();
@@ -147,21 +162,23 @@ void SlamNode::run(void)
 
 void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
 {
-  sensor_msgs::LaserScan tmpScan = scan;
-  for(std::vector<float>::iterator iter = tmpScan.ranges.begin(); iter != tmpScan.ranges.end(); iter++)
-    if(isnan(*iter))
-    {
-      *iter = 0.0;
-    }
   if(!_initialized)
   {
     std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";
-    this->initialize(tmpScan);
+    this->initialize(scan);
     std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
     return;
   }
-  _sensor->setRealMeasurementData(tmpScan.ranges, 1.0);
-  _sensor->resetMask();
+  for(unsigned int i = 0; i < scan.ranges.size(); i++)
+  {
+    if(isnan(scan.ranges[i]))
+      _mask[i] = false;
+    else
+      _mask[i] = true;
+  }
+  _sensor->setRealMeasurementData(scan.ranges, 1.0);
+  _sensor->setRealMeasurementMask(_mask);
+  //_sensor->resetMask();
   _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _localizer->localize(_sensor);
 }

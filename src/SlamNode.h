@@ -121,6 +121,8 @@ private:
    */
   obvious::SensorPolar2D* _sensor;
 
+  bool* _mask;
+
   /**
    * Localization instance
    */

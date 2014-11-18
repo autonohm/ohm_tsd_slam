@@ -19,43 +19,29 @@ SlamNode::SlamNode(void)
   prvNh.param("laser_topic", strVar, std::string("simon/scan"));
   _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
   prvNh.param<double>("max_range", _maxRange, 30.0);
-  _initialized=false;
-  _sensor=NULL;
-  _mask=NULL;
-  _localizer=NULL;
+  _sensor      = NULL;
+  _mask        = NULL;
+  _localizer   = NULL;
 }
 
 SlamNode::~SlamNode()
 {
   if(_initialized)
   {
-    _threadGrid->terminateThread();
-    while(_threadGrid->alive(THREAD_TERM_MS))
-      usleep(THREAD_TERM_MS);
-    delete _threadGrid;
-    _threadMapping->terminateThread();
-    while(_threadMapping->alive(THREAD_TERM_MS))
-      usleep(THREAD_TERM_MS);
-    delete _threadMapping;
-  }
-  if(_localizer)
     delete _localizer;
-  if(_grid)
-    delete _grid;
-  if(_sensor)
     delete _sensor;
-  if(_mask)
     delete [] _mask;
+  }
 }
 
-void SlamNode::start(void)
-{
-  this->run();
-}
+//void SlamNode::start(void)
+//{
+//  this->run();
+//}
 
 void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
 {
-  if(!_mask) _mask=new bool[initScan.ranges.size()];
+  _mask=new bool[initScan.ranges.size()];
   for(unsigned int i=0;i<initScan.ranges.size();i++)
   {
     _mask[i]=!isnan(initScan.ranges[i])&&!isinf(initScan.ranges[i])&&(fabs(initScan.ranges[i])>10e-6);
@@ -93,30 +79,21 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
 
 void SlamNode::run(void)
 {
-  ros::Time lastMap=ros::Time::now();
-  ros::Duration durLastMap=ros::Duration(_gridPublishInterval);
   std::cout << __PRETTY_FUNCTION__ << " waiting for first laser scan to initialize node...\n";
   while(ros::ok())
   {
     ros::spinOnce();
     if(_initialized)
-    {
-      ros::Time curTime=ros::Time::now();
-      if((curTime-lastMap).toSec()>durLastMap.toSec())
-      {
-        _threadGrid->unblock();
-        lastMap=ros::Time::now();
-      }
-    }
-    _loopRate->sleep();
+      this->timedGridPub();
   }
+  _loopRate->sleep();
 }
 
 void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
 {
   if(!_initialized)
   {
-    std::cout << __PRETTY_FUNCTION__ << " received first scan. Initailize node...\n";
+    std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";
     this->initialize(scan);
     std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
     return;

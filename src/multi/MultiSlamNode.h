@@ -22,7 +22,7 @@ class MultiSlamNode : public SlamBase
 public:
   MultiSlamNode();
   virtual ~MultiSlamNode();
-  void start(void);
+ // void start(void);
 private:
   void run(void);
   void init(void);

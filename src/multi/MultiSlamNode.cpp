@@ -31,6 +31,7 @@ MultiSlamNode::MultiSlamNode()
 
   _threadMapping = new ThreadMapping(_grid);
   _threadGrid    = new ThreadGrid(_grid,_nh, &_pubMutex, _xOffFactor, _yOffFactor);
+  _initialized   = true;
 
   prvNh.param<int>("robot_nbr", iVar, 1);
   unsigned int robotNbr = static_cast<unsigned int>(iVar);
@@ -59,33 +60,19 @@ MultiSlamNode::~MultiSlamNode()
       usleep(THREAD_TERM_MS);
     delete *iter;
   }
-  _threadGrid->terminateThread();
-  while(_threadGrid->alive(THREAD_TERM_MS))
-    usleep(THREAD_TERM_MS);
-  delete _threadGrid;
-  _threadMapping->terminateThread();
-  while(_threadMapping->alive(THREAD_TERM_MS))
-    usleep(THREAD_TERM_MS);
-  delete _threadMapping;
-}
-
-void MultiSlamNode::start(void)
-{
-  this->run();
 }
 
 void MultiSlamNode::run(void)
 {
-  ros::Time lastMap        = ros::Time::now();
-  ros::Duration durLastMap = ros::Duration(_gridPublishInterval);
   while(ros::ok())
   {
-    ros::Time curTime = ros::Time::now();
-    if((curTime-lastMap).toSec()>durLastMap.toSec())
-    {
-      _threadGrid->unblock();
-      lastMap=ros::Time::now();
-    }
+//    ros::Time curTime = ros::Time::now();
+//    if((curTime-lastMap).toSec()>durLastMap.toSec())
+//    {
+//      _threadGrid->unblock();
+//      lastMap=ros::Time::now();
+//    }
+    this->timedGridPub();
     _loopRate->sleep();
   }
 }

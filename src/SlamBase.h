@@ -29,7 +29,10 @@ class SlamBase
 public:
   SlamBase();
   virtual ~SlamBase();
+  void start(void);
 protected:
+  virtual void run(void) = 0;
+  void timedGridPub(void);
   ros::NodeHandle _nh;
   obvious::TsdGrid* _grid;
   ThreadMapping* _threadMapping;
@@ -38,9 +41,10 @@ protected:
   double _xOffFactor;
   double _yOffFactor;
   double _yawOffset;
-  double _gridPublishInterval;
   double _rateVar;
   ros::Rate* _loopRate;
+  bool _initialized;
+  ros::Duration* _gridInterval;
 };
 
 } /* namespace ohm_tsd_slam */

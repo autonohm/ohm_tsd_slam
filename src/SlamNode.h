@@ -59,7 +59,7 @@ public:
    * start
    * Method to start the SLAM
    */
-  void start(void);
+  //void start(void);
 
 private:
 
@@ -96,7 +96,7 @@ private:
   /**
    * Initilized flag
    */
-  bool _initialized;
+  //bool _initialized;
 
   /**
    * Representation

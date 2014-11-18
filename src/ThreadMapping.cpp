@@ -1,6 +1,8 @@
 #include "ThreadMapping.h"
-#include "obcore/base/Logger.h"
 #include "SlamNode.h"
+
+#include "obcore/base/Logger.h"
+#include "obcore/math/mathbase.h"
 
 namespace ohm_tsd_slam
 {
@@ -58,6 +60,7 @@ void ThreadMapping::queuePush(obvious::SensorPolar2D* sensor)
   sensorLocal->setTransformation(sensor->getTransformation());
   sensorLocal->setRealMeasurementData(sensor->getRealMeasurementData());
   sensorLocal->setRealMeasurementMask(sensor->getRealMeasurementMask());
+  sensorLocal->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _sensors.push(sensorLocal);
   _pushMutex.unlock();
 

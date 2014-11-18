@@ -10,6 +10,8 @@
 #include "ThreadMapping.h"
 #include "ThreadGrid.h"
 
+#include "obcore/math/mathbase.h"
+
 namespace ohm_tsd_slam
 {
 SlamNode::SlamNode(void)
@@ -104,6 +106,7 @@ void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
   }
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   _sensor->setRealMeasurementMask(_mask);
+  _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _localizer->localize(_sensor);
 
 }

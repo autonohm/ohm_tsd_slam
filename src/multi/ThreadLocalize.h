@@ -59,6 +59,7 @@ private:
   double _gridHeight;
   double _xOffFactor;
   double _yOffFactor;
+  bool* _mask;
 };
 
 } /* namespace ohm_tsd_slam */

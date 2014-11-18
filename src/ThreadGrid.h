@@ -54,12 +54,6 @@ private:
    */
   bool getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res);
 
-//  /**
-//   * freeInitialArea
-//   * Method to empty footprint of robot
-//   */
-//  void freeInitialArea(void);
-
   /**
    * Occupancy grid
    */

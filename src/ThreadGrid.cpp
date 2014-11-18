@@ -52,12 +52,6 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   _gridPub          = nh.advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
   _getMapServ       = nh.advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
   _objInflateFactor = static_cast<unsigned int>(intVar);
-
-  _robotLength = static_cast<unsigned int>(robotLength / _cellSize + 0.5);
-  _robotWidth  = static_cast<unsigned int>(robotWidth  / _cellSize + 0.5);
-
-  _initialX = static_cast<unsigned int>(static_cast<double>(_width)  * xOffFactor);
-  _initialY = static_cast<unsigned int>(static_cast<double>(_height) * yOffFactor);
 }
 
 ThreadGrid::~ThreadGrid()
@@ -79,7 +73,7 @@ void ThreadGrid::eventLoop(void)
     raycasterMap.calcCoords(_grid, _gridCoords, NULL, &mapSize, _occGridContent);
     if(mapSize == 0)
     {
-      std::cout << __PRETTY_FUNCTION__ << " error! Raycasting returned with no coordinates!\n";
+      std::cout << __PRETTY_FUNCTION__ << " Warning! Raycasting returned with no coordinates, map contains no data yet!\n";
     }
     _occGrid->header.stamp       = ros::Time::now();
     _occGrid->header.seq         = frameId++;
@@ -90,7 +84,6 @@ void ThreadGrid::eventLoop(void)
     {
       _occGrid->data[i] = _occGridContent[i];
     }
-    //this->freeInitialArea();
     for(unsigned int i = 0; i < mapSize / 2; i++)
     {
       double x       = _gridCoords[2*i];
@@ -128,20 +121,6 @@ bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::Ge
   _occGrid->header.seq=frameId++;
   _occGrid->info.map_load_time=ros::Time::now();
   return(true);
-}
-
-void ThreadGrid::freeInitialArea(void)
-{
-  unsigned int yBorder = _initialY + _robotLength / 2;
-  unsigned int xBorder = _initialX + _robotWidth  / 2;
-
-  for(unsigned int i = _initialY - _robotLength / 2; i < yBorder; ++i)
-  {
-    for(unsigned int j = _initialX - _robotWidth / 2; j < xBorder; ++j)
-    {
-      _occGrid->data[i * _width + j] = 0;
-    }
-  }
 }
 
 } /* namespace */

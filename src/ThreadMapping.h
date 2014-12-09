@@ -41,7 +41,12 @@ public:
    */
   void queuePush(obvious::SensorPolar2D* sensor);
 
-  bool initialized(void);
+  /**
+   * initPush
+   * Method to initialize representation with sensor data
+   * @param sensor Input data
+   */
+  void initPush(obvious::SensorPolar2D* sensor);
 
 protected:
 
@@ -67,8 +72,6 @@ private:
    * Push mutex for queue
    */
   boost::mutex _pushMutex;
-
-  bool _initialized;
 };
 
 } /* namespace */

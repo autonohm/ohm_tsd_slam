@@ -49,7 +49,7 @@ public:
    * @param pubMutex Mutex synchronizing ros publishing
    * @param parentNode Pointer to main node instance
    */
-  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex, SlamNode& parentNode);
+  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor);
 
   /**
    * Destructor
@@ -81,6 +81,9 @@ private:
    * @return necessary
    */
   bool isPoseChangeSignificant(obvious::Matrix* lastPose, obvious::Matrix* curPose);
+
+  const double _gridOffSetX;
+  const double _gridOffSetY;
 
   /**
    * Pointer to main node instance

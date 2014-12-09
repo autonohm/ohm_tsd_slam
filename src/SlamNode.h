@@ -19,12 +19,6 @@
 
 #include <boost/thread.hpp>
 
-#define CELLSIZE 0.025   //toDo: Launch file parameters
-#define TRUNCATION_RADIUS 3.0
-#define MAX_RANGE 30.0
-#define MIN_RANGE 0.01
-#define THETA_INIT 0.0   //used in degrees
-#define MAP_T 2.0        //time between map generations
 #define INIT_PSHS 1      //number of initial pushes into the grid
 #define LAS_OFFS_X -0.19 //offset of the laser scanner to the base footprint
 
@@ -59,20 +53,6 @@ public:
    * Method to start the SLAM
    */
   void start(void);
-
-  /**
-   * xOffFactor
-   * Method to read out x off set factor
-   * @return x offset
-   */
-  double xOffFactor(void)const;
-
-  /**
-   * yOffFactor
-   * Method to read out y off set factor
-   * @return y offset
-   */
-  double yOffFactor(void)const;
 
 private:
 
@@ -157,24 +137,19 @@ private:
   double _yawOffset;
 
   /**
-   * True in case laser input is range filtered
-   */
-  bool _rangeFilter;
-
-  /**
    * Minimum range threshold
    */
-  float _minRange;
+  double _minRange;
 
   /**
    * Maximum range threshold
    */
-  float _maxRange;
+  double _maxRange;
 
   /**
    * Maximum range threshold
    */
-  float _lowReflectivityRange;
+  double _lowReflectivityRange;
 
 
   /**
@@ -186,6 +161,10 @@ private:
    * Desired loop rate
    */
   double _loopRate;
+
+  double _footPrintWidth;
+
+  double _footPrintHeight;
 };
 
 } /* namespace ohm_tsdSlam */

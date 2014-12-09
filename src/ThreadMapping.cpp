@@ -8,7 +8,6 @@ namespace ohm_tsd_slam
 ThreadMapping::ThreadMapping(obvious::TsdGrid* grid)
 {
   _grid = grid;
-  _initialized = false;
 }
 
 ThreadMapping::~ThreadMapping()
@@ -16,13 +15,12 @@ ThreadMapping::~ThreadMapping()
   _thread->join();
 }
 
-bool ThreadMapping::initialized(void)
+void ThreadMapping::initPush(obvious::SensorPolar2D* sensor)
 {
-  bool var = false;
   _pushMutex.lock();
-  var =  _initialized;
+  for(unsigned int i = 0; i < INIT_PSHS; i++)
+    _grid->push(sensor);
   _pushMutex.unlock();
-  return var;
 }
 
 void ThreadMapping::eventLoop(void)
@@ -37,7 +35,6 @@ void ThreadMapping::eventLoop(void)
       _pushMutex.lock();
       delete _sensors.front();
       _sensors.pop();
-      _initialized = true;
       _pushMutex.unlock();
     }
   }

@@ -16,7 +16,9 @@
 namespace ohm_tsd_slam
 {
 
-Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex, SlamNode& parentNode)
+Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor):
+    _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+    _gridOffSetY(-1.0 * grid->getCellsY() * grid->getCellSize() * yOffFactor)
 {
   _pubMutex         = pubMutex;
   _mapper           = mapper;
@@ -34,8 +36,8 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _trnsMax          = TRNS_THRESH;   //toDo: config file
   _rotMax           = ROT_THRESH;    //toDo: config file
   _lastPose         = new obvious::Matrix(3, 3);
-  _xOffFactor       = parentNode.xOffFactor();
-  _yOffFactor       = parentNode.yOffFactor();
+  _xOffFactor       = xOffFactor;
+  _yOffFactor       = yOffFactor;
 
   //configure ICP
   _filterBounds     = new obvious::OutOfBoundsFilter2D(grid->getMinX(), grid->getMaxX(), grid->getMinY(), grid->getMaxY());
@@ -46,21 +48,19 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _icp->setMaxRMS(0.0);
   _icp->setMaxIterations(ITERATIONS);
   _icp->setConvergenceCounter(ITERATIONS);
-  //_icp->activateTrace();
 
   std::string poseTopic;
   std::string tfBaseFrameId;
   std::string tfChildFrameId;
   ros::NodeHandle prvNh("~");
-  prvNh.param("pose_topic", poseTopic, std::string("pose"));
-  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
-  prvNh.param("tf_child_frame", tfChildFrameId, std::string("base_footprint"));
+  prvNh.param        ("pose_topic", poseTopic, std::string("pose"));
+  prvNh.param        ("tf_base_frame", tfBaseFrameId, std::string("/map"));
+  prvNh.param        ("tf_child_frame", tfChildFrameId, std::string("laser"));
   prvNh.param<double>("sensor_static_offset_x", _lasXOffset, -0.19);
 
   _posePub = nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
 
   _poseStamped.header.frame_id = tfBaseFrameId;
-
   _tf.frame_id_                = tfBaseFrameId;
   _tf.child_frame_id_          = tfChildFrameId;
 }
@@ -154,9 +154,9 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     sensor->transform(&T);
     obvious::Matrix curPose = sensor->getTransformation();
     double curTheta = this->calcAngle(&curPose);
-    double posX=curPose(0, 2) + std::cos(curTheta) * _lasXOffset -_grid->getCellsX()*_grid->getCellSize()*_xOffFactor;
-    double posY=curPose(1, 2) + std::sin(curTheta) * _lasXOffset -_grid->getCellsY()*_grid->getCellSize()*_yOffFactor;
-    _poseStamped.header.stamp = ros::Time::now();
+    double posX = curPose(0, 2) + _gridOffSetX;
+    double posY = curPose(1, 2) + _gridOffSetY;
+    _poseStamped.header.stamp    = ros::Time::now();
     _poseStamped.pose.position.x = posX;
     _poseStamped.pose.position.y = posY;
     _poseStamped.pose.position.z = 0.0;
@@ -170,7 +170,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
     _tf.setRotation(quat);
 
-    _pubMutex->lock();   //toDo: test if this mutex is necessary (other threads use this too)
+    _pubMutex->lock();
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);
     _pubMutex->unlock();

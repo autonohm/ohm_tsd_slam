@@ -10,7 +10,7 @@
 namespace ohm_tsd_slam
 {
 
-ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, SlamNode& parentNode)
+ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor)
 {
   _pubMutex       = pubMutex;
   _grid           = grid;
@@ -30,8 +30,8 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   _occGrid->info.origin.orientation.x = 0.0;
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;
-  _occGrid->info.origin.position.x=0.0-_grid->getCellsX()*_grid->getCellSize()*parentNode.xOffFactor();
-  _occGrid->info.origin.position.y=0.0-_grid->getCellsY()*_grid->getCellSize()*parentNode.yOffFactor();
+  _occGrid->info.origin.position.x = 0.0 - _grid->getCellsX() * _grid->getCellSize() * xOffFactor;
+  _occGrid->info.origin.position.y = 0.0 - _grid->getCellsY() * _grid->getCellSize() * yOffFactor;
   _occGrid->info.origin.position.z = 0.0;
   _occGrid->data.resize(_grid->getCellsX() * _grid->getCellsY());
 
@@ -56,8 +56,8 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   _robotLength = static_cast<unsigned int>(robotLength / _cellSize + 0.5);
   _robotWidth  = static_cast<unsigned int>(robotWidth  / _cellSize + 0.5);
 
-  _initialX = static_cast<unsigned int>(static_cast<double>(_width)  * parentNode.xOffFactor());
-  _initialY = static_cast<unsigned int>(static_cast<double>(_height) * parentNode.yOffFactor());
+  _initialX = static_cast<unsigned int>(static_cast<double>(_width)  * xOffFactor);
+  _initialY = static_cast<unsigned int>(static_cast<double>(_height) * yOffFactor);
 }
 
 ThreadGrid::~ThreadGrid()

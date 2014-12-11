@@ -16,11 +16,10 @@
 namespace ohm_tsd_slam
 {
 
-Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor):
+Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor):
     _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
     _gridOffSetY(-1.0 * grid->getCellsY() * grid->getCellSize() * yOffFactor)
 {
-  _pubMutex         = pubMutex;
   _mapper           = mapper;
   _grid             = grid;
 
@@ -144,10 +143,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _tf.setOrigin(tf::Vector3(NAN, NAN, NAN));
     _tf.setRotation(quat);
 
-    _pubMutex->lock();
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);
-    _pubMutex->unlock();
   }
   else            //transformation valid -> transform sensor
   {
@@ -170,10 +167,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
     _tf.setRotation(quat);
 
-    _pubMutex->lock();
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);
-    _pubMutex->unlock();
     if(this->isPoseChangeSignificant(_lastPose, &curPose))
     {
       *_lastPose = curPose;

@@ -49,7 +49,7 @@ public:
    * @param pubMutex Mutex synchronizing ros publishing
    * @param parentNode Pointer to main node instance
    */
-  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor);
+  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor);
 
   /**
    * Destructor
@@ -179,11 +179,6 @@ private:
    * Ros current transform
    */
   tf::StampedTransform _tf;
-
-  /**
-   * Pointer to publishing mutex
-   */
-  boost::mutex* _pubMutex;
 
   /**
    * Starting x offset

@@ -105,8 +105,8 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
     std::cout << __PRETTY_FUNCTION__ << " warning! Footprint could not be freed!\n";
   _threadMapping->initPush(_sensor);
 
-  _localizer   = new Localization(_grid, _threadMapping, _nh, &_pubMutex, _xOffFactor, _yOffFactor);
-  _threadGrid  = new ThreadGrid(_grid, _nh, &_pubMutex, _xOffFactor, _yOffFactor);
+  _localizer   = new Localization(_grid, _threadMapping, _nh, _xOffFactor, _yOffFactor);
+  _threadGrid  = new ThreadGrid(_grid, _nh, _xOffFactor, _yOffFactor);
   _initialized = true;
 }
 

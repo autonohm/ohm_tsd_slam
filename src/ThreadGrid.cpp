@@ -10,9 +10,8 @@
 namespace ohm_tsd_slam
 {
 
-ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor)
+ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double xOffFactor, const double yOffFactor)
 {
-  _pubMutex       = pubMutex;
   _grid           = grid;
   _occGridContent = new char[grid->getCellsX() * grid->getCellsY()];
   _gridCoords     = new double[grid->getCellsX() * grid->getCellsY()];
@@ -39,25 +38,15 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   std::string mapTopic;
   std::string getMapTopic;
   int intVar         = 0;
-  double robotLength = 0.0;
-  double robotWidth  = 0.0;
 
   prvNh.param("map_topic", mapTopic, std::string("map"));
   prvNh.param("get_map_topic", getMapTopic, std::string("map"));
   prvNh.param<int>("object_inflation_factor", intVar, 2);
   prvNh.param<bool>("use_object_inflation", _objectInflation, false);
-  prvNh.param<double>("robot_length", robotLength, 0.40);
-  prvNh.param<double>("robot_width",  robotWidth,  0.40);
 
   _gridPub          = nh.advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
   _getMapServ       = nh.advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
   _objInflateFactor = static_cast<unsigned int>(intVar);
-
-  _robotLength = static_cast<unsigned int>(robotLength / _cellSize + 0.5);
-  _robotWidth  = static_cast<unsigned int>(robotWidth  / _cellSize + 0.5);
-
-  _initialX = static_cast<unsigned int>(static_cast<double>(_width)  * xOffFactor);
-  _initialY = static_cast<unsigned int>(static_cast<double>(_height) * yOffFactor);
 }
 
 ThreadGrid::~ThreadGrid()
@@ -90,7 +79,6 @@ void ThreadGrid::eventLoop(void)
     {
       _occGrid->data[i] = _occGridContent[i];
     }
-    this->freeInitialArea();
     for(unsigned int i = 0; i < mapSize / 2; i++)
     {
       double x       = _gridCoords[2*i];
@@ -114,9 +102,7 @@ void ThreadGrid::eventLoop(void)
         }
       }
     }
-    _pubMutex->lock();
     _gridPub.publish(*_occGrid);
-    _pubMutex->unlock();
   }
 }
 
@@ -128,20 +114,6 @@ bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::Ge
   _occGrid->header.seq=frameId++;
   _occGrid->info.map_load_time=ros::Time::now();
   return(true);
-}
-
-void ThreadGrid::freeInitialArea(void)
-{
-  unsigned int yBorder = _initialY + _robotLength / 2;
-  unsigned int xBorder = _initialX + _robotWidth  / 2;
-
-  for(unsigned int i = _initialY - _robotLength / 2; i < yBorder; ++i)
-  {
-    for(unsigned int j = _initialX - _robotWidth / 2; j < xBorder; ++j)
-    {
-      _occGrid->data[i * _width + j] = 0;
-    }
-  }
 }
 
 } /* namespace */

@@ -63,8 +63,18 @@ void ThreadMapping::queuePush(obvious::SensorPolar2D* sensor)
   sensorLocal->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _sensors.push(sensorLocal);
   _pushMutex.unlock();
-
   this->unblock();
+}
+
+void ThreadMapping::posePush(obvious::Matrix& pose, const ros::Time& timeStamp, const std::string& nameSpace)
+{
+	_poseMutex.lock();
+	StampedPose* poseVar = new StampedPose;
+	poseVar->_pose = pose;
+	poseVar->_stamp = timeStamp;
+	poseVar->_nameSpace = nameSpace;
+	_robotPoses.push_back(poseVar);
+	_poseMutex.unlock();
 }
 
 } /* namespace */

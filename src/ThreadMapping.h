@@ -48,9 +48,11 @@ public:
   /**
    * initPush
    * method to init the grid from a certain pose. Is done by the CALLING thread
-   * @param sensor
+   * @param sensor initial data
    */
   void initPush(obvious::SensorPolar2D* sensor);
+
+  void posePush(obvious::Matrix& pose, const ros::Time& timeStamp, const std::string& nameSpace);
 
 protected:
 
@@ -61,6 +63,13 @@ protected:
   virtual void eventLoop(void);
 
 private:
+
+  struct StampedPose
+  {
+	  obvious::Matrix _pose;
+	  ros::Time       _stamp;
+	  std::string     _nameSpace;
+  };
 
   /**
    * Representation
@@ -78,6 +87,10 @@ private:
   boost::mutex _pushMutex;
 
   bool _initialized;
+
+  std::vector<StampedPose*> _robotPoses;
+
+  boost::mutex _poseMutex;
 };
 
 } /* namespace */

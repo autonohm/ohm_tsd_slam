@@ -64,11 +64,15 @@ protected:
 
 private:
 
+  void multiRobotPoseFilter(obvious::SensorPolar2D& sensor, const std::string& nameSpace);
+
   struct StampedPose
   {
 	  obvious::Matrix _pose;
 	  ros::Time       _stamp;
 	  std::string     _nameSpace;
+	  double          _height;
+	  double          _width;
   };
 
   /**

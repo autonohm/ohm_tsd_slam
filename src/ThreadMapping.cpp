@@ -77,4 +77,22 @@ void ThreadMapping::posePush(obvious::Matrix& pose, const ros::Time& timeStamp, 
 	_poseMutex.unlock();
 }
 
+void ThreadMapping::multiRobotPoseFilter(obvious::SensorPolar2D& sensor, const std::string& nameSpace)
+{
+  StampedPose* curData = NULL;
+  double curWidth      = 0.0;
+  double curHeight     = 0.0;
+  for(std::vector<StampedPose*>::iterator iter = _robotPoses.begin(); iter < _robotPoses.end(); iter++)
+  {
+    curData = *iter;
+    if(curData->_nameSpace == nameSpace)
+      continue;
+    curWidth  = curData->_width;
+    curHeight = curData->_height;
+    obvious::Matrix corners(4, 4);
+    corners(0, 0) = curWidth  / 2.0;
+    corners(0, 1) = curHeight / 2.0;
+  }
+}
+
 } /* namespace */

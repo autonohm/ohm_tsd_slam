@@ -80,7 +80,8 @@ void ThreadLocalize::eventLoop(void)
 
 void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
 {
-  _sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, static_cast<double>(_maxRange));
+  _sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, static_cast<double>(_maxRange), 0.0, 2.0); //toDo: launch parameters
+ // _sensor = new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange), static_cast<double>(_minRange), static_cast<double>(2.0));
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   _mask = new bool[scan.ranges.size()];
   for(unsigned int i=0;i<scan.ranges.size();i++)

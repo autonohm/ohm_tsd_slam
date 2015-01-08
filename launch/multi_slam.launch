@@ -1,6 +1,12 @@
 <launch>
   <node name = "multi_slam_node" pkg = "ohm_tsd_slam" type = "multi_slam_node" output = "screen">
   	<param name = "robot_nbr" type = "int" value = "2"/>
+      <param name = "cell_octave_factor"      type = "int"    value = "13"    />
+      <param name = "cellsize"                type = "double" value = "0.015" />
+      <param name = "min_range"               type = "double" value = "0.0"   />
+      <param name = "max_range"               type = "double" value = "30.0"  />
+      <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
+      <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />
   	
   	<param name = "robot0/namespace" type = "string" value = "georg"/>
   	<param name = "/georg/tf_child_frame" type = "string" value = "base_footprint"/>
@@ -12,6 +18,7 @@
 	<param name = "/simon/tf_child_frame" type = "string" value = "base_footprint"/>
 	<param name = "/simon/pose_topic" type = "string" value = "pose"/>
 	<param name = "/simon/x_offset" type = "double" value = "-0.25"/>
+	<param name = "/simon/yaw_offset" type = "double" value = "3.14"/>
 	<param name = "/simon/footprint_width" type = "double" value = "1.0"/>
 	<param name = "/simon/footprint_height" type = "double" value = "1.0"/>
 	 

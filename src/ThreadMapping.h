@@ -68,11 +68,11 @@ private:
 
   struct StampedPose
   {
-	  obvious::Matrix _pose;
-	  ros::Time       _stamp;
-	  std::string     _nameSpace;
-	  double          _height;
-	  double          _width;
+	  obvious::Matrix* _pose;
+	  ros::Time        _stamp;
+	  std::string      _nameSpace;
+	  double           _height;
+	  double           _width;
   };
 
   /**

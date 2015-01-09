@@ -166,6 +166,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _tf.stamp_ = ros::Time::now();
     _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
     _tf.setRotation(quat);
+    _tf.stamp_ = ros::Time::now();
 
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);

@@ -7,6 +7,9 @@
       <param name = "max_range"               type = "double" value = "30.0"  />
       <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
       <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />
+      <param name = "truncation_radius" type = "double" value = "3.0" />
+      <param name = "object_inflation_factor" type = "int" value = "3"/>
+      <param name = "use_object_inflation" type = "bool" value = "true" />
   	
   	<param name = "robot0/namespace" type = "string" value = "georg"/>
   	<param name = "/georg/tf_child_frame" type = "string" value = "base_footprint"/>
@@ -17,7 +20,7 @@
   	<param name = "robot1/namespace" type = "string" value = "simon"/>
 	<param name = "/simon/tf_child_frame" type = "string" value = "base_footprint"/>
 	<param name = "/simon/pose_topic" type = "string" value = "pose"/>
-	<param name = "/simon/x_offset" type = "double" value = "-0.25"/>
+	<param name = "/simon/x_offset" type = "double" value = "-0.5"/>
 	<param name = "/simon/yaw_offset" type = "double" value = "3.14"/>
 	<param name = "/simon/footprint_width" type = "double" value = "1.0"/>
 	<param name = "/simon/footprint_height" type = "double" value = "1.0"/>

@@ -58,7 +58,8 @@ void ThreadMapping::eventLoop(void)
 void ThreadMapping::queuePush(obvious::SensorPolar2D* sensor)
 {
   _pushMutex.lock();
-  obvious::SensorPolar2D* sensorLocal = new obvious::SensorPolar2D(sensor->getRealMeasurementSize(), sensor->getAngularResolution(), sensor->getPhiMin(), sensor->getMaximumRange());
+  obvious::SensorPolar2D* sensorLocal = new obvious::SensorPolar2D(sensor->getRealMeasurementSize(), sensor->getAngularResolution(), sensor->getPhiMin(),
+                                                                   sensor->getMaximumRange(), 0.01, 3.0);
   sensorLocal->setTransformation(sensor->getTransformation());
   sensorLocal->setRealMeasurementData(sensor->getRealMeasurementData());
   sensorLocal->setRealMeasurementMask(sensor->getRealMeasurementMask());

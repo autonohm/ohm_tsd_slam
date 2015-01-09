@@ -142,6 +142,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double deltaY = T(1,2);
   double trnsAbs = std::sqrt(deltaX * deltaX + deltaY * deltaY);
   double deltaPhi = this->calcAngle(&T);
+  _tf.stamp_ = ros::Time::now();
 
   if(deltaY > 0.1 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
   {

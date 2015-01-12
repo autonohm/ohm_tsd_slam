@@ -197,6 +197,7 @@ install(TARGETS slam_node multi_slam_node
  install(FILES
     launch/slam.launch
     launch/multi_slam.launch
+    launch/multi_slam_sim.launch
 #   # myfile2
    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
  )

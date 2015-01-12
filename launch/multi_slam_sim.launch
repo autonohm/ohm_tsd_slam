@@ -1,0 +1,50 @@
+<launch>
+  <node name = "multi_slam_node" pkg = "ohm_tsd_slam" type = "multi_slam_node" output = "screen">
+  	<param name = "robot_nbr" type = "int" value = "4"/>
+      <param name = "cell_octave_factor"      type = "int"    value = "13"    />
+      <param name = "cellsize"                type = "double" value = "0.015" />
+      <param name = "min_range"               type = "double" value = "0.0"   />
+      <param name = "max_range"               type = "double" value = "30.0"  />
+      <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
+      <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />
+      <param name = "truncation_radius" type = "double" value = "3.0" />
+      <param name = "object_inflation_factor" type = "int" value = "2"/>
+      <param name = "use_object_inflation" type = "bool" value = "true" />
+  	
+  	<param name = "robot0/namespace" type = "string" value = "robot0"/>
+  	<param name = "laser_topic" type = "string" value = "laser_0" />
+  	<param name = "/robot0/tf_child_frame" type = "string" value = "base_footprint"/>
+  	<param name = "/robot0/pose_topic" type = "string" value = "pose"/>
+	<param name = "/robot0/footprint_width" type = "double" value = "1.0"/>
+	<param name = "/robot0/footprint_height" type = "double" value = "1.0"/>
+  		
+  	<param name = "robot1/namespace" type = "string" value = "robot1"/>
+	<param name = "/robot1/tf_child_frame" type = "string" value = "base_footprint"/>
+	<param name = "/robot1/pose_topic" type = "string" value = "pose"/>
+	<param name = "/robot1/x_offset" type = "double" value = "-1.0"/>
+		<param name = "/robot1/y_offset" type = "double" value = "0.0"/>
+	<param name = "/robot1/yaw_offset" type = "double" value = "1.5708"/>
+	<param name = "/robot1/footprint_width" type = "double" value = "1.0"/>
+	<param name = "/robot1/footprint_height" type = "double" value = "1.0"/>
+	
+	  	<param name = "robot2/namespace" type = "string" value = "robot2"/>
+	<param name = "/robot2/tf_child_frame" type = "string" value = "base_footprint"/>
+	<param name = "/robot2/pose_topic" type = "string" value = "pose"/>
+	<param name = "/robot2/x_offset" type = "double" value = "-1.0"/>
+		<param name = "/robot2/y_offset" type = "double" value = "-1.0"/>
+	<param name = "/robot2/yaw_offset" type = "double" value = "3.14"/>
+	<param name = "/robot2/footprint_width" type = "double" value = "1.0"/>
+	<param name = "/robot2/footprint_height" type = "double" value = "1.0"/>
+	
+	<param name = "robot3/namespace" type = "string" value = "robot3"/>
+	<param name = "/robot3/tf_child_frame" type = "string" value = "base_footprint"/>
+	<param name = "/robot3/pose_topic" type = "string" value = "pose"/>
+	<param name = "/robot3/x_offset" type = "double" value = "0.0"/>
+		<param name = "/robot3/y_offset" type = "double" value = "-1.0"/>
+	<param name = "/robot3/yaw_offset" type = "double" value = "-1.5708"/>
+	<param name = "/robot3/footprint_width" type = "double" value = "1.0"/>
+	<param name = "/robot3/footprint_height" type = "double" value = "1.0"/>
+	 
+		
+  </node>
+</launch>

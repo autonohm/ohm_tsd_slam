@@ -72,7 +72,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   //double sensorStaticXoffset = 0.0;
   std::string sensorStaticXoffsetParamServer;
   sensorStaticXoffsetParamServer = nameSpace + "/sensor_static_offset_x";
-  prvNh.param<double>(sensorStaticXoffsetParamServer, _lasXOffset, -0.19);
+  prvNh.param<double>(sensorStaticXoffsetParamServer, _lasXOffset, 0.0);
 
   _posePub = _nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;
@@ -188,10 +188,10 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
     _tf.setRotation(quat);
 
-    _pubMutex->lock();   //toDo: test if this mutex is necessary (other threads use this too)
+    //_pubMutex->lock();   //toDo: test if this mutex is necessary (other threads use this too)
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);
-    _pubMutex->unlock();
+    //_pubMutex->unlock();
     if(this->isPoseChangeSignificant(_lastPose, &curPose))
     {
       *_lastPose = curPose;

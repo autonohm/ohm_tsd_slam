@@ -13,14 +13,14 @@
   	
   	<param name = "robot0/namespace" type = "string" value = "robot0"/>
   	<param name = "laser_topic" type = "string" value = "laser_0" />
-  	<param name = "/robot0/tf_child_frame" type = "string" value = "base_footprint"/>
-  	<param name = "/robot0/pose_topic" type = "string" value = "pose"/>
+  	<param name = "/robot0/tf_child_frame" type = "string" value = "laser"/>
+  	<param name = "/robot0/pose_topic" type = "string" value = "real_pose"/>
 	<param name = "/robot0/footprint_width" type = "double" value = "1.0"/>
 	<param name = "/robot0/footprint_height" type = "double" value = "1.0"/>
   		
   	<param name = "robot1/namespace" type = "string" value = "robot1"/>
-	<param name = "/robot1/tf_child_frame" type = "string" value = "base_footprint"/>
-	<param name = "/robot1/pose_topic" type = "string" value = "pose"/>
+	<param name = "/robot1/tf_child_frame" type = "string" value = "laser"/>
+	<param name = "/robot1/pose_topic" type = "string" value = "real_pose"/>
 	<param name = "/robot1/x_offset" type = "double" value = "-1.0"/>
 		<param name = "/robot1/y_offset" type = "double" value = "0.0"/>
 	<param name = "/robot1/yaw_offset" type = "double" value = "1.5708"/>
@@ -28,8 +28,8 @@
 	<param name = "/robot1/footprint_height" type = "double" value = "1.0"/>
 	
 	  	<param name = "robot2/namespace" type = "string" value = "robot2"/>
-	<param name = "/robot2/tf_child_frame" type = "string" value = "base_footprint"/>
-	<param name = "/robot2/pose_topic" type = "string" value = "pose"/>
+	<param name = "/robot2/tf_child_frame" type = "string" value = "laser"/>
+	<param name = "/robot2/pose_topic" type = "string" value = "real_pose"/>
 	<param name = "/robot2/x_offset" type = "double" value = "-1.0"/>
 		<param name = "/robot2/y_offset" type = "double" value = "-1.0"/>
 	<param name = "/robot2/yaw_offset" type = "double" value = "3.14"/>
@@ -37,8 +37,8 @@
 	<param name = "/robot2/footprint_height" type = "double" value = "1.0"/>
 	
 	<param name = "robot3/namespace" type = "string" value = "robot3"/>
-	<param name = "/robot3/tf_child_frame" type = "string" value = "base_footprint"/>
-	<param name = "/robot3/pose_topic" type = "string" value = "pose"/>
+	<param name = "/robot3/tf_child_frame" type = "string" value = "laser"/>
+	<param name = "/robot3/pose_topic" type = "string" value = "real_pose"/>
 	<param name = "/robot3/x_offset" type = "double" value = "0.0"/>
 		<param name = "/robot3/y_offset" type = "double" value = "-1.0"/>
 	<param name = "/robot3/yaw_offset" type = "double" value = "-1.5708"/>

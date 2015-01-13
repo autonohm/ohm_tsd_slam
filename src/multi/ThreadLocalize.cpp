@@ -67,6 +67,7 @@ ThreadLocalize::~ThreadLocalize()
 
 void ThreadLocalize::eventLoop(void)
 {
+  //ros::MultiThreadedSpinner spinner(8);
   while(_stayActive)
   {
     ros::spinOnce();

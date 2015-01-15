@@ -31,9 +31,12 @@ bool ThreadMapping::initialized(void)
 
 void ThreadMapping::initPush(obvious::SensorPolar2D* sensor)
 {
+  if(this->initialized())
+    return;
   _pushMutex.lock();
   for(unsigned int i = 0; i < INIT_PSHS; i++)
     _grid->push(sensor);
+  _initialized = true;
   _pushMutex.unlock();
 }
 

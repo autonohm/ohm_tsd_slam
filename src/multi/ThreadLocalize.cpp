@@ -64,16 +64,19 @@ ThreadLocalize::~ThreadLocalize()
   delete _mask;
 }
 
-void ThreadLocalize::setData(const sensor_msgs::LaserScan& scan)
+bool ThreadLocalize::setData(const sensor_msgs::LaserScan& scan)
 {
-  _dataMutex.lock();
+
+ if(!_dataMutex.try_lock())
+   return false;
+  //_dataMutex.lock();
   if(!_initialized)
   {
     std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";   //toDo: print ID of referring robot
     this->init(scan);
     std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
     _dataMutex.unlock();
-    return;
+    return false;
   }
   for(unsigned int i=0;i<scan.ranges.size();i++)
   {
@@ -84,6 +87,7 @@ void ThreadLocalize::setData(const sensor_msgs::LaserScan& scan)
   _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _newScan = true;
   _dataMutex.unlock();
+  return true;
 }
 
 void ThreadLocalize::eventLoop(void)
@@ -93,7 +97,9 @@ void ThreadLocalize::eventLoop(void)
     _sleepCond.wait(_sleepMutex);
     if(_newScan)
     {
+      _dataMutex.lock();
       _localizer->localize(_sensor);
+      _dataMutex.unlock();
     }
     _newScan = false;
   }

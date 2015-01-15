@@ -33,7 +33,7 @@ public:
   ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, std::string nameSpace,
       const double xOffFactor, const double yOffFactor);
   virtual ~ThreadLocalize();
-  void setData(const sensor_msgs::LaserScan& scan);
+  bool setData(const sensor_msgs::LaserScan& scan);
 protected:
   virtual void eventLoop(void);
 private:

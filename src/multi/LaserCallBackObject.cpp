@@ -24,8 +24,8 @@ LaserCallBackObject::~LaserCallBackObject()
 
 void LaserCallBackObject::laserCallBack(const sensor_msgs::LaserScan& scan)
 {
-  _localizeThread->setData(scan);
-  _localizeThread->unblock();
+  if(_localizeThread->setData(scan))
+    _localizeThread->unblock();
 }
 
 } /* namespace ohm_tsd_slam */

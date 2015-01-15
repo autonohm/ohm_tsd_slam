@@ -9,6 +9,7 @@
 #include "ThreadGrid.h"
 #include "ThreadMapping.h"
 #include "ThreadLocalize.h"
+#include "LaserCallBackObject.h"
 
 #include <ros/ros.h>
 
@@ -36,6 +37,8 @@ MultiSlamNode::MultiSlamNode()
   prvNh.param<int>("robot_nbr", iVar, 1);
   unsigned int robotNbr = static_cast<unsigned int>(iVar);
   ThreadLocalize* threadLocalize = NULL;
+  LaserCallBackObject* laserCallBackObject = NULL;
+  ros::Subscriber* subs = NULL;
   std::string nameSpace;
 
   for(unsigned int i = 0; i < robotNbr; i++)
@@ -47,7 +50,12 @@ MultiSlamNode::MultiSlamNode()
     prvNh.param(dummy, nameSpace, std::string("default_ns"));
     threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_pubMutex, nameSpace, _xOffFactor, _yOffFactor);
     _localizers.push_back(threadLocalize);
-    std::cout << __PRETTY_FUNCTION__ << " started thread for " << nameSpace << std::endl;
+    laserCallBackObject = new LaserCallBackObject(threadLocalize);
+    subs = new ros::Subscriber;
+    *subs =  _nh.subscribe(nameSpace + "/scan", 1, &LaserCallBackObject::laserCallBack, laserCallBackObject);
+    _laserCallBacks.push_back(laserCallBackObject);
+    _subs.push_back(subs);
+    std::cout << __PRETTY_FUNCTION__ << " started for " << nameSpace << std::endl;
   }
 }
 
@@ -66,12 +74,7 @@ void MultiSlamNode::run(void)
 {
   while(ros::ok())
   {
-//    ros::Time curTime = ros::Time::now();
-//    if((curTime-lastMap).toSec()>durLastMap.toSec())
-//    {
-//      _threadGrid->unblock();
-//      lastMap=ros::Time::now();
-//    }
+    ros::spinOnce();
     this->timedGridPub();
     _loopRate->sleep();
   }

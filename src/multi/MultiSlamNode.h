@@ -16,6 +16,7 @@ namespace ohm_tsd_slam
 {
 
 class ThreadLocalize;
+class LaserCallBackObject;
 
 class MultiSlamNode : public SlamBase
 {
@@ -27,6 +28,8 @@ private:
   void run(void);
   void init(void);
   std::vector<ThreadLocalize*> _localizers;
+  std::vector<LaserCallBackObject*> _laserCallBacks;
+  std::vector<ros::Subscriber*> _subs;
 };
 
 }

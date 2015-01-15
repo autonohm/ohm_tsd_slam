@@ -12,15 +12,16 @@
       <param name = "use_object_inflation" type = "bool" value = "true" />
   	
   	<param name = "robot0/namespace" type = "string" value = "georg"/>
-  	<param name = "/georg/tf_child_frame" type = "string" value = "base_footprint"/>
+  	<param name = "/georg/tf_child_frame" type = "string" value = "laser"/>
   	<param name = "/georg/pose_topic" type = "string" value = "pose"/>
 	<param name = "/georg/footprint_width" type = "double" value = "1.0"/>
 	<param name = "/georg/footprint_height" type = "double" value = "1.0"/>
   		
   	<param name = "robot1/namespace" type = "string" value = "simon"/>
-	<param name = "/simon/tf_child_frame" type = "string" value = "base_footprint"/>
+	<param name = "/simon/tf_child_frame" type = "string" value = "laser"/>
 	<param name = "/simon/pose_topic" type = "string" value = "pose"/>
-	<param name = "/simon/x_offset" type = "double" value = "-0.5"/>
+	<param name = "/simon/x_offset" type = "double" value = "-1.3"/>
+		<param name = "/simon/y_offset" type = "double" value = "0.1"/>
 	<param name = "/simon/yaw_offset" type = "double" value = "3.14"/>
 	<param name = "/simon/footprint_width" type = "double" value = "1.0"/>
 	<param name = "/simon/footprint_height" type = "double" value = "1.0"/>

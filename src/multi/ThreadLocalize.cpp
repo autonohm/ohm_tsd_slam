@@ -27,14 +27,14 @@ namespace ohm_tsd_slam
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, std::string nameSpace,
     const double xOffFactor, const double yOffFactor):
-                    _grid(*grid),
-                    _mapper(*mapper),
-                    _nameSpace(nameSpace),
-                    _localizer(NULL),
-                    _sensor(NULL),
-                    _newScan(false),
-                    _initialized(false),
-                    _mask(NULL)
+                        _grid(*grid),
+                        _mapper(*mapper),
+                        _nameSpace(nameSpace),
+                        _localizer(NULL),
+                        _sensor(NULL),
+                        _newScan(false),
+                        _initialized(false),
+                        _mask(NULL)
 {
   ros::NodeHandle prvNh("~");
 
@@ -55,7 +55,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, bo
   _xOffFactor = xOffFactor;
   _yOffFactor = yOffFactor;
   _localizer  = new Localization(grid, mapper, pubMutex, _xOffFactor, _yOffFactor, nameSpace);
-  _lasSubs    = _nh.subscribe(laserTopic, 1, &ThreadLocalize::laserCallBack, this);
 }
 
 ThreadLocalize::~ThreadLocalize()
@@ -65,12 +64,33 @@ ThreadLocalize::~ThreadLocalize()
   delete _mask;
 }
 
+void ThreadLocalize::setData(const sensor_msgs::LaserScan& scan)
+{
+  _dataMutex.lock();
+  if(!_initialized)
+  {
+    std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";   //toDo: print ID of referring robot
+    this->init(scan);
+    std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
+    _dataMutex.unlock();
+    return;
+  }
+  for(unsigned int i=0;i<scan.ranges.size();i++)
+  {
+    _mask[i]=!isnan(scan.ranges[i]);
+  }
+  _sensor->setRealMeasurementData(scan.ranges, 1.0);
+  _sensor->setRealMeasurementMask(_mask);
+  _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
+  _newScan = true;
+  _dataMutex.unlock();
+}
+
 void ThreadLocalize::eventLoop(void)
 {
-  //ros::MultiThreadedSpinner spinner(8);
   while(_stayActive)
   {
-    ros::spinOnce();
+    _sleepCond.wait(_sleepMutex);
     if(_newScan)
     {
       _localizer->localize(_sensor);
@@ -82,7 +102,7 @@ void ThreadLocalize::eventLoop(void)
 void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
 {
   _sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, static_cast<double>(_maxRange), 0.0, 2.0); //toDo: launch parameters
- // _sensor = new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange), static_cast<double>(_minRange), static_cast<double>(2.0));
+  // _sensor = new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange), static_cast<double>(_minRange), static_cast<double>(2.0));
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   _mask = new bool[scan.ranges.size()];
   for(unsigned int i=0;i<scan.ranges.size();i++)

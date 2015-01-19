@@ -4,6 +4,7 @@
 
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
+#include "obcore/math/linalg/MatrixFactory.h"
 
 #include <boost/bind.hpp>
 
@@ -26,9 +27,32 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   _modelCoords      = NULL;
   _modelNormals     = NULL;
 
+  ros::NodeHandle prvNh("~");
+    double multiIteratorNeg = 0.0;
+    double multiIteratorPos = 0.0;
+    double icpIterations    = 0.0;
+
+    prvNh.param<double>("multi_iter_neg_angle", multiIteratorNeg, -3.14 / 180 * 5.0);
+    prvNh.param<double>("multi_iter_pose_anle", multiIteratorPos, 3.14 / 180 * 5.0);
+    prvNh.param<double>("icp_iterations", icpIterations, ITERATIONS);
+
+    std::vector<obvious::Matrix> trafoVector;
+    obvious::MatrixFactory matFak;
+
+    //obvious::Matrix negTrafo = matFak.TransformationMatrix33(multiIteratorNeg, 0.0, 0.0);
+    obvious::Matrix negTrafo = matFak.TransformationMatrix44(0.0, 0.0, multiIteratorNeg, 0.0, 0.0, 0.0);
+    obvious::Matrix posTrafo = matFak.TransformationMatrix44(0.0, 0.0, multiIteratorPos, 0.0, 0.0, 0.0);
+    obvious::Matrix ident    = matFak.TransformationMatrix44(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    //obvious::Matrix posTrafo = matFak.TransformationMatrix33(multiIteratorPos, 0.0, 0.0);
+    //obvious::Matrix ident    =  matFak.TransformationMatrix33(0.0, 0.0, 0.0);
+
+    trafoVector.push_back(negTrafo);
+    trafoVector.push_back(ident);
+    trafoVector.push_back(posTrafo);
+
   _rayCaster        = new obvious::RayCastPolar2D();
   _assigner         = new obvious::FlannPairAssignment(2);
-  _filterDist       = new obvious::DistanceFilter(2.0, 0.01, ITERATIONS - 3);
+  _filterDist       = new obvious::DistanceFilter(1.0, 0.01, icpIterations - 3);
   _filterReciprocal = new obvious::ReciprocalFilter();
   _estimator        = new obvious::ClosedFormEstimator2D();
   _trnsMax          = TRNS_THRESH;   //toDo: config file
@@ -37,18 +61,20 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   _xOffFactor       = xOffFactor;
   _yOffFactor       = yOffFactor;
 
+
+
   //configure ICP
   _filterBounds     = new obvious::OutOfBoundsFilter2D(grid->getMinX(), grid->getMaxX(), grid->getMinY(), grid->getMaxY());
   _assigner->addPreFilter(_filterBounds);
   _assigner->addPostFilter(_filterDist);
   _assigner->addPostFilter(_filterReciprocal);
   _icp = new obvious::Icp(_assigner, _estimator);
+  _multiIcp = new obvious::IcpMultiInitIterator(trafoVector);
   _icp->setMaxRMS(0.0);
-  _icp->setMaxIterations(ITERATIONS);
-  _icp->setConvergenceCounter(ITERATIONS);
+  _icp->setMaxIterations(icpIterations);
+  _icp->setConvergenceCounter(icpIterations);
   //_icp->activateTrace();
 
-  ros::NodeHandle prvNh("~");
 
   if(nameSpace.size())   //given namespace
     nameSpace += "/";
@@ -78,6 +104,8 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   _poseStamped.header.frame_id = tfBaseFrameId;
   _tf.frame_id_                = tfBaseFrameId;
   _tf.child_frame_id_          = nameSpace + tfChildFrameId;
+
+
 }
 
 Localization::~Localization()
@@ -134,6 +162,10 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double rms = 0.0;
   unsigned int pairs = 0;
   unsigned int it = 0;
+
+  //std::cout << __PRETTY_FUNCTION__ << "premultiiteratoricp " << std::endl;
+//  obvious::Matrix T = _multiIcp->iterate(_icp);
+  //std::cout << __PRETTY_FUNCTION__ << "postmultiiteratoricp " << std::endl;
   _icp->iterate(&rms, &pairs, &it);
   obvious::Matrix T = _icp->getFinalTransformation();
 

@@ -167,6 +167,8 @@ private:
    * Desired loop rate
    */
   //double _loopRate;
+
+  double _lowReflectivityRange;
 };
 
 } /* namespace ohm_tsdSlam */

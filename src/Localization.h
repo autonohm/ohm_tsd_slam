@@ -12,6 +12,7 @@
 #include "obvision/reconstruct/grid/TsdGrid.h"
 #include "obvision/reconstruct/grid/RayCastPolar2D.h"
 #include "obvision/icp/icp_def.h"
+#include "obvision/icp/IcpMultiInitIterator.h"
 
 #include <boost/thread.hpp>
 
@@ -19,9 +20,9 @@
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_broadcaster.h>
 
-#define ITERATIONS 25
-#define TRNS_THRESH 0.25            //Thresholds for registration. If the gained transformation is out of these bounds,
-#define ROT_THRESH 0.17             //the Transformation is not taken over
+#define ITERATIONS 150
+#define TRNS_THRESH 1.0            //Thresholds for registration. If the gained transformation is out of these bounds,
+#define ROT_THRESH 0.6             //the Transformation is not taken over
 #define TRNS_MIN 0.05              //Minimal values for the pose change. Push is only needed when pose change
 #define ROT_MIN 0.09               //greater than than one of these values
 
@@ -144,6 +145,7 @@ private:
    * ICP main icp instance
    */
   obvious::Icp* _icp;
+  obvious::IcpMultiInitIterator* _multiIcp;
 
   /**
    * ICP translation threshold

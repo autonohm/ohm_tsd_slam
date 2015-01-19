@@ -21,6 +21,7 @@ SlamNode::SlamNode(void)
   prvNh.param("laser_topic", strVar, std::string("simon/scan"));
   _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
   prvNh.param<double>("max_range", _maxRange, 30.0);
+  prvNh.param<double>("low_reflectivity_range", _lowReflectivityRange, 2.0);
   _sensor      = NULL;
   _mask        = NULL;
   _localizer   = NULL;
@@ -49,7 +50,7 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
     _mask[i]=!isnan(initScan.ranges[i])&&!isinf(initScan.ranges[i])&&(fabs(initScan.ranges[i])>10e-6);
   }
 
-  _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange));
+  _sensor = new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange), 0.0, _lowReflectivityRange);
   _sensor->setRealMeasurementData(initScan.ranges, 1.0);
   _sensor->setRealMeasurementMask(_mask);
 

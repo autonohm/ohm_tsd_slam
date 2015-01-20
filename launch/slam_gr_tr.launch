@@ -26,6 +26,6 @@
 	  <param name = "footprint_height"        type = "double" value = "0.15"  />
 	  <param name = "multi_iter_neg_angle"    type = "double" value = "-0.187222"/>
 	  <param name = "multi_iter_neg_angle"    type = "double" value = "0.187222"/>
-	  <param name = "icp_iterations"          type = "double" value = "1550.0"/>	    
+	  <param name = "icp_iterations"          type = "double" value = "500.0"/>	    
   </node>
 </launch>

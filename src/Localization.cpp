@@ -40,15 +40,18 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
     obvious::MatrixFactory matFak;
 
     //obvious::Matrix negTrafo = matFak.TransformationMatrix33(multiIteratorNeg, 0.0, 0.0);
-    obvious::Matrix negTrafo = matFak.TransformationMatrix44(0.0, 0.0, multiIteratorNeg, 0.0, 0.0, 0.0);
-    obvious::Matrix posTrafo = matFak.TransformationMatrix44(0.0, 0.0, multiIteratorPos, 0.0, 0.0, 0.0);
+    obvious::Matrix negTrafo = matFak.TransformationMatrix44(multiIteratorNeg, 0.0, 0.0, 0.0, 0.0, 0.0);
+    obvious::Matrix posTrafo = matFak.TransformationMatrix44(multiIteratorPos, 0.0, 0.0, 0.0, 0.0, 0.0);
     obvious::Matrix ident    = matFak.TransformationMatrix44(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    obvious::Matrix transX   = matFak.TranslationMatrix44(1.0, 0.0, 0.0);
     //obvious::Matrix posTrafo = matFak.TransformationMatrix33(multiIteratorPos, 0.0, 0.0);
     //obvious::Matrix ident    =  matFak.TransformationMatrix33(0.0, 0.0, 0.0);
 
+    trafoVector.push_back(transX);
     trafoVector.push_back(negTrafo);
     trafoVector.push_back(ident);
     trafoVector.push_back(posTrafo);
+
 
   _rayCaster        = new obvious::RayCastPolar2D();
   _assigner         = new obvious::FlannPairAssignment(2);
@@ -164,10 +167,10 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   unsigned int it = 0;
 
   //std::cout << __PRETTY_FUNCTION__ << "premultiiteratoricp " << std::endl;
-//  obvious::Matrix T = _multiIcp->iterate(_icp);
+  obvious::Matrix T = _multiIcp->iterate(_icp);
   //std::cout << __PRETTY_FUNCTION__ << "postmultiiteratoricp " << std::endl;
-  _icp->iterate(&rms, &pairs, &it);
-  obvious::Matrix T = _icp->getFinalTransformation();
+//  _icp->iterate(&rms, &pairs, &it);
+//  obvious::Matrix T = _icp->getFinalTransformation();
 
   // analyze registration result
   double deltaX = T(0,2);

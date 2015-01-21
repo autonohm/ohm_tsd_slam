@@ -25,6 +25,7 @@ SlamNode::SlamNode(void)
   _sensor      = NULL;
   _mask        = NULL;
   _localizer   = NULL;
+  std::cout << __PRETTY_FUNCTION__ << " low ref = " << _lowReflectivityRange << std::endl;
 }
 
 SlamNode::~SlamNode()
@@ -103,7 +104,7 @@ void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
   }
   for(unsigned int i=0;i<scan.ranges.size();i++)
   {
-    _mask[i]=!isnan(scan.ranges[i]);
+    _mask[i]=(!isnan(scan.ranges[i])&&(fabs(scan.ranges[i])>10e-6));
   }
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   _sensor->setRealMeasurementMask(_mask);

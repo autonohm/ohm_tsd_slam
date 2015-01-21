@@ -53,16 +53,17 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
     trafoVector.push_back(transX);
     trafoVector.push_back(negTrafo);
     trafoVector.push_back(ident);
-    trafoVector.push_back(posTrafo);
-    trafoVector.push_back(posdblTrafo);
-    trafoVector.push_back(negdblTrafo);
+//    trafoVector.push_back(posTrafo);
+//    trafoVector.push_back(posdblTrafo);
+//    trafoVector.push_back(negdblTrafo);
 
 
   _rayCaster        = new obvious::RayCastPolar2D();
   _assigner         = new obvious::FlannPairAssignment(2);
-  _filterDist       = new obvious::DistanceFilter(1.0, 0.01, icpIterations - 3);
+  _filterDist       = new obvious::DistanceFilter(20.0, 0.01, icpIterations - 3);
   _filterReciprocal = new obvious::ReciprocalFilter();
   _estimator        = new obvious::ClosedFormEstimator2D();
+  //_estimator        = new obvious::PointToLine2DEstimator();
   _trnsMax          = TRNS_THRESH;   //toDo: config file
   _rotMax           = ROT_THRESH;    //toDo: config file
   _lastPose         = new obvious::Matrix(3, 3);
@@ -81,7 +82,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   _icp->setMaxRMS(0.0);
   _icp->setMaxIterations(icpIterations);
   _icp->setConvergenceCounter(icpIterations);
-  //_icp->activateTrace();
+  _icp->activateTrace();
 
 
   if(nameSpace.size())   //given namespace
@@ -160,8 +161,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   _filterBounds->setPose(&P);
 
   obvious::Matrix M( modelSize / 2, 2, _modelCoords);
-  obvious::Matrix N( modelSize / 2, 2, _modelNormals);
-  _icp->setModel(&M, &N);
+  //obvious::Matrix N( modelSize / 2, 2, _modelNormals);
+  _icp->setModel(&M);//, &N);
 
   size = sensor->dataToCartesianVector(_scene);
   obvious::Matrix S(size / 2, 2, _scene);
@@ -172,10 +173,10 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   unsigned int it = 0;
 
   //std::cout << __PRETTY_FUNCTION__ << "premultiiteratoricp " << std::endl;
-  obvious::Matrix T = _multiIcp->iterate(_icp);
+  //obvious::Matrix T = _multiIcp->iterate(_icp);
   //std::cout << __PRETTY_FUNCTION__ << "postmultiiteratoricp " << std::endl;
-//  _icp->iterate(&rms, &pairs, &it);
-//  obvious::Matrix T = _icp->getFinalTransformation();
+  _icp->iterate(&rms, &pairs, &it);
+  obvious::Matrix T = _icp->getFinalTransformation();
 
   // analyze registration result
   double deltaX = T(0,2);
@@ -187,20 +188,36 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   if(deltaY > 0.1 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
   {
     // localization error broadcast invalid tf
-    std::cout << __PRETTY_FUNCTION__ << "regError!\n";
-    _poseStamped.header.stamp = ros::Time::now();
-    _poseStamped.pose.position.x = NAN;
-    _poseStamped.pose.position.y = NAN;
-    _poseStamped.pose.position.z = NAN;
-    tf::Quaternion quat(NAN, NAN, NAN);
-    _poseStamped.pose.orientation.w = quat.w();
-    _poseStamped.pose.orientation.x = quat.x();
-    _poseStamped.pose.orientation.y = quat.y();
-    _poseStamped.pose.orientation.z = quat.z();
 
-    _tf.stamp_ = ros::Time::now();
-    _tf.setOrigin(tf::Vector3(NAN, NAN, NAN));
-    _tf.setRotation(quat);
+    sensor->transform(&T);
+        obvious::Matrix curPose = sensor->getTransformation();
+        double curTheta = this->calcAngle(&curPose);
+        double posX=curPose(0, 2) + std::cos(curTheta) * _lasXOffset -_grid->getCellsX() * _grid->getCellSize() * _xOffFactor;
+        double posY=curPose(1, 2) + std::sin(curTheta) * _lasXOffset -_grid->getCellsY() * _grid->getCellSize() * _yOffFactor;
+        _poseStamped.header.stamp = ros::Time::now();
+        _poseStamped.pose.position.x = posX;
+        _poseStamped.pose.position.y = posY;
+        _poseStamped.pose.position.z = 0.0;
+        tf::Quaternion quat(0.0, 0.0, curTheta);
+        _poseStamped.pose.orientation.w = quat.w();
+        _poseStamped.pose.orientation.x = quat.x();
+        _poseStamped.pose.orientation.y = quat.y();
+        _poseStamped.pose.orientation.z = quat.z();
+        _icp->serializeTrace("/tmp/icp");
+//    std::cout << __PRETTY_FUNCTION__ << "regError!\n";
+//    _poseStamped.header.stamp = ros::Time::now();
+//    _poseStamped.pose.position.x = NAN;
+//    _poseStamped.pose.position.y = NAN;
+//    _poseStamped.pose.position.z = NAN;
+//    tf::Quaternion quat(NAN, NAN, NAN);
+//    _poseStamped.pose.orientation.w = quat.w();
+//    _poseStamped.pose.orientation.x = quat.x();
+//    _poseStamped.pose.orientation.y = quat.y();
+//    _poseStamped.pose.orientation.z = quat.z();
+//
+//    _tf.stamp_ = ros::Time::now();
+//    _tf.setOrigin(tf::Vector3(NAN, NAN, NAN));
+//    _tf.setRotation(quat);
 
     _pubMutex->lock();
     _posePub.publish(_poseStamped);

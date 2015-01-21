@@ -41,9 +41,12 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
 
     //obvious::Matrix negTrafo = matFak.TransformationMatrix33(multiIteratorNeg, 0.0, 0.0);
     obvious::Matrix negTrafo = matFak.TransformationMatrix44(multiIteratorNeg, 0.0, 0.0, 0.0, 0.0, 0.0);
-    obvious::Matrix posTrafo = matFak.TransformationMatrix44(multiIteratorPos, 0.0, 0.0, 0.0, 0.0, 0.0);
+    obvious::Matrix posdblTrafo = matFak.TransformationMatrix44(2.0 * multiIteratorPos, 0.0, 0.0, 0.0, 0.0, 0.0);
+    obvious::Matrix negdblTrafo = matFak.TransformationMatrix44(2.0 * multiIteratorNeg, 0.0, 0.0, 0.0, 0.0, 0.0);
+        obvious::Matrix posTrafo = matFak.TransformationMatrix44(multiIteratorPos, 0.0, 0.0, 0.0, 0.0, 0.0);
     obvious::Matrix ident    = matFak.TransformationMatrix44(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
     obvious::Matrix transX   = matFak.TranslationMatrix44(1.0, 0.0, 0.0);
+
     //obvious::Matrix posTrafo = matFak.TransformationMatrix33(multiIteratorPos, 0.0, 0.0);
     //obvious::Matrix ident    =  matFak.TransformationMatrix33(0.0, 0.0, 0.0);
 
@@ -51,6 +54,8 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
     trafoVector.push_back(negTrafo);
     trafoVector.push_back(ident);
     trafoVector.push_back(posTrafo);
+    trafoVector.push_back(posdblTrafo);
+    trafoVector.push_back(negdblTrafo);
 
 
   _rayCaster        = new obvious::RayCastPolar2D();

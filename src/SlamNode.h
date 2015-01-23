@@ -83,6 +83,8 @@ private:
    */
   void laserScanCallBack(const sensor_msgs::LaserScan& scan);
 
+  void multiScanCallBack(const sensor_msgs::LaserScan& scan);
+
   /**
    * Main node handle
    */
@@ -169,6 +171,10 @@ private:
   //double _loopRate;
 
   double _lowReflectivityRange;
+
+  unsigned int _multiScanNumber;
+
+  std::vector<obvious::SensorPolar2D*> _multiScans;
 };
 
 } /* namespace ohm_tsdSlam */

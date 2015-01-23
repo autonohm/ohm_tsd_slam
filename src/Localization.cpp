@@ -28,34 +28,34 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   _modelNormals     = NULL;
 
   ros::NodeHandle prvNh("~");
-    double multiIteratorNeg = 0.0;
-    double multiIteratorPos = 0.0;
-    double icpIterations    = 0.0;
+  double multiIteratorNeg = 0.0;
+  double multiIteratorPos = 0.0;
+  double icpIterations    = 0.0;
 
-    prvNh.param<double>("multi_iter_neg_angle", multiIteratorNeg, -3.14 / 180 * 5.0);
-    prvNh.param<double>("multi_iter_pose_anle", multiIteratorPos, 3.14 / 180 * 5.0);
-    prvNh.param<double>("icp_iterations", icpIterations, ITERATIONS);
+  prvNh.param<double>("multi_iter_neg_angle", multiIteratorNeg, -3.14 / 180 * 5.0);
+  prvNh.param<double>("multi_iter_pose_anle", multiIteratorPos, 3.14 / 180 * 5.0);
+  prvNh.param<double>("icp_iterations", icpIterations, ITERATIONS);
 
-    std::vector<obvious::Matrix> trafoVector;
-    obvious::MatrixFactory matFak;
+  std::vector<obvious::Matrix> trafoVector;
+  obvious::MatrixFactory matFak;
 
-    //obvious::Matrix negTrafo = matFak.TransformationMatrix33(multiIteratorNeg, 0.0, 0.0);
-    obvious::Matrix negTrafo = matFak.TransformationMatrix44(multiIteratorNeg, 0.0, 0.0, 0.0, 0.0, 0.0);
-    obvious::Matrix posdblTrafo = matFak.TransformationMatrix44(2.0 * multiIteratorPos, 0.0, 0.0, 0.0, 0.0, 0.0);
-    obvious::Matrix negdblTrafo = matFak.TransformationMatrix44(2.0 * multiIteratorNeg, 0.0, 0.0, 0.0, 0.0, 0.0);
-        obvious::Matrix posTrafo = matFak.TransformationMatrix44(multiIteratorPos, 0.0, 0.0, 0.0, 0.0, 0.0);
-    obvious::Matrix ident    = matFak.TransformationMatrix44(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    obvious::Matrix transX   = matFak.TranslationMatrix44(1.0, 0.0, 0.0);
+  //obvious::Matrix negTrafo = matFak.TransformationMatrix33(multiIteratorNeg, 0.0, 0.0);
+  obvious::Matrix negTrafo = matFak.TransformationMatrix44(multiIteratorNeg, 0.0, 0.0, 0.0, 0.0, 0.0);
+  obvious::Matrix posdblTrafo = matFak.TransformationMatrix44(2.0 * multiIteratorPos, 0.0, 0.0, 0.0, 0.0, 0.0);
+  obvious::Matrix negdblTrafo = matFak.TransformationMatrix44(2.0 * multiIteratorNeg, 0.0, 0.0, 0.0, 0.0, 0.0);
+  obvious::Matrix posTrafo = matFak.TransformationMatrix44(multiIteratorPos, 0.0, 0.0, 0.0, 0.0, 0.0);
+  obvious::Matrix ident    = matFak.TransformationMatrix44(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  obvious::Matrix transX   = matFak.TranslationMatrix44(1.0, 0.0, 0.0);
 
-    //obvious::Matrix posTrafo = matFak.TransformationMatrix33(multiIteratorPos, 0.0, 0.0);
-    //obvious::Matrix ident    =  matFak.TransformationMatrix33(0.0, 0.0, 0.0);
+  //obvious::Matrix posTrafo = matFak.TransformationMatrix33(multiIteratorPos, 0.0, 0.0);
+  //obvious::Matrix ident    =  matFak.TransformationMatrix33(0.0, 0.0, 0.0);
 
-    trafoVector.push_back(transX);
-    trafoVector.push_back(negTrafo);
-    trafoVector.push_back(ident);
-//    trafoVector.push_back(posTrafo);
-//    trafoVector.push_back(posdblTrafo);
-//    trafoVector.push_back(negdblTrafo);
+  trafoVector.push_back(transX);
+  trafoVector.push_back(negTrafo);
+  trafoVector.push_back(ident);
+  //    trafoVector.push_back(posTrafo);
+  //    trafoVector.push_back(posdblTrafo);
+  //    trafoVector.push_back(negdblTrafo);
 
 
   _rayCaster        = new obvious::RayCastPolar2D();
@@ -190,34 +190,34 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     // localization error broadcast invalid tf
 
     sensor->transform(&T);
-        obvious::Matrix curPose = sensor->getTransformation();
-        double curTheta = this->calcAngle(&curPose);
-        double posX=curPose(0, 2) + std::cos(curTheta) * _lasXOffset -_grid->getCellsX() * _grid->getCellSize() * _xOffFactor;
-        double posY=curPose(1, 2) + std::sin(curTheta) * _lasXOffset -_grid->getCellsY() * _grid->getCellSize() * _yOffFactor;
-        _poseStamped.header.stamp = ros::Time::now();
-        _poseStamped.pose.position.x = posX;
-        _poseStamped.pose.position.y = posY;
-        _poseStamped.pose.position.z = 0.0;
-        tf::Quaternion quat(0.0, 0.0, curTheta);
-        _poseStamped.pose.orientation.w = quat.w();
-        _poseStamped.pose.orientation.x = quat.x();
-        _poseStamped.pose.orientation.y = quat.y();
-        _poseStamped.pose.orientation.z = quat.z();
-        _icp->serializeTrace("/tmp/icp");
-//    std::cout << __PRETTY_FUNCTION__ << "regError!\n";
-//    _poseStamped.header.stamp = ros::Time::now();
-//    _poseStamped.pose.position.x = NAN;
-//    _poseStamped.pose.position.y = NAN;
-//    _poseStamped.pose.position.z = NAN;
-//    tf::Quaternion quat(NAN, NAN, NAN);
-//    _poseStamped.pose.orientation.w = quat.w();
-//    _poseStamped.pose.orientation.x = quat.x();
-//    _poseStamped.pose.orientation.y = quat.y();
-//    _poseStamped.pose.orientation.z = quat.z();
-//
-//    _tf.stamp_ = ros::Time::now();
-//    _tf.setOrigin(tf::Vector3(NAN, NAN, NAN));
-//    _tf.setRotation(quat);
+    obvious::Matrix curPose = sensor->getTransformation();
+    double curTheta = this->calcAngle(&curPose);
+    double posX=curPose(0, 2) + std::cos(curTheta) * _lasXOffset -_grid->getCellsX() * _grid->getCellSize() * _xOffFactor;
+    double posY=curPose(1, 2) + std::sin(curTheta) * _lasXOffset -_grid->getCellsY() * _grid->getCellSize() * _yOffFactor;
+    _poseStamped.header.stamp = ros::Time::now();
+    _poseStamped.pose.position.x = posX;
+    _poseStamped.pose.position.y = posY;
+    _poseStamped.pose.position.z = 0.0;
+    tf::Quaternion quat(0.0, 0.0, curTheta);
+    _poseStamped.pose.orientation.w = quat.w();
+    _poseStamped.pose.orientation.x = quat.x();
+    _poseStamped.pose.orientation.y = quat.y();
+    _poseStamped.pose.orientation.z = quat.z();
+    _icp->serializeTrace("/tmp/icp");
+    //    std::cout << __PRETTY_FUNCTION__ << "regError!\n";
+    //    _poseStamped.header.stamp = ros::Time::now();
+    //    _poseStamped.pose.position.x = NAN;
+    //    _poseStamped.pose.position.y = NAN;
+    //    _poseStamped.pose.position.z = NAN;
+    //    tf::Quaternion quat(NAN, NAN, NAN);
+    //    _poseStamped.pose.orientation.w = quat.w();
+    //    _poseStamped.pose.orientation.x = quat.x();
+    //    _poseStamped.pose.orientation.y = quat.y();
+    //    _poseStamped.pose.orientation.z = quat.z();
+    //
+    //    _tf.stamp_ = ros::Time::now();
+    //    _tf.setOrigin(tf::Vector3(NAN, NAN, NAN));
+    //    _tf.setRotation(quat);
 
     _pubMutex->lock();
     _posePub.publish(_poseStamped);
@@ -255,6 +255,145 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
       _mapper->queuePush(sensor);
     }
   }
+}
+
+void Localization::multiScanLocalize(const std::vector<obvious::SensorPolar2D*> multiScans, obvious::SensorPolar2D* sensor)
+{
+  unsigned int size = sensor->getRealMeasurementSize();
+  if(!_scene)
+  {
+    _scene        = new double[size * 2];
+    _modelCoords  = new double[size * 2];
+    _modelNormals = new double[size * 2];
+    *_lastPose    = sensor->getTransformation();
+  }
+//  obvious::Matrix Tcum(3, 3);
+//  Tcum.setIdentity();
+  for (unsigned int i = 0; i < multiScans.size() - 2; i++)
+  {
+    _icp->reset();
+    obvious::Matrix P = multiScans[i]->getTransformation();
+    _filterBounds->setPose(&P);
+    size = multiScans[i]->dataToCartesianVector(_modelCoords);
+    obvious::Matrix M(size / 2, 2, _modelCoords);
+    _icp->setModel(&M);//, &N);
+    size = multiScans[i + 1]->dataToCartesianVector(_scene);
+    obvious::Matrix S(size / 2, 2, _scene);
+    _icp->setScene(&S);
+
+    double rms = 0.0;
+    unsigned int pairs = 0;
+    unsigned int it = 0;
+    _icp->iterate(&rms, &pairs, &it);
+    obvious::Matrix T = _icp->getFinalTransformation();
+    multiScans[i + 1]->transform(&T);
+    _mapper->queuePush(multiScans[i + 1]);    //toDo: validate transformation and remove the fowl data set
+    //Tcum
+  }
+  unsigned int modelSize = 0;
+  _rayCaster->calcCoordsFromCurrentView(_grid, multiScans[multiScans.size() - 1], _modelCoords, _modelNormals, &modelSize);
+  if(modelSize == 0)
+  {
+    std::cout << __PRETTY_FUNCTION__ << " Error! Raycasting found no coordinates!\n";
+    return;
+  }
+  _icp->reset();
+   obvious::Matrix P = multiScans[multiScans.size() - 1]->getTransformation();
+   _filterBounds->setPose(&P);
+
+   obvious::Matrix M( modelSize / 2, 2, _modelCoords);
+   //obvious::Matrix N( modelSize / 2, 2, _modelNormals);
+   _icp->setModel(&M);//, &N);
+
+   size = sensor->dataToCartesianVector(_scene);
+   obvious::Matrix S(size / 2, 2, _scene);
+   _icp->setScene(&S);
+
+   double rms = 0.0;
+   unsigned int pairs = 0;
+   unsigned int it = 0;
+
+   _icp->iterate(&rms, &pairs, &it);
+   obvious::Matrix T = _icp->getFinalTransformation();
+
+   // analyze registration result
+    double deltaX = T(0,2);
+    double deltaY = T(1,2);
+    double trnsAbs = std::sqrt(deltaX * deltaX + deltaY * deltaY);
+    double deltaPhi = this->calcAngle(&T);
+    _tf.stamp_ = ros::Time::now();
+
+    if(deltaY > 0.1 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
+    {
+      // localization error broadcast invalid tf
+
+      sensor->transform(&T);
+      obvious::Matrix curPose = sensor->getTransformation();
+      double curTheta = this->calcAngle(&curPose);
+      double posX=curPose(0, 2) + std::cos(curTheta) * _lasXOffset -_grid->getCellsX() * _grid->getCellSize() * _xOffFactor;
+      double posY=curPose(1, 2) + std::sin(curTheta) * _lasXOffset -_grid->getCellsY() * _grid->getCellSize() * _yOffFactor;
+      _poseStamped.header.stamp = ros::Time::now();
+      _poseStamped.pose.position.x = posX;
+      _poseStamped.pose.position.y = posY;
+      _poseStamped.pose.position.z = 0.0;
+      tf::Quaternion quat(0.0, 0.0, curTheta);
+      _poseStamped.pose.orientation.w = quat.w();
+      _poseStamped.pose.orientation.x = quat.x();
+      _poseStamped.pose.orientation.y = quat.y();
+      _poseStamped.pose.orientation.z = quat.z();
+      _icp->serializeTrace("/tmp/icp");
+      //    std::cout << __PRETTY_FUNCTION__ << "regError!\n";
+      //    _poseStamped.header.stamp = ros::Time::now();
+      //    _poseStamped.pose.position.x = NAN;
+      //    _poseStamped.pose.position.y = NAN;
+      //    _poseStamped.pose.position.z = NAN;
+      //    tf::Quaternion quat(NAN, NAN, NAN);
+      //    _poseStamped.pose.orientation.w = quat.w();
+      //    _poseStamped.pose.orientation.x = quat.x();
+      //    _poseStamped.pose.orientation.y = quat.y();
+      //    _poseStamped.pose.orientation.z = quat.z();
+      //
+      //    _tf.stamp_ = ros::Time::now();
+      //    _tf.setOrigin(tf::Vector3(NAN, NAN, NAN));
+      //    _tf.setRotation(quat);
+
+      _pubMutex->lock();
+      _posePub.publish(_poseStamped);
+      _tfBroadcaster.sendTransform(_tf);
+      _pubMutex->unlock();
+    }
+    else            //transformation valid -> transform sensor
+    {
+      sensor->transform(&T);
+      obvious::Matrix curPose = sensor->getTransformation();
+      double curTheta = this->calcAngle(&curPose);
+      double posX=curPose(0, 2) + std::cos(curTheta) * _lasXOffset -_grid->getCellsX() * _grid->getCellSize() * _xOffFactor;
+      double posY=curPose(1, 2) + std::sin(curTheta) * _lasXOffset -_grid->getCellsY() * _grid->getCellSize() * _yOffFactor;
+      _poseStamped.header.stamp = ros::Time::now();
+      _poseStamped.pose.position.x = posX;
+      _poseStamped.pose.position.y = posY;
+      _poseStamped.pose.position.z = 0.0;
+      tf::Quaternion quat(0.0, 0.0, curTheta);
+      _poseStamped.pose.orientation.w = quat.w();
+      _poseStamped.pose.orientation.x = quat.x();
+      _poseStamped.pose.orientation.y = quat.y();
+      _poseStamped.pose.orientation.z = quat.z();
+
+      _tf.stamp_ = ros::Time::now();
+      _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
+      _tf.setRotation(quat);
+
+      //_pubMutex->lock();   //toDo: test if this mutex is necessary (other threads use this too)
+      _posePub.publish(_poseStamped);
+      _tfBroadcaster.sendTransform(_tf);
+      //_pubMutex->unlock();
+      if(this->isPoseChangeSignificant(_lastPose, &curPose))
+      {
+        *_lastPose = curPose;
+        _mapper->queuePush(sensor);
+      }
+    }
+
 }
 
 double Localization::calcAngle(obvious::Matrix* T)

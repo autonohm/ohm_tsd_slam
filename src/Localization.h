@@ -64,6 +64,8 @@ public:
    */
   void localize(obvious::SensorPolar2D* sensor);
 
+  void multiScanLocalize(const std::vector<obvious::SensorPolar2D*> multiScans, obvious::SensorPolar2D* sensor);
+
 private:
 
   /**

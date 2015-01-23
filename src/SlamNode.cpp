@@ -18,10 +18,14 @@ SlamNode::SlamNode(void)
 {
   ros::NodeHandle prvNh("~");
   std::string strVar;
+  int iVar = 0;
   prvNh.param("laser_topic", strVar, std::string("simon/scan"));
-  _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
+  //_laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
+  _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::multiScanCallBack, this);
   prvNh.param<double>("max_range", _maxRange, 30.0);
   prvNh.param<double>("low_reflectivity_range", _lowReflectivityRange, 2.0);
+  prvNh.param<int>("multi_scans", iVar, 2);
+  _multiScanNumber = static_cast<unsigned int>(iVar);
   _sensor      = NULL;
   _mask        = NULL;
   _localizer   = NULL;
@@ -110,7 +114,45 @@ void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
   _sensor->setRealMeasurementMask(_mask);
   _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _localizer->localize(_sensor);
+}
 
+void SlamNode::multiScanCallBack(const sensor_msgs::LaserScan& scan)
+{
+  static unsigned int ctr = 0;
+  if(!_initialized)
+  {
+    std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";
+    this->initialize(scan);
+    std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
+    return;
+  }
+  for(unsigned int i=0;i<scan.ranges.size();i++)
+  {
+    _mask[i]=!isnan(scan.ranges[i]) && (fabs(scan.ranges[i])>10e-6);
+  }
+//  if(ctr == 0)
+//  {
+//
+//  }
+  if(ctr++ < _multiScanNumber)
+  {
+    obvious::SensorPolar2D* sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, static_cast<double>(_maxRange), 0.0, _lowReflectivityRange);
+    sensor->setRealMeasurementData(scan.ranges, 1.0);
+    sensor->setRealMeasurementMask(_mask);
+    _multiScans.push_back(sensor);
+  }
+  else
+  {
+    _sensor->setRealMeasurementData(scan.ranges, 1.0);
+    _sensor->setRealMeasurementMask(_mask);
+    _localizer->multiScanLocalize(_multiScans, _sensor);
+    for (unsigned int i = 0; i < _multiScans.size(); i++)
+    {
+      delete _multiScans[i];   //toDo: check local output. Registration error will crash everything
+      _multiScans.clear();
+    }
+    ctr = 0;
+  }
 }
 
 } /* namespace ohm_tsdSlam2 */

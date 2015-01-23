@@ -139,6 +139,7 @@ void SlamNode::multiScanCallBack(const sensor_msgs::LaserScan& scan)
     obvious::SensorPolar2D* sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, static_cast<double>(_maxRange), 0.0, _lowReflectivityRange);
     sensor->setRealMeasurementData(scan.ranges, 1.0);
     sensor->setRealMeasurementMask(_mask);
+    sensor->setTransformation(_sensor->getTransformation());
     _multiScans.push_back(sensor);
   }
   else

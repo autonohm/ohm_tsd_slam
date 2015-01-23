@@ -269,7 +269,7 @@ void Localization::multiScanLocalize(const std::vector<obvious::SensorPolar2D*> 
   }
 //  obvious::Matrix Tcum(3, 3);
 //  Tcum.setIdentity();
-  for (unsigned int i = 0; i < multiScans.size() - 2; i++)
+  for (unsigned int i = 0; i <= multiScans.size() - 2; i++)
   {
     _icp->reset();
     obvious::Matrix P = multiScans[i]->getTransformation();

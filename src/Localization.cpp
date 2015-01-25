@@ -82,7 +82,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   _icp->setMaxRMS(0.0);
   _icp->setMaxIterations(icpIterations);
   _icp->setConvergenceCounter(icpIterations);
-  _icp->activateTrace();
+  //_icp->activateTrace();
 
 
   if(nameSpace.size())   //given namespace

@@ -8,7 +8,7 @@
       <param name = "cell_octave_factor"      type = "int"    value = "10"    />
       <param name = "cellsize"                type = "double" value = "0.05" />
       <param name = "min_range"               type = "double" value = "0.0"   />
-      <param name = "max_range"               type = "double" value = "70.0"  />
+      <param name = "max_range"               type = "double" value = "30.0"  />
       <param name = "low_reflectivity_range"  type = "double" value = "8.0"   />
       <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />
       <param name = "loop_rate"               type = "double" value = "40.0"  />
@@ -26,6 +26,6 @@
 	  <param name = "footprint_height"        type = "double" value = "0.15"  />
 	  <param name = "multi_iter_neg_angle"    type = "double" value = "-0.27222"/>
 	  <param name = "multi_iter_pos_angle"    type = "double" value = "0.27222"/>
-	  <param name = "icp_iterations"          type = "double" value = "100.0"/>	   
+	  <param name = "icp_iterations"          type = "double" value = "200.0"/>	   
   </node>
 </launch>

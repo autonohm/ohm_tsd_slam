@@ -60,7 +60,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
 
   _rayCaster        = new obvious::RayCastPolar2D();
   _assigner         = new obvious::FlannPairAssignment(2);
-  _filterDist       = new obvious::DistanceFilter(20.0, 0.01, icpIterations - 3);
+  _filterDist       = new obvious::DistanceFilter(10.0, 0.01, icpIterations - 3);
   _filterReciprocal = new obvious::ReciprocalFilter();
   _estimator        = new obvious::ClosedFormEstimator2D();
   //_estimator        = new obvious::PointToLine2DEstimator();
@@ -161,12 +161,12 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   _filterBounds->setPose(&P);
 
   obvious::Matrix M( modelSize / 2, 2, _modelCoords);
-  //obvious::Matrix N( modelSize / 2, 2, _modelNormals);
-  _icp->setModel(&M);//, &N);
+//  obvious::Matrix N( modelSize / 2, 2, _modelNormals);
+  _icp->setScene(&M);//, &N);
 
   size = sensor->dataToCartesianVector(_scene);
   obvious::Matrix S(size / 2, 2, _scene);
-  _icp->setScene(&S);
+  _icp->setModel(&S);
 
   double rms = 0.0;
   unsigned int pairs = 0;
@@ -177,6 +177,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   //std::cout << __PRETTY_FUNCTION__ << "postmultiiteratoricp " << std::endl;
   _icp->iterate(&rms, &pairs, &it);
   obvious::Matrix T = _icp->getFinalTransformation();
+  T.invert();
 
   // analyze registration result
   double deltaX = T(0,2);
@@ -203,7 +204,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _poseStamped.pose.orientation.x = quat.x();
     _poseStamped.pose.orientation.y = quat.y();
     _poseStamped.pose.orientation.z = quat.z();
-    _icp->serializeTrace("/tmp/icp");
+    //_icp->serializeTrace("/tmp/icp");
     //    std::cout << __PRETTY_FUNCTION__ << "regError!\n";
     //    _poseStamped.header.stamp = ros::Time::now();
     //    _poseStamped.pose.position.x = NAN;
@@ -269,6 +270,7 @@ void Localization::multiScanLocalize(const std::vector<obvious::SensorPolar2D*> 
   }
 //  obvious::Matrix Tcum(3, 3);
 //  Tcum.setIdentity();
+  _mapper->queuePush(multiScans[0]);
   for (unsigned int i = 0; i <= multiScans.size() - 2; i++)
   {
     _icp->reset();

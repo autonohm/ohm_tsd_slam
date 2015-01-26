@@ -20,8 +20,8 @@ SlamNode::SlamNode(void)
   std::string strVar;
   int iVar = 0;
   prvNh.param("laser_topic", strVar, std::string("simon/scan"));
-  //_laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
-  _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::multiScanCallBack, this);
+  _laserSubs=_nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
+  //_laserSubs=_nh.subscribe(strVar, 1, &SlamNode::multiScanCallBack, this);
   prvNh.param<double>("max_range", _maxRange, 30.0);
   prvNh.param<double>("low_reflectivity_range", _lowReflectivityRange, 2.0);
   prvNh.param<int>("multi_scans", iVar, 2);

@@ -203,6 +203,8 @@ private:
    * Static sensor offset to kinematic center x-axis
    */
   double _lasXOffset;
+
+  int _multiPush;
 };
 
 } /* namespace ohm_tsd_slam*/

@@ -35,6 +35,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   prvNh.param<double>("multi_iter_neg_angle", multiIteratorNeg, -3.14 / 180 * 5.0);
   prvNh.param<double>("multi_iter_pose_anle", multiIteratorPos, 3.14 / 180 * 5.0);
   prvNh.param<double>("icp_iterations", icpIterations, ITERATIONS);
+  prvNh.param<int>("multi_push", _multiPush, 0);
 
   std::vector<obvious::Matrix> trafoVector;
   obvious::MatrixFactory matFak;
@@ -60,7 +61,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
 
   _rayCaster        = new obvious::RayCastPolar2D();
   _assigner         = new obvious::FlannPairAssignment(2);
-  _filterDist       = new obvious::DistanceFilter(10.0, 0.01, icpIterations - 3);
+  _filterDist       = new obvious::DistanceFilter(3.0, 0.01, icpIterations - 3);
   _filterReciprocal = new obvious::ReciprocalFilter();
   _estimator        = new obvious::ClosedFormEstimator2D();
   //_estimator        = new obvious::PointToLine2DEstimator();
@@ -82,7 +83,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   _icp->setMaxRMS(0.0);
   _icp->setMaxIterations(icpIterations);
   _icp->setConvergenceCounter(icpIterations);
-  //_icp->activateTrace();
+  _icp->activateTrace();
 
 
   if(nameSpace.size())   //given namespace
@@ -204,7 +205,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _poseStamped.pose.orientation.x = quat.x();
     _poseStamped.pose.orientation.y = quat.y();
     _poseStamped.pose.orientation.z = quat.z();
-    //_icp->serializeTrace("/tmp/icp");
+    _icp->serializeTrace("/tmp/icp", 100);
     //    std::cout << __PRETTY_FUNCTION__ << "regError!\n";
     //    _poseStamped.header.stamp = ros::Time::now();
     //    _poseStamped.pose.position.x = NAN;
@@ -253,7 +254,10 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     if(this->isPoseChangeSignificant(_lastPose, &curPose))
     {
       *_lastPose = curPose;
-      _mapper->queuePush(sensor);
+      for(int i = 0; i < _multiPush; i++)
+      {
+        _mapper->queuePush(sensor);
+      }
     }
   }
 }

@@ -130,7 +130,8 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   obfloat t[2] = {startX, startY};
   if(!_grid.freeFootprint(t, _footPrintWidth, _footPrintHeight))
     std::cout << __PRETTY_FUNCTION__ << " warning! Footprint could not be freed!\n";
-  _mapper.initPush(_sensor);
+  if(!_mapper.initialized())
+    _mapper.initPush(_sensor);
   _initialized = true;
 
 }

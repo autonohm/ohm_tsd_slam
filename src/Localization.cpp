@@ -61,7 +61,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
 
   _rayCaster        = new obvious::RayCastPolar2D();
   _assigner         = new obvious::FlannPairAssignment(2);
-  _filterDist       = new obvious::DistanceFilter(3.0, 0.01, icpIterations - 3);
+  _filterDist       = new obvious::DistanceFilter(2.0, 0.01, icpIterations - 3);
   _filterReciprocal = new obvious::ReciprocalFilter();
   _estimator        = new obvious::ClosedFormEstimator2D();
   //_estimator        = new obvious::PointToLine2DEstimator();

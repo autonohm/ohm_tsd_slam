@@ -109,16 +109,18 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
 
   obvious::Matrix M( modelSize / 2, 2, _modelCoords);
   obvious::Matrix N( modelSize / 2, 2, _modelNormals);
-  _icp->setModel(&M, &N);
 
   size = sensor->dataToCartesianVector(_scene);
   obvious::Matrix S(size / 2, 2, _scene);
-  _icp->setScene(&S);
+
+  _icp->setModel(&S, NULL);
+  _icp->setScene(&M);
   double rms = 0.0;
   unsigned int pairs = 0;
   unsigned int it = 0;
   _icp->iterate(&rms, &pairs, &it);
   obvious::Matrix T = _icp->getFinalTransformation();
+  T.invert();
 
   // analyze registration result
   double deltaX = T(0,2);

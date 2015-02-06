@@ -141,7 +141,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   unsigned int pairs = 0;
   unsigned int it = 0;
   _icp->iterate(&rms, &pairs, &it, &T44);
-  T = _icp->getFinalTransformation();
+  obvious::Matrix T = _icp->getFinalTransformation();
   T.invert();
 
   // analyze registration result

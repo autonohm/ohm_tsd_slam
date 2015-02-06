@@ -83,8 +83,15 @@ void SlamNode::start(void)
 
 void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
 {
-  _sensor = new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange), static_cast<double>(_minRange), static_cast<double>(_lowReflectivityRange));
-  _sensor->setRealMeasurementData(initScan.ranges, 1.0);
+  std::vector<float> ranges;
+  for(int i=0; i<initScan.ranges.size(); i++)
+  {
+    if(initScan.ranges[i]>80.0) ranges.push_back(INFINITY);
+    else
+      ranges.push_back(initScan.ranges[i]);
+  }
+  _sensor=new obvious::SensorPolar2D(ranges.size(), initScan.angle_increment, initScan.angle_min, static_cast<double>(_maxRange), static_cast<double>(_minRange), static_cast<double>(_lowReflectivityRange));
+  _sensor->setRealMeasurementData(ranges, 1.0);
 
   const double phi       = _yawOffset;
   const double gridWidth =_grid->getCellsX()*_grid->getCellSize();
@@ -147,7 +154,14 @@ void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
     std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
     return;
   }
-  _sensor->setRealMeasurementData(tmpScan.ranges, 1.0);
+  std::vector<float> ranges;
+  for(int i=0; i<scan.ranges.size(); i++)
+  {
+    if(scan.ranges[i]>80.0) ranges.push_back(INFINITY);
+    else
+      ranges.push_back(scan.ranges[i]);
+  }
+  _sensor->setRealMeasurementData(ranges, 1.0);
   _sensor->resetMask();
   _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _localizer->localize(_sensor);

@@ -21,8 +21,8 @@
 #include <tf/transform_broadcaster.h>
 
 #define ITERATIONS  25
-#define TRNS_THRESH 0.25            //Thresholds for registration. If the gained transformation is out of these bounds,
-#define ROT_THRESH  0.6             //the Transformation is not taken over
+#define TRNS_THRESH 1.25            //Thresholds for registration. If the gained transformation is out of these bounds,
+#define ROT_THRESH  0.9             //the Transformation is not taken over
 #define TRNS_MIN    0.05              //Minimal values for the pose change. Push is only needed when pose change
 #define ROT_MIN     0.09               //greater than than one of these values
 
@@ -48,8 +48,9 @@ public:
    * @param nh Ros node handle
    * @param pubMutex Mutex synchronizing ros publishing
    * @param parentNode Pointer to main node instance
+   * @param ransac use RANSAC pre-registration
    */
-  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor);
+  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, const bool ransac=true);
 
   /**
    * Destructor
@@ -194,6 +195,11 @@ private:
    * Static sensor offset to kinematic center x-axis
    */
   double _lasXOffset;
+
+  /**
+   * RANSAC registration flag
+   */
+  bool _ransac;
 };
 
 } /* namespace ohm_tsd_slam*/

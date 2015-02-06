@@ -5,6 +5,8 @@
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
 
+#include "obvision/ransacMatching/RansacMatching.h"
+
 #include <boost/bind.hpp>
 
 #include <cstring>
@@ -16,12 +18,14 @@
 namespace ohm_tsd_slam
 {
 
-Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor):
+Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, const bool ransac):
     _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
     _gridOffSetY(-1.0 * grid->getCellsY() * grid->getCellSize() * yOffFactor)
 {
   _mapper           = mapper;
   _grid             = grid;
+
+  _ransac           = ransac;
 
   _scene            = NULL;
   _modelCoords      = NULL;
@@ -29,7 +33,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
 
   _rayCaster        = new obvious::RayCastPolar2D();
   _assigner         = new obvious::FlannPairAssignment(2);
-  _filterDist       = new obvious::DistanceFilter(2.0, 0.01, ITERATIONS - 3);
+  _filterDist       = new obvious::DistanceFilter(0.2, 0.01, ITERATIONS - 10);
   _filterReciprocal = new obvious::ReciprocalFilter();
   _estimator        = new obvious::ClosedFormEstimator2D();
   _trnsMax          = TRNS_THRESH;   //toDo: config file
@@ -113,13 +117,31 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   size = sensor->dataToCartesianVector(_scene);
   obvious::Matrix S(size / 2, 2, _scene);
 
+
+  obvious::Matrix T44(4, 4);
+  T44.setIdentity();
+
+  // RANSAC pre-registration (rough)
+  if(_ransac)
+  {
+    RansacMatching ransac;
+    obvious::Matrix T = ransac.match(&M, &S);
+    T.invert();
+    T44(0, 0) = T(0, 0);
+    T44(0, 1) = T(0, 1);
+    T44(0, 3) = T(0, 2);
+    T44(1, 0) = T(1, 0);
+    T44(1, 1) = T(1, 1);
+    T44(1, 3) = T(1, 2);
+  }
+
   _icp->setModel(&S, NULL);
   _icp->setScene(&M);
   double rms = 0.0;
   unsigned int pairs = 0;
   unsigned int it = 0;
-  _icp->iterate(&rms, &pairs, &it);
-  obvious::Matrix T = _icp->getFinalTransformation();
+  _icp->iterate(&rms, &pairs, &it, &T44);
+  T = _icp->getFinalTransformation();
   T.invert();
 
   // analyze registration result
@@ -129,9 +151,11 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double deltaPhi = this->calcAngle(&T);
   _tf.stamp_ = ros::Time::now();
 
-  if(deltaY > 0.1 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
+  if(deltaY > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
   {
+    cout << "Registration error - deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
     // localization error broadcast invalid tf
+
     _poseStamped.header.stamp = ros::Time::now();
     _poseStamped.pose.position.x = NAN;
     _poseStamped.pose.position.y = NAN;

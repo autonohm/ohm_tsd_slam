@@ -172,6 +172,7 @@ install(TARGETS slam_node
 ## Mark other files for installation (e.g. launch and bag files, etc.)
  install(FILES
     launch/slam.launch
+    launch/slam_icp_only.launch
 #   # myfile2
    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
  )

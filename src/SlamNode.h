@@ -124,22 +124,22 @@ private:
   /**
    * X starting offset factor
    */
-  double _xOffFactor;
+//  double _xOffFactor;
 
   /**
    * Y starting offset factor
    */
-  double _yOffFactor;
+  //double _yOffFactor;
 
   /**
    * Starting yaw angle
    */
-  double _yawOffset;
+ // double _yawOffset;
 
   /**
    * Minimum range threshold
    */
-  double _minRange;
+  //double _minRange;
 
   /**
    * Maximum range threshold
@@ -149,7 +149,7 @@ private:
   /**
    * Maximum range threshold
    */
-  double _lowReflectivityRange;
+//  double _lowReflectivityRange;
 
 
   /**
@@ -162,9 +162,13 @@ private:
    */
   double _loopRate;
 
-  double _footPrintWidth;
-
-  double _footPrintHeight;
+//  double _footPrintWidth;
+//
+//  double _footPrintHeight;
+//
+//  double _footPrintXoffset;
+//
+//  bool   _icpSac;
 };
 
 } /* namespace ohm_tsdSlam */

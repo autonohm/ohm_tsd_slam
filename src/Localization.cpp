@@ -19,25 +19,32 @@ namespace ohm_tsd_slam
 {
 
 Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, const bool ransac):
-    _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-    _gridOffSetY(-1.0 * grid->getCellsY() * grid->getCellSize() * yOffFactor)
+        _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+        _gridOffSetY(-1.0 * grid->getCellsY() * grid->getCellSize() * yOffFactor)
 {
+  ros::NodeHandle prvNh("~");
   _mapper           = mapper;
   _grid             = grid;
-
   _ransac           = ransac;
-
   _scene            = NULL;
   _modelCoords      = NULL;
   _modelNormals     = NULL;
 
+  double distFilterMax = 0.0;
+  double distFilterMin = 0.0;
+  int icpIterations    = 0;
+
+  prvNh.param<double>("dist_filter_max", distFilterMax, 0.2);
+  prvNh.param<double>("dist_filter_min", distFilterMin, 0.01);
+  prvNh.param<int>   ("icp_iterations",     icpIterations, 20);
+
   _rayCaster        = new obvious::RayCastPolar2D();
   _assigner         = new obvious::FlannPairAssignment(2);
-  _filterDist       = new obvious::DistanceFilter(0.2, 0.01, ITERATIONS - 10);
+  _filterDist       = new obvious::DistanceFilter(distFilterMax, distFilterMin, icpIterations - 10);
   _filterReciprocal = new obvious::ReciprocalFilter();
   _estimator        = new obvious::ClosedFormEstimator2D();
-  _trnsMax          = TRNS_THRESH;   //toDo: config file
-  _rotMax           = ROT_THRESH;    //toDo: config file
+  prvNh.param<double>("reg_trs_max",     _trnsMax, TRNS_THRESH);
+  prvNh.param<double>("reg_sin_rot_max", _rotMax,  ROT_THRESH);
   _lastPose         = new obvious::Matrix(3, 3);
   _xOffFactor       = xOffFactor;
   _yOffFactor       = yOffFactor;
@@ -49,17 +56,16 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _assigner->addPostFilter(_filterReciprocal);
   _icp = new obvious::Icp(_assigner, _estimator);
   _icp->setMaxRMS(0.0);
-  _icp->setMaxIterations(ITERATIONS);
-  _icp->setConvergenceCounter(ITERATIONS);
+  _icp->setMaxIterations(icpIterations);
+  _icp->setConvergenceCounter(icpIterations);
 
   std::string poseTopic;
   std::string tfBaseFrameId;
   std::string tfChildFrameId;
-  ros::NodeHandle prvNh("~");
-  prvNh.param        ("pose_topic", poseTopic, std::string("pose"));
-  prvNh.param        ("tf_base_frame", tfBaseFrameId, std::string("/map"));
+
+  prvNh.param        ("pose_topic",     poseTopic, std::string("pose"));
+  prvNh.param        ("tf_base_frame",  tfBaseFrameId, std::string("/map"));
   prvNh.param        ("tf_child_frame", tfChildFrameId, std::string("laser"));
-  prvNh.param<double>("sensor_static_offset_x", _lasXOffset, -0.19);
 
   _posePub = nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
 

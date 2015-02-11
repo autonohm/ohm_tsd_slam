@@ -192,11 +192,6 @@ private:
   double _yOffFactor;
 
   /**
-   * Static sensor offset to kinematic center x-axis
-   */
-  double _lasXOffset;
-
-  /**
    * RANSAC registration flag
    */
   bool _ransac;

@@ -121,6 +121,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix N( modelSize / 2, 2, _modelNormals);
 
   size = sensor->dataToCartesianVector(_scene);
+
   obvious::Matrix S(size / 2, 2, _scene);
 
 
@@ -131,7 +132,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   if(_ransac)
   {
     RansacMatching ransac;
-    obvious::Matrix T = ransac.match(&M, &S);
+    obvious::Matrix T = ransac.match(&M, &S, M_PI/4, sensor->getAngularResolution());
     T.invert();
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);

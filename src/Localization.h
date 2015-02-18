@@ -102,6 +102,11 @@ private:
   double* _modelNormals;
 
   /**
+   * Mask of model
+   */
+  bool* _maskM;
+
+  /**
    * reconstruction
    */
   obvious::RayCastPolar2D* _rayCaster;
@@ -115,6 +120,11 @@ private:
    * Buffer for scene coordinates
    */
   double* _scene;
+
+  /**
+   * Mask of scene
+   */
+  bool* _maskS;
 
   /**
    * ICP pair assigner

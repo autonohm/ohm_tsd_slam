@@ -85,6 +85,7 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
   double yOffFactor = 0.0;
   double yawOffset  = 0.0;
   double minRange = 0.0;
+  double maxRange = 0.0;
   double lowReflectivityRange = 0.0;
   double footPrintWidth= 0.0;
   double footPrintHeight= 0.0;
@@ -102,8 +103,7 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
   prvNh.param<double>("footprint_x_offset", footPrintXoffset, 0.28);
   prvNh.param<bool>  ("use_icpsac", icpSac, true);
 
-  _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, _maxRange,
-      minRange, lowReflectivityRange);
+  _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, _maxRange, minRange, lowReflectivityRange);
   _sensor->setRealMeasurementData(initScan.ranges, 1.0);
 
   const double phi        = yawOffset;
@@ -171,6 +171,8 @@ void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
   }
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   _sensor->resetMask();
+  _sensor->maskZeroDepth();
+  _sensor->maskInvalidDepth();
   _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _localizer->localize(_sensor);
 }

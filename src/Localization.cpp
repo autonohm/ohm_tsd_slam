@@ -67,7 +67,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
   prvNh.param("tf_child_frame", tfChildFrameId, std::string("laser"));
 
-  _posePub = nh.advertise < geometry_msgs::PoseStamped > (poseTopic, 1);
+  _posePub = nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
 
   _poseStamped.header.frame_id = tfBaseFrameId;
   _tf.frame_id_ = tfBaseFrameId;
@@ -90,39 +90,64 @@ Localization::~Localization()
     delete[] _modelNormals;
   if(_scene)
     delete[] _scene;
+  if(_maskS)
+    delete[] _maskS;
+  if(_maskM)
+    delete[] _maskM;
+}
+
+obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints)
+{
+  assert(Mat->getRows() == maskSize);
+  assert(Mat->getCols() == 2);
+  obvious::Matrix retMat(validPoints, 2);
+  unsigned int cnt = 0;
+  for(int i = 0; i < maskSize; i++)
+  {
+    if(mask[i])
+    {
+      retMat(cnt, 0) = (*Mat)(i, 0);
+      retMat(cnt, 1) = (*Mat)(i, 1);
+      cnt++;
+    }
+  }
+  return retMat;
 }
 
 void Localization::localize(obvious::SensorPolar2D* sensor)
 {
-  unsigned int size = sensor->getRealMeasurementSize();
+  unsigned int measurementSize = sensor->getRealMeasurementSize();
 
   if(!_scene)
   {
-    _scene = new double[size * 2];
-    _modelCoords = new double[size * 2];
-    _modelNormals = new double[size * 2];
-    *_lastPose = sensor->getTransformation();
+    _scene        = new double[measurementSize * 2];
+    _maskS        = new bool[measurementSize];
+    _modelCoords  = new double[measurementSize * 2];
+    _modelNormals = new double[measurementSize * 2];
+    _maskM        = new bool[measurementSize];
+    *_lastPose    = sensor->getTransformation();
   }
 
   // reconstruction
-  unsigned int modelSize = 0;
-  _rayCaster->calcCoordsFromCurrentView(_grid, sensor, _modelCoords, _modelNormals, &modelSize);
-  if(modelSize == 0)
+
+  unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(_grid, sensor, _modelCoords, _modelNormals, _maskM);
+  if(validModelPoints == 0)
   {
     std::cout << __PRETTY_FUNCTION__ << " Error! Raycasting found no coordinates!\n";
     return;
   }
 
-  _icp->reset();
-  obvious::Matrix P = sensor->getTransformation();
-  _filterBounds->setPose(&P);
+  unsigned int validScenePoints = 0;
 
-  obvious::Matrix M(modelSize / 2, 2, _modelCoords);
-  obvious::Matrix N(modelSize / 2, 2, _modelNormals);
+  validScenePoints = sensor->dataToCartesianVectorMask(_scene, _maskS);
 
-  size = sensor->dataToCartesianVector(_scene);
+  obvious::Matrix M(measurementSize, 2, _modelCoords);
+  obvious::Matrix N(measurementSize, 2, _modelNormals);
+  obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
 
-  obvious::Matrix S(size / 2, 2, _scene);
+  unsigned int size = sensor->dataToCartesianVector(_scene);
+  obvious::Matrix S(measurementSize, 2, _scene);
+  obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
 
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
@@ -131,7 +156,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   if(_ransac)
   {
     RansacMatching ransac;
-    obvious::Matrix T = ransac.match(&M, &S, M_PI / 4, sensor->getAngularResolution());
+    double phiMax = M_PI / 3.0;
+    obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
     T.invert();
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
@@ -141,6 +167,9 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     T44(1, 3) = T(1, 2);
   }
 
+  _icp->reset();
+  obvious::Matrix P = sensor->getTransformation();
+  _filterBounds->setPose(&P);
   _icp->setModel(&S, NULL);
   _icp->setScene(&M);
   double rms = 0.0;
@@ -159,8 +188,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
 
   if(deltaY > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
   {
-    cout << "Registration error - deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi)
-        << endl;
+    cout << "Registration error - deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
     // localization error broadcast invalid tf
 
     _poseStamped.header.stamp = ros::Time::now();
@@ -179,6 +207,13 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
 
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);
+
+    // Try circumferential matching
+    RansacMatching ransac;
+    double phiMax = M_PI/2.0;
+    obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
+    //T.invert();
+    sensor->transform(&T);
   }
   else            //transformation valid -> transform sensor
   {

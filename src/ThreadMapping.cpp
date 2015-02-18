@@ -47,6 +47,8 @@ void ThreadMapping::queuePush(obvious::SensorPolar2D* sensor)
   sensorLocal->setTransformation(sensor->getTransformation());
   sensorLocal->setRealMeasurementData(sensor->getRealMeasurementData());
   sensorLocal->resetMask();
+  sensorLocal->maskZeroDepth();
+  sensorLocal->maskInvalidDepth();
   sensorLocal->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _sensors.push(sensorLocal);
   _pushMutex.unlock();

@@ -170,8 +170,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   _icp->reset();
   obvious::Matrix P = sensor->getTransformation();
   _filterBounds->setPose(&P);
-  _icp->setModel(&S, NULL);
-  _icp->setScene(&M);
+  _icp->setModel(&Svalid, NULL);
+  _icp->setScene(&Mvalid);
   double rms = 0.0;
   unsigned int pairs = 0;
   unsigned int it = 0;
@@ -209,11 +209,11 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _tfBroadcaster.sendTransform(_tf);
 
     // Try circumferential matching
-    RansacMatching ransac;
-    double phiMax = M_PI/2.0;
-    obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
-    //T.invert();
-    sensor->transform(&T);
+//    RansacMatching ransac(200, 0.15, 180);
+//    double phiMax = M_PI/2.0;
+//    obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
+//    //T.invert();
+//    sensor->transform(&T);
   }
   else            //transformation valid -> transform sensor
   {

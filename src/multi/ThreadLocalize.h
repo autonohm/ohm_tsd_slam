@@ -56,6 +56,7 @@ private:
   double _minRange;
   double _footPrintWidth;
   double _footPrintHeight;
+  double _footPrintXoffset;
   double _gridWidth;
   double _gridHeight;
   double _xOffFactor;

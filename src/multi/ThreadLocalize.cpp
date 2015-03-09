@@ -41,13 +41,14 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, bo
   std::string laserTopic;
   prvNh.param("laser_topic", laserTopic, std::string("scan"));
   laserTopic = nameSpace + "/" + laserTopic;
-  prvNh.param<double>(nameSpace + "/x_offset"        , _xOffset, 0.0);
-  prvNh.param<double>(nameSpace + "/y_offset"        , _yOffset, 0.0);
-  prvNh.param<double>(nameSpace + "/yaw_offset"      , _yawOffset, 0.0);
-  prvNh.param<double>(nameSpace + "/max_range"       , _maxRange, 30.0);
-  prvNh.param<double>(nameSpace + "/min_range"       , _minRange, 0.001);
-  prvNh.param<double>(nameSpace + "/footprint_width" , _footPrintWidth, 0.0);
-  prvNh.param<double>(nameSpace + "/footprint_height", _footPrintHeight, 0.0);
+  prvNh.param<double>(nameSpace + "/x_offset"        ,  _xOffset, 0.0);
+  prvNh.param<double>(nameSpace + "/y_offset"        ,  _yOffset, 0.0);
+  prvNh.param<double>(nameSpace + "/yaw_offset"      ,  _yawOffset, 0.0);
+  prvNh.param<double>(nameSpace + "/max_range"       ,  _maxRange, 30.0);
+  prvNh.param<double>(nameSpace + "/min_range"       ,  _minRange, 0.001);
+  prvNh.param<double>(nameSpace + "/footprint_width" ,  _footPrintWidth, 0.0);
+  prvNh.param<double>(nameSpace + "/footprint_height",  _footPrintHeight, 0.0);
+  prvNh.param<double>(nameSpace + "/footprint_x_offset", _footPrintXoffset, 0.28);
   std::cout << __PRETTY_FUNCTION__ << " min range set but currently not used." << std::endl;
 
   _gridWidth  = grid->getCellsX() * grid->getCellSize();
@@ -127,7 +128,7 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   obvious::Matrix Tinit(3, 3);
   Tinit.setData(tf);
   _sensor->transform(&Tinit);
-  obfloat t[2] = {startX, startY};
+  obfloat t[2] = {startX + _footPrintXoffset, startY};
   if(!_grid.freeFootprint(t, _footPrintWidth, _footPrintHeight))
     std::cout << __PRETTY_FUNCTION__ << " warning! Footprint could not be freed!\n";
   if(!_mapper.initialized())

@@ -11,8 +11,9 @@
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obvision/reconstruct/grid/TsdGrid.h"
 #include "obvision/reconstruct/grid/RayCastPolar2D.h"
-#include "obvision/icp/icp_def.h"
+#include "obvision/registration/icp/icp_def.h"
 
+#include <boost/signal.hpp>
 #include <boost/thread.hpp>
 
 #include <ros/ros.h>
@@ -48,8 +49,8 @@ public:
    * @param pubMutex Mutex synchronizing ros publishing
    * @param parentNode Pointer to main node instance
    */
-  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor,
-               std::string nameSpace = "");
+  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor,
+      const bool ransac, std::string nameSpace = "");
 
   /**
    * Destructor
@@ -84,6 +85,8 @@ private:
 
   ros::NodeHandle _nh;
 
+  const double _gridOffSetX;
+  const double _gridOffSetY;
 
   /**
    * Pointer to main node instance
@@ -101,6 +104,11 @@ private:
   double* _modelNormals;
 
   /**
+   * Mask of model
+   */
+  bool* _maskM;
+
+  /**
    * reconstruction
    */
   obvious::RayCastPolar2D* _rayCaster;
@@ -114,6 +122,11 @@ private:
    * Buffer for scene coordinates
    */
   double* _scene;
+
+  /**
+   * Mask of scene
+   */
+  bool* _maskS;
 
   /**
    * ICP pair assigner
@@ -183,7 +196,7 @@ private:
   /**
    * Pointer to publishing mutex
    */
-  boost::mutex* _pubMutex;
+  //boost::mutex* _pubMutex;
 
   /**
    * Starting x offset
@@ -194,12 +207,15 @@ private:
    * Starting y offset
    */
   double _yOffFactor;
-
+  
   /**
-   * Static sensor offset to kinematic center x-axis
+   * RANSAC registration flag
    */
-  double _lasXOffset;
+  bool _ransac;
+
 };
+
+obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints);
 
 } /* namespace ohm_tsd_slam*/
 

@@ -45,6 +45,7 @@ protected:
   ros::Rate* _loopRate;
   bool _initialized;
   ros::Duration* _gridInterval;
+  bool _icpSac;
 };
 
 } /* namespace ohm_tsd_slam */

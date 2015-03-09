@@ -53,11 +53,28 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
   _sensor->setRealMeasurementData(initScan.ranges, 1.0);
   _sensor->setRealMeasurementMask(_mask);
 
-  double phi       = _yawOffset;
-  double gridWidth =_grid->getCellsX()*_grid->getCellSize();
-  double gridHeight=_grid->getCellsY()*_grid->getCellSize();
-  double tf[9]     ={cos(phi), -sin(phi), gridWidth*_xOffFactor,
-      sin(phi),  cos(phi), gridHeight*_yOffFactor,
+  ros::NodeHandle prvNh("~");
+//  double xOffFactor = 0.0;
+//  double yOffFactor = 0.0;
+//  double yawOffset  = 0.0;
+  double footPrintWidth = 0.0;
+  double footPrintHeight = 0.0;
+  double footPrintXoffset = 0.0;
+
+//  prvNh.param<double>("x_off_factor", xOffFactor, 0.5);
+//  prvNh.param<double>("y_off_factor", yOffFactor, 0.5);
+//  prvNh.param<double>("yaw_start_offset", yawOffset, 0.0);
+  prvNh.param<double>("footprint_width" , footPrintWidth, 0.1);
+  prvNh.param<double>("footprint_height", footPrintHeight, 0.1);
+  prvNh.param<double>("footprint_x_offset", footPrintXoffset, 0.28);
+
+  const double phi        = _yawOffset;
+  const double gridWidth  = _grid->getCellsX() * _grid->getCellSize();
+  const double gridHeight = _grid->getCellsY() * _grid->getCellSize();
+  const obfloat startX    = static_cast<obfloat>(gridWidth  * _xOffFactor);
+  const obfloat startY    = static_cast<obfloat>(gridHeight * _yOffFactor);
+  double tf[9]     ={cos(phi), -sin(phi), gridWidth * _xOffFactor,
+      sin(phi),  cos(phi), gridHeight * _yOffFactor,
       0,         0,               1};
   obvious::Matrix Tinit(3, 3);
   Tinit.setData(tf);
@@ -65,14 +82,12 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
 
   _threadMapping=new ThreadMapping(_grid);
 
-  for(int i=0; i<INIT_PSHS; i++)
-    _threadMapping->queuePush(_sensor);
+  const obfloat t[2] = {startX + footPrintXoffset, startY};
+  if(!_grid->freeFootprint(t, footPrintWidth, footPrintHeight))
+    std::cout << __PRETTY_FUNCTION__ << " warning! Footprint could not be freed!\n";
+  _threadMapping->initPush(_sensor);
 
-
-  _localizer=new Localization(_grid, _threadMapping, &_pubMutex, _xOffFactor, _yOffFactor);
-
-  for(int i=0; i<INIT_PSHS; i++)
-    _threadMapping->queuePush(_sensor);
+  _localizer=new Localization(_grid, _threadMapping, _nh, _xOffFactor, _yOffFactor, _icpSac);
 
   _threadGrid=new ThreadGrid(_grid, _nh, &_pubMutex, _xOffFactor, _yOffFactor);
 

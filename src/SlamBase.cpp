@@ -34,6 +34,7 @@ SlamBase::SlamBase()
   truncationRadius = static_cast<double>(iVar);
   prvNh.param<double>("occ_grid_time_interval", gridPublishInterval, 2.0);
   prvNh.param<double>("loop_rate", _rateVar, 40.0);
+  prvNh.param<bool>("use_icpsac", _icpSac, false);
   _loopRate = new ros::Rate(_rateVar);
   _gridInterval = new ros::Duration(gridPublishInterval);
   unsigned int uiVar = static_cast<unsigned int>(octaveFactor);

@@ -9,7 +9,13 @@
     <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />
     <param name = "truncation_radius" type = "double" value = "3.0" />
     <param name = "object_inflation_factor" type = "int" value = "3"/>
-    <param name = "use_object_inflation" type = "bool" value = "true" />
+    <param name = "use_object_inflation" type = "bool" value = "true" /> 
+	<param name = "use_icpsac"              type = "bool"   value = "true"  />
+	<param name = "dist_filter_max"         type = "double" value = "2.0"   />
+    <param name = "dist_filter_min"         type = "double" value = "0.1"  /> 
+	<param name = "icp_iterations"          type = "int"    value = "25"    />
+	<param name = "reg_trs_max"             type = "double" value = "1.25"  />
+	<param name = "reg_sin_rot_max"         type = "double" value = "0.6"   />     
   	
   	<param name = "robot0/namespace" type = "string" value = "georg"/>
   	<param name = "/georg/tf_child_frame" type = "string" value = "laser"/>
@@ -19,8 +25,10 @@
 	<param name = "/georg/yaw_offset" type = "double" value = "0.0"/>
 	<param name = "/georg/footprint_width" type = "double" value = "1.0"/>
 	<param name = "/georg/footprint_height" type = "double" value = "1.0"/>
-    <param name = "/georg/footprint_x_offset" type = "double" value = "0.5"/>
-    			
+    <param name = "/georg/footprint_x_offset" type = "double" value = "-0.5"/>
+    <param name = "/georg/low_reflectivity_range"  type = "double" value = "3.0"   />
+    <param name = "/georg/max_range" type = "double" value ="30.0" />    
+    <param name = "/georg/min_range" type = "double" value ="0.01" />			
 		
   	<param name = "robot1/namespace" type = "string" value = "simon"/>
 	<param name = "/simon/tf_child_frame" type = "string" value = "laser"/>
@@ -30,6 +38,9 @@
 	<param name = "/simon/yaw_offset" type = "double" value = "0.0"/>
 	<param name = "/simon/footprint_width" type = "double" value = "1.0"/>
 	<param name = "/simon/footprint_height" type = "double" value = "1.0"/>
-    <param name = "/simon/footprint_x_offset" type = "double" value = "0.5"/>	
+    <param name = "/simon/footprint_x_offset" type = "double" value = "-0.5"/>
+    <param name = "/simon/low_reflectivity_range"  type = "double" value = "3.0"   />
+    <param name = "/simon/max_range" type = "double" value ="30.0" />    
+    <param name = "/simon/min_range" type = "double" value ="0.01" />	
   </node>
 </launch>

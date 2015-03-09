@@ -4,6 +4,7 @@
 
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
+#include "obvision/registration/ransacMatching/RansacMatching.h"
 
 #include <boost/bind.hpp>
 
@@ -16,26 +17,41 @@
 namespace ohm_tsd_slam
 {
 
-Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor, std::string nameSpace)
+Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, 
+    const bool ransac, std::string nameSpace):
+        _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+        _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor)
 {
-  _pubMutex         = pubMutex;
+  ros::NodeHandle prvNh("~");
+  // _pubMutex         = pubMutex;
   _mapper           = mapper;
   _grid             = grid;
+  _ransac = ransac;
 
   _scene            = NULL;
   _modelCoords      = NULL;
   _modelNormals     = NULL;
+  _maskM = NULL;
+  _maskS = NULL;
 
-  _rayCaster        = new obvious::RayCastPolar2D();
-  _assigner         = new obvious::FlannPairAssignment(2);
-  _filterDist       = new obvious::DistanceFilter(2.0, 0.01, ITERATIONS - 3);
-  _filterReciprocal = new obvious::ReciprocalFilter();
-  _estimator        = new obvious::ClosedFormEstimator2D();
-  _trnsMax          = TRNS_THRESH;   //toDo: config file
-  _rotMax           = ROT_THRESH;    //toDo: config file
+  double distFilterMax = 0.0;
+  double distFilterMin = 0.0;
+  int icpIterations = 0;
+
+  prvNh.param<double>("dist_filter_max", distFilterMax, 0.2);
+  prvNh.param<double>("dist_filter_min", distFilterMin, 0.01);
+  prvNh.param<int>("icp_iterations", icpIterations, 20);
+  prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
+  prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
   _lastPose         = new obvious::Matrix(3, 3);
   _xOffFactor       = xOffFactor;
   _yOffFactor       = yOffFactor;
+
+  _rayCaster        = new obvious::RayCastPolar2D();
+  _assigner         = new obvious::FlannPairAssignment(2);
+  _filterDist       = new obvious::DistanceFilter(distFilterMax, distFilterMin, icpIterations - 10);
+  _filterReciprocal = new obvious::ReciprocalFilter();
+  _estimator        = new obvious::ClosedFormEstimator2D();
 
   //configure ICP
   _filterBounds     = new obvious::OutOfBoundsFilter2D(grid->getMinX(), grid->getMaxX(), grid->getMinY(), grid->getMaxY());
@@ -44,11 +60,8 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   _assigner->addPostFilter(_filterReciprocal);
   _icp = new obvious::Icp(_assigner, _estimator);
   _icp->setMaxRMS(0.0);
-  _icp->setMaxIterations(ITERATIONS);
-  _icp->setConvergenceCounter(ITERATIONS);
-  //_icp->activateTrace();
-
-  ros::NodeHandle prvNh("~");
+  _icp->setMaxIterations(icpIterations);
+  _icp->setConvergenceCounter(icpIterations);
 
   if(nameSpace.size())   //given namespace
     nameSpace += "/";
@@ -65,14 +78,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, boost:
   std::string tfChildParamServer;
   tfChildParamServer = nameSpace + "tf_child_frame";
   std::string tfChildFrameId;
-  //std::cout << __PRETTY_FUNCTION__ << " looking up " << tfChildParamServer << std::endl;
-  prvNh.param(tfChildParamServer, tfChildFrameId, std::string("default_ns/base_footprint"));
-  //std::cout << __PRETTY_FUNCTION__ << " found " << tfChildFrameId << std::endl;
-
-  //double sensorStaticXoffset = 0.0;
-  std::string sensorStaticXoffsetParamServer;
-  sensorStaticXoffsetParamServer = nameSpace + "/sensor_static_offset_x";
-  prvNh.param<double>(sensorStaticXoffsetParamServer, _lasXOffset, 0.0);
+  prvNh.param(tfChildParamServer, tfChildFrameId, std::string("default_ns/laser"));
 
   _posePub = _nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;
@@ -100,42 +106,81 @@ Localization::~Localization()
 
 void Localization::localize(obvious::SensorPolar2D* sensor)
 {
-  unsigned int size = sensor->getRealMeasurementSize();
+  //unsigned int size = sensor->getRealMeasurementSize();
+
+  unsigned int measurementSize = sensor->getRealMeasurementSize();
 
   if(!_scene)
   {
-    _scene        = new double[size * 2];
-    _modelCoords  = new double[size * 2];
-    _modelNormals = new double[size * 2];
+    _scene        = new double[measurementSize * 2];
+    _maskS        = new bool[measurementSize];
+    _modelCoords  = new double[measurementSize * 2];
+    _modelNormals = new double[measurementSize * 2];
+    _maskM        = new bool[measurementSize];
     *_lastPose    = sensor->getTransformation();
   }
 
   // reconstruction
-  unsigned int modelSize = 0;
-  _rayCaster->calcCoordsFromCurrentView(_grid, sensor, _modelCoords, _modelNormals, &modelSize);
-  if(modelSize == 0)
+  unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(_grid, sensor, _modelCoords, _modelNormals, _maskM);
+  if(validModelPoints == 0)
   {
     std::cout << __PRETTY_FUNCTION__ << " Error! Raycasting found no coordinates!\n";
     return;
   }
 
-  _icp->reset();
+  /**_icp->reset();
   obvious::Matrix P = sensor->getTransformation();
   _filterBounds->setPose(&P);
 
   obvious::Matrix M( modelSize / 2, 2, _modelCoords);
   obvious::Matrix N( modelSize / 2, 2, _modelNormals);
-  _icp->setModel(&M, &N);
+  _icp->setModel(&M, &N);**/
 
-  size = sensor->dataToCartesianVector(_scene);
-  obvious::Matrix S(size / 2, 2, _scene);
-  _icp->setScene(&S);
+  unsigned int validScenePoints = 0;
 
+  validScenePoints = sensor->dataToCartesianVectorMask(_scene, _maskS);
+
+  obvious::Matrix M(measurementSize, 2, _modelCoords);
+  obvious::Matrix N(measurementSize, 2, _modelNormals);
+  obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
+
+  //  size = sensor->dataToCartesianVector(_scene);
+  //  obvious::Matrix S(size / 2, 2, _scene);
+  //  _icp->setScene(&S);
+
+  unsigned int size = sensor->dataToCartesianVector(_scene);
+  obvious::Matrix S(measurementSize, 2, _scene);
+  obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
+
+  obvious::Matrix T44(4, 4);
+  T44.setIdentity();
+
+  // RANSAC pre-registration (rough)
+  if(_ransac)
+  {
+    RansacMatching ransac;
+    double phiMax = M_PI / 3.0;
+    obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
+    T.invert();
+    T44(0, 0) = T(0, 0);
+    T44(0, 1) = T(0, 1);
+    T44(0, 3) = T(0, 2);
+    T44(1, 0) = T(1, 0);
+    T44(1, 1) = T(1, 1);
+    T44(1, 3) = T(1, 2);
+  }
+
+  _icp->reset();
+  obvious::Matrix P = sensor->getTransformation();
+  _filterBounds->setPose(&P);
+  _icp->setModel(&Svalid, NULL);
+  _icp->setScene(&Mvalid);
   double rms = 0.0;
   unsigned int pairs = 0;
   unsigned int it = 0;
-  _icp->iterate(&rms, &pairs, &it);
+  _icp->iterate(&rms, &pairs, &it, &T44);
   obvious::Matrix T = _icp->getFinalTransformation();
+  T.invert();
 
   // analyze registration result
   double deltaX = T(0,2);
@@ -144,7 +189,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double deltaPhi = this->calcAngle(&T);
   _tf.stamp_ = ros::Time::now();
 
-  if(deltaY > 0.1 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
+  if(deltaY > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
   {
     // localization error broadcast invalid tf
     std::cout << __PRETTY_FUNCTION__ << "regError!\n";
@@ -162,18 +207,18 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _tf.setOrigin(tf::Vector3(NAN, NAN, NAN));
     _tf.setRotation(quat);
 
-    _pubMutex->lock();
+    //_pubMutex->lock();
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);
-    _pubMutex->unlock();
+    //_pubMutex->unlock();
   }
   else            //transformation valid -> transform sensor
   {
     sensor->transform(&T);
     obvious::Matrix curPose = sensor->getTransformation();
     double curTheta = this->calcAngle(&curPose);
-    double posX=curPose(0, 2) + std::cos(curTheta) * _lasXOffset -_grid->getCellsX() * _grid->getCellSize() * _xOffFactor;
-    double posY=curPose(1, 2) + std::sin(curTheta) * _lasXOffset -_grid->getCellsY() * _grid->getCellSize() * _yOffFactor;
+    double posX = curPose(0, 2) + _gridOffSetX;
+    double posY = curPose(1, 2) + _gridOffSetY;
     _poseStamped.header.stamp = ros::Time::now();
     _poseStamped.pose.position.x = posX;
     _poseStamped.pose.position.y = posY;
@@ -222,6 +267,24 @@ bool Localization::isPoseChangeSignificant(obvious::Matrix* lastPose, obvious::M
   double trnsAbs  = sqrt(deltaX * deltaX + deltaY * deltaY);
 
   return (deltaPhi > ROT_MIN) || (trnsAbs > TRNS_MIN);
+}
+
+obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints)
+{
+  assert(Mat->getRows() == maskSize);
+  assert(Mat->getCols() == 2);
+  obvious::Matrix retMat(validPoints, 2);
+  unsigned int cnt = 0;
+  for(int i = 0; i < maskSize; i++)
+  {
+    if(mask[i])
+    {
+      retMat(cnt, 0) = (*Mat)(i, 0);
+      retMat(cnt, 1) = (*Mat)(i, 1);
+      cnt++;
+    }
+  }
+  return retMat;
 }
 
 } /* namespace */

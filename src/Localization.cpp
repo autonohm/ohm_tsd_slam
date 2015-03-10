@@ -128,14 +128,6 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     return;
   }
 
-  /**_icp->reset();
-  obvious::Matrix P = sensor->getTransformation();
-  _filterBounds->setPose(&P);
-
-  obvious::Matrix M( modelSize / 2, 2, _modelCoords);
-  obvious::Matrix N( modelSize / 2, 2, _modelNormals);
-  _icp->setModel(&M, &N);**/
-
   unsigned int validScenePoints = 0;
 
   validScenePoints = sensor->dataToCartesianVectorMask(_scene, _maskS);
@@ -143,10 +135,6 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix M(measurementSize, 2, _modelCoords);
   obvious::Matrix N(measurementSize, 2, _modelNormals);
   obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
-
-  //  size = sensor->dataToCartesianVector(_scene);
-  //  obvious::Matrix S(size / 2, 2, _scene);
-  //  _icp->setScene(&S);
 
   unsigned int size = sensor->dataToCartesianVector(_scene);
   obvious::Matrix S(measurementSize, 2, _scene);
@@ -158,7 +146,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   // RANSAC pre-registration (rough)
   if(_ransac)
   {
-    RansacMatching ransac;
+    RansacMatching ransac(20, 0.15, measurementSize);
     double phiMax = M_PI / 3.0;
     obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
     T.invert();
@@ -197,7 +185,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _poseStamped.pose.position.x = NAN;
     _poseStamped.pose.position.y = NAN;
     _poseStamped.pose.position.z = NAN;
-    tf::Quaternion quat(NAN, NAN, NAN);
+    tf::Quaternion quat;
+    quat.setEuler(NAN, NAN, NAN);
     _poseStamped.pose.orientation.w = quat.w();
     _poseStamped.pose.orientation.x = quat.x();
     _poseStamped.pose.orientation.y = quat.y();
@@ -223,7 +212,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _poseStamped.pose.position.x = posX;
     _poseStamped.pose.position.y = posY;
     _poseStamped.pose.position.z = 0.0;
-    tf::Quaternion quat(0.0, 0.0, curTheta);
+    tf::Quaternion quat;
+    quat.setEuler(0.0, 0.0, curTheta);
     _poseStamped.pose.orientation.w = quat.w();
     _poseStamped.pose.orientation.x = quat.x();
     _poseStamped.pose.orientation.y = quat.y();

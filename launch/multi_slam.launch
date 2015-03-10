@@ -1,6 +1,8 @@
 <launch>
   <node name = "multi_slam_node" pkg = "ohm_tsd_slam" type = "multi_slam_node" output = "screen">
   	<param name = "robot_nbr" type = "int" value = "2"/>
+    <param name = "x_off_factor"            type = "double" value = "0.5"   />
+    <param name = "y_off_factor"            type = "double" value = "0.5"   />  	
     <param name = "cell_octave_factor"      type = "int"    value = "13"    />
     <param name = "cellsize"                type = "double" value = "0.015" />
     <param name = "min_range"               type = "double" value = "0.0"   />
@@ -11,11 +13,11 @@
     <param name = "object_inflation_factor" type = "int" value = "3"/>
     <param name = "use_object_inflation" type = "bool" value = "true" /> 
 	<param name = "use_icpsac"              type = "bool"   value = "true"  />
-	<param name = "dist_filter_max"         type = "double" value = "2.0"   />
-    <param name = "dist_filter_min"         type = "double" value = "0.1"  /> 
+	<param name = "dist_filter_max"         type = "double" value = "0.2"   />
+    <param name = "dist_filter_min"         type = "double" value = "0.01"  /> 
 	<param name = "icp_iterations"          type = "int"    value = "25"    />
 	<param name = "reg_trs_max"             type = "double" value = "1.25"  />
-	<param name = "reg_sin_rot_max"         type = "double" value = "0.6"   />     
+	<param name = "reg_sin_rot_max"         type = "double" value = "0.9"   />     
   	
   	<param name = "robot0/namespace" type = "string" value = "georg"/>
   	<param name = "/georg/tf_child_frame" type = "string" value = "laser"/>

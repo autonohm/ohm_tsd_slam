@@ -215,6 +215,7 @@ private:
 };
 
 obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints);
+void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigned int maskSize);
 
 } /* namespace ohm_tsd_slam*/
 

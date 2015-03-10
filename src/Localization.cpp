@@ -143,10 +143,13 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
 
+
   // RANSAC pre-registration (rough)
   if(_ransac)
   {
-    RansacMatching ransac(20, 0.15, measurementSize);
+    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
+      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
+    RansacMatching ransac(50, 0.15, 180);
     double phiMax = M_PI / 3.0;
     obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
     T.invert();
@@ -275,6 +278,19 @@ obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSi
     }
   }
   return retMat;
+}
+
+void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigned int maskSize)
+{
+  const double desResRad = 1.0 * M_PI / 180.0;
+  const unsigned int factor = static_cast<unsigned int>(desResRad / resolution + 0.5);
+  for(unsigned int i = 0; i < maskSize; i++)
+  {
+    if((!(i % factor)) && mask[i])
+      mask[i] = true;
+    else
+      mask[i] = false;
+  }
 }
 
 } /* namespace */

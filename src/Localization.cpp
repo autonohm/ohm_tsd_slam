@@ -5,7 +5,7 @@
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
 
-#include "obvision/ransacMatching/RansacMatching.h"
+#include "obvision/registration/ransacMatching/RansacMatching.h"
 
 #include <boost/bind.hpp>
 

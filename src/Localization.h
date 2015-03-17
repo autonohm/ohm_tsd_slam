@@ -11,7 +11,7 @@
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obvision/reconstruct/grid/TsdGrid.h"
 #include "obvision/reconstruct/grid/RayCastPolar2D.h"
-#include "obvision/icp/icp_def.h"
+#include "obvision/registration/icp/icp_def.h"
 
 #include <boost/signal.hpp>
 #include <boost/thread.hpp>
@@ -20,7 +20,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_broadcaster.h>
 
-#define ITERATIONS  25
+#define ITERATIONS  50
 #define TRNS_THRESH 1.25            //Thresholds for registration. If the gained transformation is out of these bounds,
 #define ROT_THRESH  0.9             //the Transformation is not taken over
 #define TRNS_MIN    0.05              //Minimal values for the pose change. Push is only needed when pose change

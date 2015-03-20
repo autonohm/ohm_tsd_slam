@@ -157,7 +157,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   {
     RansacMatching ransac;
     double phiMax = M_PI / 3.0;
-    obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
+    obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
     T.invert();
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);

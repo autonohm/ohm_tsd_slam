@@ -147,11 +147,27 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   // RANSAC pre-registration (rough)
   if(_ransac)
   {
-    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
-      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
+    const unsigned int factor = 4; //from 0.25 deg resolution to 1 deg resolution
+    const unsigned int reducedSize = (measurementSize / factor); // e.g.: 1080 -> 270
+
+    obvious::Matrix Sreduced(reducedSize, 2);
+    obvious::Matrix Mreduced(reducedSize, 2);
+    bool* maskSRed = new bool[reducedSize];
+    bool* maskMRed = new bool[reducedSize];
+
+    reduceResolution(_maskS, &S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
+    reduceResolution(_maskM, &M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
+//    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
+//      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
     RansacMatching ransac(50, 0.15, 180);
     double phiMax = M_PI / 3.0;
-    obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
+    obvious::Matrix T(3, 3);
+    if(factor == 1)
+      T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
+    else
+      T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
+                                     _trnsMax, sensor->getAngularResolution() * factor);
+
     T.invert();
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
@@ -180,7 +196,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double deltaPhi = this->calcAngle(&T);
   _tf.stamp_ = ros::Time::now();
 
-  if(deltaY > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
+  if((trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)   //deltaY > 0.5 ||
   {
     // localization error broadcast invalid tf
     std::cout << __PRETTY_FUNCTION__ << "regError!\n";
@@ -291,6 +307,33 @@ void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigne
     else
       mask[i] = false;
   }
+}
+
+void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
+                      unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor)
+{
+  assert(pointsIn > pointsOut);
+  const unsigned int factor = pointsIn / pointsOut;
+  assert(factor == reductionFactor);
+  assert(factor%2 == 0); //allowed factors are 0, 2,4, //fixme avoids wrong usage of the function for the moment
+
+  unsigned int cnt = 0;
+  for(unsigned int i = 0; i < pointsIn; i++)
+  {
+    if(!(i % factor)) {
+      cnt++;
+      if (maskIn[i]) {
+        maskOut[i/factor] = true;
+        (*matOut)(i/factor, 0) = (*matIn)(i, 0);
+        (*matOut)(i/factor, 1) = (*matIn)(i, 1);
+      }
+      else
+      {
+        maskOut[i/factor] = false;
+      }
+   }
+ }
+ assert(cnt == pointsOut);
 }
 
 } /* namespace */

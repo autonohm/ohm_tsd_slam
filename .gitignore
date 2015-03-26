@@ -23,3 +23,5 @@
 #eclipse hidden files
 .cproject
 .project
+.settings
+/maps

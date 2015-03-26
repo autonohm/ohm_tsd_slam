@@ -24,10 +24,11 @@
 	  <param name = "footprint_height"        type = "double" value = "1.0"  />
       <param name = "footprint_x_offset"      type = "double" value = "-0.5" /> 
 	  <param name = "use_icpsac"              type = "bool"   value = "true"  />
-	  <param name = "dist_filter_max"         type = "double" value = "0.4"   />
-      <param name = "dist_filter_min"         type = "double" value = "0.01"  /> 
+	  <param name = "dist_filter_max"         type = "double" value = "2.0"   />
+      <param name = "dist_filter_min"         type = "double" value = "0.1"  /> 
 	  <param name = "icp_iterations"          type = "int"    value = "25"    />
 	  <param name = "reg_trs_max"             type = "double" value = "1.25"  />
-	  <param name = "reg_sin_rot_max"         type = "double" value = "0.4"   />  
+	  <param name = "reg_sin_rot_max"         type = "double" value = "0.4"   /> 
+	  <param name = "ransac_reduce_factor"    type = "int"    value = "3"/>	 
   </node>
 </launch>

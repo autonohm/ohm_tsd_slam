@@ -80,6 +80,12 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   std::string tfChildFrameId;
   prvNh.param(tfChildParamServer, tfChildFrameId, std::string("default_ns/laser"));
 
+  std::string ranRedFactorParamServer;
+  int iVar = 0;
+  ranRedFactorParamServer = nameSpace + "ransac_reduce_factor";
+  prvNh.param<int>(ranRedFactorParamServer, iVar, 1);
+  _ransacReduceFactor = static_cast<unsigned int>(iVar);
+
   _posePub = _nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;
   _tf.frame_id_                = tfBaseFrameId;
@@ -147,7 +153,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   // RANSAC pre-registration (rough)
   if(_ransac)
   {
-    const unsigned int factor = 4; //from 0.25 deg resolution to 1 deg resolution
+    const unsigned int factor = _ransacReduceFactor;
     const unsigned int reducedSize = (measurementSize / factor); // e.g.: 1080 -> 270
 
     obvious::Matrix Sreduced(reducedSize, 2);
@@ -159,11 +165,11 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     reduceResolution(_maskM, &M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
 //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
 //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
-    RansacMatching ransac(50, 0.15, 180);
+    RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
     double phiMax = M_PI / 3.0;
     obvious::Matrix T(3, 3);
     if(factor == 1)
-      T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
+      T = ransac.match(&M, _maskM, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
     else
       T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
                                      _trnsMax, sensor->getAngularResolution() * factor);
@@ -315,7 +321,7 @@ void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* co
   assert(pointsIn > pointsOut);
   const unsigned int factor = pointsIn / pointsOut;
   assert(factor == reductionFactor);
-  assert(factor%2 == 0); //allowed factors are 0, 2,4, //fixme avoids wrong usage of the function for the moment
+  //assert(factor%2 == 0); //allowed factors are 0, 2,4, //fixme avoids wrong usage of the function for the moment
 
   unsigned int cnt = 0;
   for(unsigned int i = 0; i < pointsIn; i++)

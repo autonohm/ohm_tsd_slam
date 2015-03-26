@@ -43,6 +43,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _filterDist = new obvious::DistanceFilter(distFilterMax, distFilterMin, icpIterations - 10);
   _filterReciprocal = new obvious::ReciprocalFilter();
   _estimator = new obvious::ClosedFormEstimator2D();
+  //_estimator = new obvious::PointToLine2DEstimator();
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
   _lastPose = new obvious::Matrix(3, 3);
@@ -144,6 +145,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix M(measurementSize, 2, _modelCoords);
   obvious::Matrix N(measurementSize, 2, _modelNormals);
   obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
+  //obvious::Matrix Nvalid = maskMatrix(&N, _maskM, measurementSize, validModelPoints);
 
   unsigned int size = sensor->dataToCartesianVector(_scene);
   obvious::Matrix S(measurementSize, 2, _scene);
@@ -153,10 +155,11 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   T44.setIdentity();
 
   // RANSAC pre-registration (rough)
+  RansacMatching ransac;
+  double phiMax = M_PI / 3.0;
   if(_ransac)
   {
-    RansacMatching ransac;
-    double phiMax = M_PI / 3.0;
+    ransac.activateTrace();
     obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
     T.invert();
     T44(0, 0) = T(0, 0);
@@ -186,9 +189,11 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double deltaPhi = this->calcAngle(&T);
   _tf.stamp_ = ros::Time::now();
 
-  if(deltaY > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)
+  if(abs(deltaY) > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > phiMax)
   {
     cout << "Registration error - deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
+    ransac.serializeTrace("/tmp/ransac/");
+
     // localization error broadcast invalid tf
 
     _poseStamped.header.stamp = ros::Time::now();

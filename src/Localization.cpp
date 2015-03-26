@@ -155,18 +155,19 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     bool* maskSRed = new bool[reducedSize];
     bool* maskMRed = new bool[reducedSize];
 
-    reduceResolution(_maskS, &S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
-    reduceResolution(_maskM, &M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
-//    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
-//      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
-    RansacMatching ransac(50, 0.15, 180);
+    if(factor != 1)
+    {
+      reduceResolution(_maskS, &S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
+      reduceResolution(_maskM, &M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
+    }
+    RansacMatching ransac(50, 0.15, 270);
     double phiMax = M_PI / 3.0;
     obvious::Matrix T(3, 3);
     if(factor == 1)
-      T = ransac.match(&M, _maskM, &S, _maskS, phiMax, sensor->getAngularResolution());
+      T = ransac.match(&M, _maskM, &S, _maskS, phiMax,_trnsMax, sensor->getAngularResolution());
     else
       T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
-                                     _trnsMax, sensor->getAngularResolution() * factor);
+                                     _trnsMax/2, sensor->getAngularResolution() * factor);
 
     T.invert();
     T44(0, 0) = T(0, 0);
@@ -196,7 +197,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double deltaPhi = this->calcAngle(&T);
   _tf.stamp_ = ros::Time::now();
 
-  if((trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)   //deltaY > 0.5 ||
+  if((trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > M_PI/3.0)   //deltaY > 0.5 ||
   {
     // localization error broadcast invalid tf
     std::cout << __PRETTY_FUNCTION__ << "regError!\n";

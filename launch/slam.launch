@@ -5,7 +5,7 @@
       <param name = "x_off_factor"            type = "double" value = "0.5"   />
       <param name = "y_off_factor"            type = "double" value = "0.5"   />
 	  <param name = "yaw_offset"              type = "double" value = "0.0"   />      
-      <param name = "cell_octave_factor"      type = "int"    value = "11"    />
+      <param name = "cell_octave_factor"      type = "int"    value = "13"    />
       <param name = "cellsize"                type = "double" value = "0.015" />
       <param name = "min_range"               type = "double" value = "0.0"   />
       <param name = "max_range"               type = "double" value = "30.0"  />

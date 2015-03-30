@@ -160,13 +160,15 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     obvious::Matrix Mreduced(reducedSize, 2);
     bool* maskSRed = new bool[reducedSize];
     bool* maskMRed = new bool[reducedSize];
+    if( factor != 1) {
+      reduceResolution(_maskS, &S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
+      reduceResolution(_maskM, &M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
+    }
 
-    reduceResolution(_maskS, &S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
-    reduceResolution(_maskM, &M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
 //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
 //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
     RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
-    double phiMax = M_PI / 3.0;
+    double phiMax = _rotMax;
     obvious::Matrix T(3, 3);
     if(factor == 1)
       T = ransac.match(&M, _maskM, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());

@@ -49,7 +49,7 @@ public:
    * @param parentNode Pointer to main node instance
    */
   Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor,
-      const bool ransac, std::string nameSpace = "");
+       std::string nameSpace = "");
 
   /**
    * Destructor

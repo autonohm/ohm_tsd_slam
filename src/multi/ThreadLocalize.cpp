@@ -26,7 +26,7 @@ namespace ohm_tsd_slam
 {
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
-    const double xOffFactor, const double yOffFactor, const bool icpSac):
+    const double xOffFactor, const double yOffFactor):
                                 _nh(nh),
                                 _grid(*grid),
                                 _mapper(*mapper),
@@ -35,14 +35,13 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
                                 _newScan(false),
                                 _initialized(false),
                                 _nameSpace(nameSpace),
-                                _icpSac(icpSac),
                                 _mask(NULL)
 {
   _gridWidth  = grid->getCellsX() * grid->getCellSize();
   _gridHeight = grid->getCellsY() * grid->getCellSize();
   _xOffFactor = xOffFactor;
   _yOffFactor = yOffFactor;
-  _localizer  = new Localization(grid, mapper, *_nh, _xOffFactor, _yOffFactor, icpSac, nameSpace);
+  _localizer  = new Localization(grid, mapper, *_nh, _xOffFactor, _yOffFactor, nameSpace);
 }
 
 ThreadLocalize::~ThreadLocalize()

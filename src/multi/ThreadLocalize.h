@@ -31,7 +31,7 @@ class ThreadLocalize: public ThreadSLAM
 {
 public:
   ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
-      const double xOffFactor, const double yOffFactor, const bool icpSac);
+      const double xOffFactor, const double yOffFactor);
   virtual ~ThreadLocalize();
   bool setData(const sensor_msgs::LaserScan& scan);
 protected:
@@ -52,7 +52,6 @@ private:
   double _gridHeight;
   double _xOffFactor;
   double _yOffFactor;
-  bool   _icpSac;
   bool* _mask;
   boost::mutex _dataMutex;
 };

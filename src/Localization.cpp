@@ -18,7 +18,7 @@ namespace ohm_tsd_slam
 {
 
 Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, 
-    const bool ransac, std::string nameSpace):
+     std::string nameSpace):
         _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
         _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor)
 {
@@ -26,7 +26,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   // _pubMutex         = pubMutex;
   _mapper           = mapper;
   _grid             = grid;
-  _ransac = ransac;
+  //_ransac = ransac;
 
   _scene            = NULL;
   _modelCoords      = NULL;
@@ -79,6 +79,10 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   tfChildParamServer = nameSpace + "tf_child_frame";
   std::string tfChildFrameId;
   prvNh.param(tfChildParamServer, tfChildFrameId, std::string("default_ns/laser"));
+
+  std::string icpSacParamServer;
+  icpSacParamServer = nameSpace + "use_icpSac";
+  prvNh.param<bool>(icpSacParamServer, _ransac, false);
 
   _posePub = _nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;

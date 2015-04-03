@@ -48,7 +48,7 @@ MultiSlamNode::MultiSlamNode()
     sstream << i << "/namespace";
     std::string dummy = sstream.str();
     prvNh.param(dummy, nameSpace, std::string("default_ns"));
-    threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_nh, nameSpace, _xOffFactor, _yOffFactor, _icpSac);
+    threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_nh, nameSpace, _xOffFactor, _yOffFactor);
     _localizers.push_back(threadLocalize);
     laserCallBackObject = new LaserCallBackObject(threadLocalize);
     subs = new ros::Subscriber;

@@ -1,7 +1,7 @@
 <launch>
     <node pkg="tf"  type="static_transform_publisher" name = "tf_laser" args = "-0.19 0 0.0 0 0 0 laser base_footprint 50"/>
   <node name = "slam_node" pkg = "ohm_tsd_slam" type = "slam_node" output = "screen">
-      <param name = "laser_topic"             type = "string" value = "simon/scan"  />
+      <param name = "laser_topic"             type = "string" value = "scan"  />
       <param name = "x_off_factor"            type = "double" value = "0.5"   />
       <param name = "y_off_factor"            type = "double" value = "0.5"   />
 	  <param name = "yaw_offset"              type = "double" value = "0.0"   />      
@@ -23,11 +23,12 @@
       <param name = "footprint_width"         type = "double" value = "1.0"  />	
 	  <param name = "footprint_height"        type = "double" value = "1.0"  />
       <param name = "footprint_x_offset"      type = "double" value = "-0.5" /> 
-	  <param name = "use_icpsac"              type = "bool"   value = "false"  />
+	  <param name = "use_icpsac"              type = "bool"   value = "true"  />
 	  <param name = "dist_filter_max"         type = "double" value = "2.0"   />
       <param name = "dist_filter_min"         type = "double" value = "0.1"  /> 
 	  <param name = "icp_iterations"          type = "int"    value = "25"    />
 	  <param name = "reg_trs_max"             type = "double" value = "1.25"  />
-	  <param name = "reg_sin_rot_max"         type = "double" value = "0.4"   />  
+	  <param name = "reg_sin_rot_max"         type = "double" value = "0.4"   /> 
+	  <param name = "ransac_reduce_factor"    type = "int"    value = "3"/>	 
   </node>
 </launch>

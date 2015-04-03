@@ -212,6 +212,8 @@ private:
    */
   bool _ransac;
 
+  unsigned int _ransacReduceFactor;
+
 };
 
 obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints);

@@ -33,6 +33,7 @@ public:
 protected:
   virtual void run(void) = 0;
   void timedGridPub(void);
+  bool resetGrid(void);
   ros::NodeHandle _nh;
   obvious::TsdGrid* _grid;
   ThreadMapping* _threadMapping;
@@ -46,6 +47,9 @@ protected:
   bool _initialized;
   ros::Duration* _gridInterval;
   //bool _icpSac;
+  unsigned int _octaveFactor;
+  double _truncationRadius;
+  double _cellSize;
 };
 
 } /* namespace ohm_tsd_slam */

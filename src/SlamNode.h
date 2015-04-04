@@ -17,6 +17,7 @@
 
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obcore/base/Logger.h"
+#include "ohm_srvs/NodeControl.h"
 
 #include <boost/thread.hpp>
 
@@ -82,6 +83,14 @@ private:
    * @param scan Laser scan
    */
   void laserScanCallBack(const sensor_msgs::LaserScan& scan);
+
+  bool nodeControlServiceCallBack(ohm_srvs::NodeControl::Request& req, ohm_srvs::NodeControl::Response& res);
+
+  bool pause(void);
+
+  bool unPause(void);
+
+  bool reset(void);
 
   /**
    * Main node handle
@@ -167,6 +176,12 @@ private:
    * Desired loop rate
    */
   //double _loopRate;
+
+  bool _pause;
+
+  std::string _laserTopic;
+
+  ros::ServiceServer _nodeControlSrv;
 };
 
 } /* namespace ohm_tsdSlam */

@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   tf
+  ohm_srvs
 )
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native")
@@ -138,7 +139,8 @@ add_executable(multi_slam_node src/multi/multi_slam_node.cpp
                                   
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(ohm_tsd_slam_node ohm_tsd_slam_generate_messages_cpp)
+add_dependencies(slam_node ohm_srvs_generate_messages_cpp)
+add_dependencies(multi_slam_node ohm_srvs_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(ohm_tsd_slam_node

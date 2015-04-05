@@ -32,7 +32,8 @@
     <param name = "/georg/max_range" type = "double" value ="30.0" />    
     <param name = "/georg/min_range" type = "double" value ="0.01" />
     <param name = "/georg/ransac_reduce_factor" type = "int" value = "1"/>
-    <param name = "/georg/use_icpsac" type = "bool"   value = "true"  />  			
+    <param name = "/georg/use_icpsac" type = "bool"   value = "false"  />
+    <param name = "/georg/node_control" type = "string" value = "node_control"/> 			
 		
   	<param name = "robot1/namespace" type = "string" value = "simon"/>
 	<param name = "/simon/tf_child_frame" type = "string" value = "laser"/>
@@ -47,6 +48,7 @@
     <param name = "/simon/max_range" type = "double" value ="30.0" />    
     <param name = "/simon/min_range" type = "double" value ="0.01" />
     <param name = "/simon/ransac_reduce_factor" type = "int" value = "4"/>
-    <param name = "/simon/use_icpsac" type = "bool"   value = "true"  />
+    <param name = "/simon/use_icpsac" type = "bool"   value = "false"  />
+	<param name = "/simon/node_control" type = "string" value = "node_control"/>    
   </node>
 </launch>

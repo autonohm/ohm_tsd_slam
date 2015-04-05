@@ -24,12 +24,13 @@ public:
   MultiSlamNode();
   virtual ~MultiSlamNode();
  // void start(void);
+  bool reset(void);
 private:
   void run(void);
   void init(void);
   std::vector<ThreadLocalize*> _localizers;
   std::vector<LaserCallBackObject*> _laserCallBacks;
-  std::vector<ros::Subscriber*> _subs;
+  unsigned int _robotNbr;
 };
 
 }

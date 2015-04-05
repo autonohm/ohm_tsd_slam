@@ -154,13 +154,15 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
 
+  RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
+
 
   // RANSAC pre-registration (rough)
   if(_ransac)
   {
     const unsigned int factor = _ransacReduceFactor;
-    const unsigned int reducedSize = (measurementSize / factor); // e.g.: 1080 -> 270
-
+    const unsigned int reducedSize = measurementSize / factor; //fix e.g.: 1080 -> 270
+    //cout<<"reduced: "<<reducedSize<<" full: "<<measurementSize<<endl;
     obvious::Matrix Sreduced(reducedSize, 2);
     obvious::Matrix Mreduced(reducedSize, 2);
     bool* maskSRed = new bool[reducedSize];
@@ -172,7 +174,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
 
 //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
 //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
-    RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
+    //ransac.activateTrace();
     double phiMax = _rotMax;
     obvious::Matrix T(3, 3);
     if(factor == 1)
@@ -180,6 +182,9 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     else
       T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
                                      _trnsMax, sensor->getAngularResolution() * factor);
+    //char path[30];
+    //sprintf(path, "/tmp/ransacTrace%d",ros::Time::now().nsec);
+    //ransac.serializeTrace(path);
 
     T.invert();
     T44(0, 0) = T(0, 0);
@@ -323,17 +328,18 @@ void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigne
 }
 
 void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
-                      unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor)
+                      const unsigned int pointsIn, const unsigned int pointsOut, const unsigned int reductionFactor)
 {
   assert(pointsIn > pointsOut);
+  //fixme we only support scan with even number of points like 1080. if a scan has 1081 points is not usable for subsampling here!
   const unsigned int factor = pointsIn / pointsOut;
   assert(factor == reductionFactor);
-  //assert(factor%2 == 0); //allowed factors are 0, 2,4, //fixme avoids wrong usage of the function for the moment
 
   unsigned int cnt = 0;
   for(unsigned int i = 0; i < pointsIn; i++)
   {
-    if(!(i % factor)) {
+    if(!(i % factor)) // i % factor == 0
+    {
       cnt++;
       if (maskIn[i]) {
         maskOut[i/factor] = true;

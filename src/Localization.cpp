@@ -82,7 +82,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
 
 
   std::string icpSacParamServer;
-  icpSacParamServer = nameSpace + "use_icpSac";
+  icpSacParamServer = nameSpace + "use_icpsac";
   prvNh.param<bool>(icpSacParamServer, _ransac, false);
 
   std::string ranRedFactorParamServer;

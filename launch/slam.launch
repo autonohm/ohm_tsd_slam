@@ -6,16 +6,16 @@
       <param name = "y_off_factor"            type = "double" value = "0.5"   />
 	  <param name = "yaw_offset"              type = "double" value = "0.0"   />      
       <param name = "cell_octave_factor"      type = "int"    value = "13"    />
-      <param name = "cellsize"                type = "double" value = "0.01" />
+      <param name = "cellsize"                type = "double" value = "0.015" />
       <param name = "min_range"               type = "double" value = "0.0"   />
-      <param name = "max_range"               type = "double" value = "50.0"  />
+      <param name = "max_range"               type = "double" value = "30.0"  />
       <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
       <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />
       <param name = "loop_rate"               type = "double" value = "40.0"  />
       <param name = "pose_topic"              type = "string" value = "pose"  />
       <param name = "tf_base_frame"           type = "string" value = "/map"  />
       <param name = "tf_child_frame"          type = "string" value = "laser" />
-      <param name = "truncation_radius"       type = "double" value = "3.0"   />
+      <param name = "truncation_radius"       type = "double" value = "2.0"   />
       <param name = "object_inflation_factor" type = "int"    value = "0"     />
       <param name = "use_object_inflation"    type = "bool"   value = "false" /> 
       <param name = "map_topic"               type = "string" value = "/map"  />
@@ -23,12 +23,12 @@
       <param name = "footprint_width"         type = "double" value = "1.0"  />	
 	  <param name = "footprint_height"        type = "double" value = "1.0"  />
       <param name = "footprint_x_offset"      type = "double" value = "-0.5" /> 
-	  <param name = "use_icpsac"              type = "bool"   value = "true"  />
-	  <param name = "dist_filter_max"         type = "double" value = "0.2"   />
-      <param name = "dist_filter_min"         type = "double" value = "0.01"  /> 
+	  <param name = "use_icpsac"              type = "bool"   value = "false"  />
+	  <param name = "dist_filter_max"         type = "double" value = "2.0"   />
+      <param name = "dist_filter_min"         type = "double" value = "0.1"  /> 
 	  <param name = "icp_iterations"          type = "int"    value = "25"    />
-	  <param name = "reg_trs_max"             type = "double" value = "0.5"  />
-	  <param name = "reg_sin_rot_max"         type = "double" value = "0.5"   /> 
+	  <param name = "reg_trs_max"             type = "double" value = "1.25"  />
+	  <param name = "reg_sin_rot_max"         type = "double" value = "0.4"   /> 
 	  <param name = "ransac_reduce_factor"    type = "int"    value = "1"/>	 
 	  <param name = "node_control_topic"      type = "string" value = "node_control"/>	 
   </node>

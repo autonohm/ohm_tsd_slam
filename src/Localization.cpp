@@ -155,15 +155,11 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
 
-  RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
-
-
   // RANSAC pre-registration (rough)
   if(_ransac)
   {
     const unsigned int factor = _ransacReduceFactor;
-    const unsigned int reducedSize = measurementSize / factor; //fix e.g.: 1080 -> 270
-    //cout<<"reduced: "<<reducedSize<<" full: "<<measurementSize<<endl;
+    const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270
     obvious::Matrix Sreduced(reducedSize, 2);
     obvious::Matrix Mreduced(reducedSize, 2);
     bool* maskSRed = new bool[reducedSize];
@@ -175,7 +171,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
 
 //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
 //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
-    //ransac.activateTrace();
+    RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
     double phiMax = _rotMax;
     obvious::Matrix T(3, 3);
     if(factor == 1)
@@ -183,10 +179,6 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     else
       T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
                                      _trnsMax, sensor->getAngularResolution() * factor);
-    //char path[30];
-    //sprintf(path, "/tmp/ransacTrace%d",ros::Time::now().nsec);
-    //ransac.serializeTrace(path);
-
     T.invert();
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);

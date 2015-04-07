@@ -5,19 +5,13 @@
     <param name = "y_off_factor"            type = "double" value = "0.5"   />  	
     <param name = "cell_octave_factor"      type = "int"    value = "13"    />
     <param name = "cellsize"                type = "double" value = "0.015" />
-    <param name = "min_range"               type = "double" value = "0.0"   />
-    <param name = "max_range"               type = "double" value = "30.0"  />
     <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
     <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />
     <param name = "truncation_radius" type = "double" value = "3.0" />
     <param name = "object_inflation_factor" type = "int" value = "3"/>
     <param name = "use_object_inflation" type = "bool" value = "true" /> 
-	<param name = "use_icpsac"              type = "bool"   value = "true"  />
-	<param name = "dist_filter_max"         type = "double" value = "0.2"   />
-    <param name = "dist_filter_min"         type = "double" value = "0.01"  /> 
-	<param name = "icp_iterations"          type = "int"    value = "25"    />
-	<param name = "reg_trs_max"             type = "double" value = "1.25"  />
-	<param name = "reg_sin_rot_max"         type = "double" value = "0.9"   />     
+	<param name = "reg_trs_max"             type = "double" value = "0.5"  />
+	<param name = "reg_sin_rot_max"         type = "double" value = "0.5"   />     
   	
   	<param name = "robot0/namespace" type = "string" value = "georg"/>
   	<param name = "/georg/tf_child_frame" type = "string" value = "laser"/>
@@ -29,16 +23,19 @@
 	<param name = "/georg/footprint_height" type = "double" value = "1.0"/>
     <param name = "/georg/footprint_x_offset" type = "double" value = "-0.5"/>
     <param name = "/georg/low_reflectivity_range"  type = "double" value = "3.0"   />
-    <param name = "/georg/max_range" type = "double" value ="30.0" />    
+    <param name = "/georg/max_range" type = "double" value ="15.0" />    
     <param name = "/georg/min_range" type = "double" value ="0.01" />
     <param name = "/georg/ransac_reduce_factor" type = "int" value = "1"/>
     <param name = "/georg/use_icpsac" type = "bool"   value = "false"  />
+    <param name = "/georg/icp_iterations" type = "int"    value = "25"    />
+    <param name = "/georg/dist_filter_max" type = "double" value = "2.0"   />
+    <param name = "/georg/dist_filter_min" type = "double" value = "0.1"  /> 
     <param name = "/georg/node_control" type = "string" value = "node_control"/> 			
 		
   	<param name = "robot1/namespace" type = "string" value = "simon"/>
 	<param name = "/simon/tf_child_frame" type = "string" value = "laser"/>
 	<param name = "/simon/pose_topic" type = "string" value = "pose"/>
-	<param name = "/simon/x_offset" type = "double" value = "0.0"/>
+	<param name = "/simon/x_offset" type = "double" value = "1.8"/>
     <param name = "/simon/y_offset" type = "double" value = "0.0"/>
 	<param name = "/simon/yaw_offset" type = "double" value = "0.0"/>
 	<param name = "/simon/footprint_width" type = "double" value = "1.0"/>
@@ -48,7 +45,10 @@
     <param name = "/simon/max_range" type = "double" value ="30.0" />    
     <param name = "/simon/min_range" type = "double" value ="0.01" />
     <param name = "/simon/ransac_reduce_factor" type = "int" value = "4"/>
-    <param name = "/simon/use_icpsac" type = "bool"   value = "false"  />
+    <param name = "/simon/use_icpsac" type = "bool"   value = "true"  />
+    <param name = "/simon/icp_iterations" type = "int"    value = "25"    />
+    <param name = "/simon/dist_filter_max" type = "double" value = "0.2"   />
+    <param name = "/simon/dist_filter_min" type = "double" value = "0.01"  /> 
 	<param name = "/simon/node_control" type = "string" value = "node_control"/>    
   </node>
 </launch>

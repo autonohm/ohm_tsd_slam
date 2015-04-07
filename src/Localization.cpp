@@ -26,7 +26,6 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   // _pubMutex         = pubMutex;
   _mapper           = mapper;
   _grid             = grid;
-  //_ransac = ransac;
 
   _scene            = NULL;
   _modelCoords      = NULL;
@@ -34,15 +33,44 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _maskM = NULL;
   _maskS = NULL;
 
+  /*** Read parameters from ros parameter server. Use namespace if provided ***/
+  if(nameSpace.size())   //given namespace
+      nameSpace += "/";
+
+  //pose
+  std::string poseTopic;
+  prvNh.param(nameSpace + "pose_topic", poseTopic, std::string("default_ns/pose"));
+  poseTopic = nameSpace + poseTopic;
+
+  //base frame
+  std::string tfBaseFrameId;
+  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
+
+  //child frame
+  std::string tfChildFrameId;
+  prvNh.param(nameSpace + "tf_child_frame", tfChildFrameId, std::string("default_ns/laser"));
+
+  //use icpsac?
+  prvNh.param<bool>(nameSpace + "use_icpsac", _ransac, false);
+
+  //reduce size for ransac
+  int iVar = 0;
+  prvNh.param<int>(nameSpace + "ransac_reduce_factor", iVar, 1);
+  _ransacReduceFactor = static_cast<unsigned int>(iVar);
+
+  //ICP Options
   double distFilterMax = 0.0;
   double distFilterMin = 0.0;
   int icpIterations = 0;
+  prvNh.param<double>(nameSpace + "dist_filter_min", distFilterMin, 0.2);
+  prvNh.param<double>(nameSpace + "dist_filter_max", distFilterMax, 1.0);
+  prvNh.param<int>(nameSpace+"icp_iterations", icpIterations, 25);
 
-  prvNh.param<double>("dist_filter_max", distFilterMax, 0.2);
-  prvNh.param<double>("dist_filter_min", distFilterMin, 0.01);
-  prvNh.param<int>("icp_iterations", icpIterations, 20);
+  //Maximum allowed offset between to aligned scans
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
+
+  /** Initialize member modules **/
   _lastPose         = new obvious::Matrix(3, 3);
   _xOffFactor       = xOffFactor;
   _yOffFactor       = yOffFactor;
@@ -63,33 +91,6 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _icp->setMaxIterations(icpIterations);
   _icp->setConvergenceCounter(icpIterations);
 
-  if(nameSpace.size())   //given namespace
-    nameSpace += "/";
-
-  std::string poseParamServer;
-  poseParamServer = nameSpace + "pose_topic";
-  std::string poseTopic;
-  prvNh.param(poseParamServer, poseTopic, std::string("default_ns/pose"));
-  poseTopic = nameSpace + poseTopic;
-
-  std::string tfBaseFrameId;
-  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
-
-  std::string tfChildParamServer;
-  tfChildParamServer = nameSpace + "tf_child_frame";
-  std::string tfChildFrameId;
-  prvNh.param(tfChildParamServer, tfChildFrameId, std::string("default_ns/laser"));
-
-
-  std::string icpSacParamServer;
-  icpSacParamServer = nameSpace + "use_icpsac";
-  prvNh.param<bool>(icpSacParamServer, _ransac, false);
-
-  std::string ranRedFactorParamServer;
-  int iVar = 0;
-  ranRedFactorParamServer = nameSpace + "ransac_reduce_factor";
-  prvNh.param<int>(ranRedFactorParamServer, iVar, 1);
-  _ransacReduceFactor = static_cast<unsigned int>(iVar);
 
   _posePub = _nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;

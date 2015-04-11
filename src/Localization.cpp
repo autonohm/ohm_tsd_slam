@@ -118,7 +118,7 @@ obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSi
 void Localization::localize(obvious::SensorPolar2D* sensor)
 {
   unsigned int measurementSize = sensor->getRealMeasurementSize();
-
+  bool* measurementMask = sensor->getRealMeasurementMask();
   if(!_scene)
   {
     _scene        = new double[measurementSize * 2];
@@ -147,7 +147,11 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
   //obvious::Matrix Nvalid = maskMatrix(&N, _maskM, measurementSize, validModelPoints);
 
-  unsigned int size = sensor->dataToCartesianVector(_scene);
+  for(unsigned int i=0; i<validScenePoints; i++)
+    _maskS[i] = measurementMask[i];
+  for(unsigned int i=validScenePoints; i<measurementSize; i++)
+    _maskS[i] = false;
+
   obvious::Matrix S(measurementSize, 2, _scene);
   obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
 
@@ -159,7 +163,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double phiMax = M_PI / 3.0;
   if(_ransac)
   {
-    ransac.activateTrace();
+    //ransac.activateTrace();
     obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
     T.invert();
     T44(0, 0) = T(0, 0);
@@ -171,6 +175,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   }
 
   _icp->reset();
+  //_icp->activateTrace();
   obvious::Matrix P = sensor->getTransformation();
   _filterBounds->setPose(&P);
   _icp->setModel(&Svalid, NULL);
@@ -189,10 +194,12 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double deltaPhi = this->calcAngle(&T);
   _tf.stamp_ = ros::Time::now();
 
+  //cout << "Registration: " << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
+
   if(abs(deltaY) > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > phiMax)
   {
     cout << "Registration error - deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
-    ransac.serializeTrace("/tmp/ransac/");
+    // ransac.serializeTrace("/tmp/ransac/");
 
     // localization error broadcast invalid tf
 

@@ -19,9 +19,10 @@ namespace ohm_tsd_slam
 
 Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, 
     std::string nameSpace):
-            _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-            _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor)
+                _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+                _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor)
 {
+  _nh = &nh;
   ros::NodeHandle prvNh("~");
   // _pubMutex         = pubMutex;
   _mapper           = mapper;
@@ -58,6 +59,12 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   prvNh.param<int>(nameSpace + "ransac_reduce_factor", iVar, 1);
   _ransacReduceFactor = static_cast<unsigned int>(iVar);
 
+  _noPush = false;   //start in slam mode (nopush = false)
+
+  std::string togglePushServiceTopic;
+  prvNh.param<std::string>(nameSpace + "toggle_push", togglePushServiceTopic, "toggle_push");
+  _togglePushService = _nh->advertiseService(togglePushServiceTopic, &Localization::togglePushServiceCallBack, this);
+
   //ICP Options
   double distFilterMax = 0.0;
   double distFilterMin = 0.0;
@@ -92,7 +99,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _icp->setConvergenceCounter(icpIterations);
 
 
-  _posePub = _nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
+  _posePub = _nh->advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;
   _tf.frame_id_                = tfBaseFrameId;
   _tf.child_frame_id_          = nameSpace + tfChildFrameId;
@@ -262,10 +269,13 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);
     //_pubMutex->unlock();
-    if(this->isPoseChangeSignificant(_lastPose, &curPose))
+    if(!_noPush)
     {
-      *_lastPose = curPose;
-      _mapper->queuePush(sensor);
+      if(this->isPoseChangeSignificant(_lastPose, &curPose))
+      {
+        *_lastPose = curPose;
+        _mapper->queuePush(sensor);
+      }
     }
   }
 }
@@ -310,6 +320,12 @@ obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSi
     }
   }
   return retMat;
+}
+
+bool Localization::togglePushServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+{
+  _noPush = !_noPush;
+  return true;
 }
 
 void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigned int maskSize)

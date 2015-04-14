@@ -66,6 +66,11 @@ private:
   ros::ServiceServer _getMapServ;
 
   /**
+   * Store map service
+   */
+  ros::ServiceServer _storeMapServ;
+
+  /**
    * Buffer for occupancy grid content
    */
   char* _occGridContent;

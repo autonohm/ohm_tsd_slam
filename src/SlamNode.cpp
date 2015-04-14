@@ -36,6 +36,7 @@ SlamNode::SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource so
   prvNh.param<double>("loop_rate", _loopRate, 40.0);
 
   _laserSubs = _nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
+  _storeMapServ = _nh.advertiseService(storeMapTopic, &SlamNode::storeMapServiceCallBack, this);
 
   unsigned int uiVar = static_cast<unsigned int>(octaveFactor);
   if((uiVar > 15) || (uiVar < 5))

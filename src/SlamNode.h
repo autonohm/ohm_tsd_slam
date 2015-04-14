@@ -92,6 +92,11 @@ private:
   ros::Subscriber _laserSubs;
 
   /**
+     * Store map service
+     */
+    ros::ServiceServer _storeMapServ;
+
+  /**
    * Initilized flag
    */
   bool _initialized;

@@ -125,18 +125,16 @@ Localization::~Localization()
 
 void Localization::localize(obvious::SensorPolar2D* sensor)
 {
-  //unsigned int size = sensor->getRealMeasurementSize();
-
-  unsigned int measurementSize = sensor->getRealMeasurementSize();
+  const unsigned int measurementSize = sensor->getRealMeasurementSize();
 
   if(!_scene)
   {
-    _scene        = new double[measurementSize * 2];
-    _maskS        = new bool[measurementSize];
-    _modelCoords  = new double[measurementSize * 2];
+    _scene 				= new double[measurementSize * 2];
+    _maskS 				= new bool[measurementSize];
+    _modelCoords 	= new double[measurementSize * 2];
     _modelNormals = new double[measurementSize * 2];
-    _maskM        = new bool[measurementSize];
-    *_lastPose    = sensor->getTransformation();
+    _maskM 				= new bool[measurementSize];
+    *_lastPose 		= sensor->getTransformation();
   }
 
   // reconstruction
@@ -147,137 +145,194 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     return;
   }
 
+  //get current scan
   unsigned int validScenePoints = 0;
-
   validScenePoints = sensor->dataToCartesianVectorMask(_scene, _maskS);
 
+  /**
+   *  Create Point Matrixes with structure [x1 y1; x2 y2; ..]
+   *  M, N, and S are matrices that preserve the ray model of a laser scanner
+   *  Xvalid matrices are matrices that do not preserve the ray model but contain only valid points
+   */
   obvious::Matrix M(measurementSize, 2, _modelCoords);
   obvious::Matrix N(measurementSize, 2, _modelNormals);
   obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
 
-  for(unsigned int i=0; i<validScenePoints; i++)
+  for(unsigned int i = 0; i < validScenePoints; i++)
     _maskS[i] = sensor->getRealMeasurementMask()[i];
-  for(unsigned int i=validScenePoints; i<measurementSize; i++)
+  for(unsigned int i = validScenePoints; i < measurementSize; i++)
     _maskS[i] = false;
 
   unsigned int size = sensor->dataToCartesianVector(_scene);
   obvious::Matrix S(measurementSize, 2, _scene);
   obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
 
-  obvious::Matrix T44(4, 4);
-  T44.setIdentity();
+  /** Align Laser scans */
+  obvious::Matrix T = doRegistration(sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, _ransac);  //3x3 Transformation Matrix
+  T.print();
 
-  // RANSAC pre-registration (rough)
-  if(_ransac)
-  {
-    const unsigned int factor = _ransacReduceFactor;
-    const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270
-    obvious::Matrix Sreduced(reducedSize, 2);
-    obvious::Matrix Mreduced(reducedSize, 2);
-    bool* maskSRed = new bool[reducedSize];
-    bool* maskMRed = new bool[reducedSize];
-    if( factor != 1) {
-      reduceResolution(_maskS, &S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
-      reduceResolution(_maskM, &M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
-    }
-
-    //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
-    //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
-    RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
-    double phiMax = _rotMax;
-    obvious::Matrix T(3, 3);
-    if(factor == 1)
-      T = ransac.match(&M, _maskM, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
-    else
-      T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
-          _trnsMax, sensor->getAngularResolution() * factor);
-    T.invert();
-    T44(0, 0) = T(0, 0);
-    T44(0, 1) = T(0, 1);
-    T44(0, 3) = T(0, 2);
-    T44(1, 0) = T(1, 0);
-    T44(1, 1) = T(1, 1);
-    T44(1, 3) = T(1, 2);
-  }
-
-  _icp->reset();
-  obvious::Matrix P = sensor->getTransformation();
-  _filterBounds->setPose(&P);
-  _icp->setModel(&Svalid, NULL);
-  _icp->setScene(&Mvalid);
-  double rms = 0.0;
-  unsigned int pairs = 0;
-  unsigned int it = 0;
-  _icp->iterate(&rms, &pairs, &it, &T44);
-  obvious::Matrix T = _icp->getFinalTransformation();
-  T.invert();
-
-  // analyze registration result
-  double deltaX = T(0,2);
-  double deltaY = T(1,2);
-  double trnsAbs = std::sqrt(deltaX * deltaX + deltaY * deltaY);
-  double deltaPhi = this->calcAngle(&T);
+  /** analyze registration result */
   _tf.stamp_ = ros::Time::now();
+  const bool regErrorT = isRegistrationError(&T);
+  
+//  if(regErrorT && !_ransac) //icp only, we can use the ransac to get it back
+//  {
+//    std::cout << __PRETTY_FUNCTION__ << "regError! Trying to recapture with ICPSac\n";
+//    obvious::Matrix secondT = doRegistration(sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
+//    if(isRegistrationError(&secondT))
+//    {
+//      std::cout << __PRETTY_FUNCTION__ << "Could not recapture \n";
+//      sendNanTransform();
+//    }
+//    else
+//      std::cout << __PRETTY_FUNCTION__ << "Lucky You! Got back in place\n"; /todo push
+//
+//  }
+//  else
 
-  if((trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > _rotMax)   //deltaY > 0.5 ||
+  if(regErrorT)    //already used ransac, we can do nothing to get the pose right. Let's hope for the next scan
   {
-    // localization error broadcast invalid tf
-    std::cout << __PRETTY_FUNCTION__ << "regError!\n";
-    _poseStamped.header.stamp = ros::Time::now();
-    _poseStamped.pose.position.x = NAN;
-    _poseStamped.pose.position.y = NAN;
-    _poseStamped.pose.position.z = NAN;
-    tf::Quaternion quat;
-    quat.setEuler(NAN, NAN, NAN);
-    _poseStamped.pose.orientation.w = quat.w();
-    _poseStamped.pose.orientation.x = quat.x();
-    _poseStamped.pose.orientation.y = quat.y();
-    _poseStamped.pose.orientation.z = quat.z();
-
-    _tf.stamp_ = ros::Time::now();
-    _tf.setOrigin(tf::Vector3(NAN, NAN, NAN));
-    _tf.setRotation(quat);
-
-    //_pubMutex->lock();
-    _posePub.publish(_poseStamped);
-    _tfBroadcaster.sendTransform(_tf);
-    //_pubMutex->unlock();
+    std::cout << __PRETTY_FUNCTION__ << "regError! \n";
+    sendNanTransform();
   }
-  else            //transformation valid -> transform sensor
+  else //transformation valid -> transform sensor and publish new sensor pose
   {
     sensor->transform(&T);
     obvious::Matrix curPose = sensor->getTransformation();
-    double curTheta = this->calcAngle(&curPose);
-    double posX = curPose(0, 2) + _gridOffSetX;
-    double posY = curPose(1, 2) + _gridOffSetY;
-    _poseStamped.header.stamp = ros::Time::now();
-    _poseStamped.pose.position.x = posX;
-    _poseStamped.pose.position.y = posY;
-    _poseStamped.pose.position.z = 0.0;
-    tf::Quaternion quat;
-    quat.setEuler(0.0, 0.0, curTheta);
-    _poseStamped.pose.orientation.w = quat.w();
-    _poseStamped.pose.orientation.x = quat.x();
-    _poseStamped.pose.orientation.y = quat.y();
-    _poseStamped.pose.orientation.z = quat.z();
 
-    _tf.stamp_ = ros::Time::now();
-    _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
-    _tf.setRotation(quat);
-
-    //_pubMutex->lock();   //toDo: test if this mutex is necessary (other threads use this too)
-    _posePub.publish(_poseStamped);
-    _tfBroadcaster.sendTransform(_tf);
-    //_pubMutex->unlock();
-    if(!_noPush)
+    sendTransform(&curPose);
+    /** Update MAP if necessary */
+    if(this->isPoseChangeSignificant(_lastPose, &curPose) && !_noPush)
     {
-      if(this->isPoseChangeSignificant(_lastPose, &curPose))
-      {
-        *_lastPose = curPose;
-        _mapper->queuePush(sensor);
-      }
+         *_lastPose = curPose;
+         _mapper->queuePush(sensor);
     }
   }
+}
+
+obvious::Matrix Localization::doRegistration(obvious::SensorPolar2D* sensor,
+                                              obvious::Matrix* M,
+                                              obvious::Matrix* Mvalid,
+                                              obvious::Matrix* N,
+                                              obvious::Matrix* Nvalid,
+                                              obvious::Matrix* S,
+                                              obvious::Matrix* Svalid,
+                                              const bool useRansac
+                                              )
+{
+
+    const unsigned int measurementSize = sensor->getRealMeasurementSize();
+    obvious::Matrix T44(4, 4);
+    T44.setIdentity();
+
+    // RANSAC pre-registration (rough)
+    if(useRansac)
+    {
+      const unsigned int factor = _ransacReduceFactor;
+      const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270
+      obvious::Matrix Sreduced(reducedSize, 2);
+      obvious::Matrix Mreduced(reducedSize, 2);
+      bool* maskSRed = new bool[reducedSize];
+      bool* maskMRed = new bool[reducedSize];
+      if( factor != 1) {
+        reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
+        reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
+      }
+
+      //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
+      //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
+      RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
+      const double phiMax = _rotMax;
+      obvious::Matrix T(3, 3);
+      if(factor == 1)
+        T = ransac.match(M, _maskM, S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
+      else
+        T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
+            _trnsMax, sensor->getAngularResolution() * (double) factor);
+      T.invert();
+      T44(0, 0) = T(0, 0);
+      T44(0, 1) = T(0, 1);
+      T44(0, 3) = T(0, 2);
+      T44(1, 0) = T(1, 0);
+      T44(1, 1) = T(1, 1);
+      T44(1, 3) = T(1, 2);
+    }
+
+    _icp->reset();
+    obvious::Matrix P = sensor->getTransformation();
+    _filterBounds->setPose(&P);
+    _icp->setModel(Svalid, Nvalid);
+    _icp->setScene(Mvalid);
+    double rms = 0.0;
+    unsigned int pairs = 0;
+    unsigned int it = 0;
+    _icp->iterate(&rms, &pairs, &it, &T44);
+    obvious::Matrix T = _icp->getFinalTransformation();
+    T.invert();
+
+    return T;
+
+}
+
+bool Localization::isRegistrationError(obvious::Matrix* T)
+{
+  double deltaX = (*T)(0, 2);
+  double deltaY = (*T)(1, 2);
+  double trnsAbs = std::sqrt(deltaX * deltaX + deltaY * deltaY);
+  double deltaPhi = this->calcAngle(T);
+
+  return (trnsAbs > _trnsMax) || (std::fabs(std::sin(deltaPhi)) > _rotMax);
+}
+
+void Localization::sendTransform(obvious::Matrix* T)
+{
+  double curTheta = this->calcAngle(T);
+  double posX = (*T)(0, 2) + _gridOffSetX; //Fixme this is not the right place for this
+  double posY = (*T)(1, 2) + _gridOffSetY;
+  _poseStamped.header.stamp = ros::Time::now();
+  _poseStamped.pose.position.x = posX;
+  _poseStamped.pose.position.y = posY;
+  _poseStamped.pose.position.z = 0.0;
+  tf::Quaternion quat;
+  quat.setEuler(0.0, 0.0, curTheta);
+  _poseStamped.pose.orientation.w = quat.w();
+  _poseStamped.pose.orientation.x = quat.x();
+  _poseStamped.pose.orientation.y = quat.y();
+  _poseStamped.pose.orientation.z = quat.z();
+
+  _tf.stamp_ = ros::Time::now();
+  _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
+  _tf.setRotation(quat);
+
+  //_pubMutex->lock();   //toDo: test if this mutex is necessary (other threads use this too)
+  _posePub.publish(_poseStamped);
+  _tfBroadcaster.sendTransform(_tf);
+  //_pubMutex->unlock();
+
+}
+
+
+void Localization::sendNanTransform()
+{
+  _poseStamped.header.stamp = ros::Time::now();
+  _poseStamped.pose.position.x = NAN;
+  _poseStamped.pose.position.y = NAN;
+  _poseStamped.pose.position.z = NAN;
+  tf::Quaternion quat;
+  quat.setEuler(NAN, NAN, NAN);
+  _poseStamped.pose.orientation.w = quat.w();
+  _poseStamped.pose.orientation.x = quat.x();
+  _poseStamped.pose.orientation.y = quat.y();
+  _poseStamped.pose.orientation.z = quat.z();
+
+  _tf.stamp_ = ros::Time::now();
+  _tf.setOrigin(tf::Vector3(NAN, NAN, NAN));
+  _tf.setRotation(quat);
+
+  //_pubMutex->lock();
+  _posePub.publish(_poseStamped);
+  _tfBroadcaster.sendTransform(_tf);
+  //_pubMutex->unlock();
 }
 
 double Localization::calcAngle(obvious::Matrix* T)

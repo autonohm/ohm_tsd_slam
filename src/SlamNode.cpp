@@ -68,11 +68,6 @@ SlamNode::SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource so
   //  _grid        = new obvious::TsdGrid(cellsize, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(uiVar));
   //  _grid->setMaxTruncation(truncationRadius * cellsize);
 
-  unsigned int cellsPerSide = std::pow(2, uiVar);
-  std::cout << __PRETTY_FUNCTION__ << " creating representation with " << cellsPerSide << "x" << cellsPerSide;
-  double sideLength = static_cast<double>(cellsPerSide) * cellsize;
-  std::cout << " cells, representating "<< sideLength << "x" << sideLength << "m^2" << std::endl;
-
   _sensor        = NULL;
   _localizer     = NULL;
   _threadMapping = NULL;

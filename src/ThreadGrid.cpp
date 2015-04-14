@@ -42,6 +42,7 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double 
 
   prvNh.param("map_topic", mapTopic, std::string("map"));
   prvNh.param("get_map_topic", getMapTopic, std::string("map"));
+  prvNh.param<std::string>("store_map_path", _storeGridPath, "tsd_grid.dat");
   prvNh.param<int>("object_inflation_factor", intVar, 2);
   prvNh.param<bool>("use_object_inflation", _objectInflation, false);
 

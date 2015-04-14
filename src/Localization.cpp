@@ -18,9 +18,9 @@ namespace ohm_tsd_slam
 {
 
 Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, 
-     std::string nameSpace):
-        _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-        _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor)
+    std::string nameSpace):
+            _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+            _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor)
 {
   ros::NodeHandle prvNh("~");
   // _pubMutex         = pubMutex;
@@ -35,7 +35,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
 
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
   if(nameSpace.size())   //given namespace
-      nameSpace += "/";
+    nameSpace += "/";
 
   //pose
   std::string poseTopic;
@@ -148,6 +148,11 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix N(measurementSize, 2, _modelNormals);
   obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
 
+  for(unsigned int i=0; i<validScenePoints; i++)
+    _maskS[i] = sensor->getRealMeasurementMask()[i];
+  for(unsigned int i=validScenePoints; i<measurementSize; i++)
+    _maskS[i] = false;
+
   unsigned int size = sensor->dataToCartesianVector(_scene);
   obvious::Matrix S(measurementSize, 2, _scene);
   obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
@@ -169,8 +174,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
       reduceResolution(_maskM, &M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
     }
 
-//    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
-//      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
+    //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
+    //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
     RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
     double phiMax = _rotMax;
     obvious::Matrix T(3, 3);
@@ -178,7 +183,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
       T = ransac.match(&M, _maskM, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
     else
       T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
-                                     _trnsMax, sensor->getAngularResolution() * factor);
+          _trnsMax, sensor->getAngularResolution() * factor);
     T.invert();
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
@@ -321,7 +326,7 @@ void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigne
 }
 
 void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
-                      const unsigned int pointsIn, const unsigned int pointsOut, const unsigned int reductionFactor)
+    const unsigned int pointsIn, const unsigned int pointsOut, const unsigned int reductionFactor)
 {
   assert(pointsIn > pointsOut);
   //fixme we only support scan with even number of points like 1080. if a scan has 1081 points is not usable for subsampling here!
@@ -343,9 +348,9 @@ void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* co
       {
         maskOut[i/factor] = false;
       }
-   }
- }
- assert(cnt == pointsOut);
+    }
+  }
+  assert(cnt == pointsOut);
 }
 
 } /* namespace */

@@ -24,7 +24,7 @@ int main(int argc, char** argv)
   ros::NodeHandle prvNh("~");
   ohm_tsd_slam::SlamNode* localizeNode = NULL;
 
-    prvNh.param<std::string>("data_path", dataPath, "/home/phil/.ros/tsd_grid.dat");
+    prvNh.param<std::string>("data_path", dataPath, "/home/user/.ros/tsd_grid.dat");
     localizeNode = new ohm_tsd_slam::SlamNode(dataPath, obvious::FILE);
 
   localizeNode->start();

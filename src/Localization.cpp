@@ -34,8 +34,8 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   double distFilterMin = 0.0;
   int icpIterations = 0;
 
-  prvNh.param<double>("dist_filter_max", distFilterMax, 0.2);
-  prvNh.param<double>("dist_filter_min", distFilterMin, 0.01);
+  prvNh.param<double>("dist_filter_max", distFilterMax, 2.0);
+  prvNh.param<double>("dist_filter_min", distFilterMin, 0.1);
   prvNh.param<int>("icp_iterations", icpIterations, 20);
 
   _rayCaster = new obvious::RayCastPolar2D();
@@ -254,8 +254,11 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _tfBroadcaster.sendTransform(_tf);
     if(this->isPoseChangeSignificant(_lastPose, &curPose))
     {
+      if(_mapper)
+      {
       *_lastPose = curPose;
       _mapper->queuePush(sensor);
+      }
     }
   }
 }

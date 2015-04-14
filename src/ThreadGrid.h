@@ -29,12 +29,14 @@ public:
    * @param pubMutex Publising mutex publishing mutex
    * @param parentNode Pointer to main mapping instance
    */
-  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double xOffFactor, const double yOffFactor);
+  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double xOffFactor, const double yOffFactor, bool localizeOnly);
 
   /**
    * Destructor
    */
   virtual ~ThreadGrid();
+
+  bool requestStoreTsdGrid(void);
 
 protected:
 
@@ -114,6 +116,16 @@ private:
    * Object inflation control flag
    */
   bool _objectInflation;
+
+  boost::mutex _storeGridMutex;
+
+    bool _storeTsdGridRequest;
+
+    std::string _storeGridPath;
+
+    bool _localizeOnly;
+
+    bool _initial;
 };
 
 } /* namespace ohm_tsd_slam */

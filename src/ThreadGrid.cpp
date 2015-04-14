@@ -10,7 +10,7 @@
 namespace ohm_tsd_slam
 {
 
-ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double xOffFactor, const double yOffFactor)
+ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double xOffFactor, const double yOffFactor, bool localizeOnly)
 {
   _grid           = grid;
   _occGridContent = new char[grid->getCellsX() * grid->getCellsY()];
@@ -18,6 +18,7 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double 
   _width          = grid->getCellsX();
   _height         = grid->getCellsY();
   _cellSize       = grid->getCellSize();
+  _storeTsdGridRequest = false;
   for(unsigned int i = 0; i < _grid->getCellsX() * _grid->getCellsY(); ++i)
     _occGridContent[i] = -1;
 
@@ -47,6 +48,10 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double 
   _gridPub          = nh.advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
   _getMapServ       = nh.advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
   _objInflateFactor = static_cast<unsigned int>(intVar);
+
+  _localizeOnly = localizeOnly;
+  _initial = true;
+
 }
 
 ThreadGrid::~ThreadGrid()
@@ -55,6 +60,22 @@ ThreadGrid::~ThreadGrid()
   delete _occGrid;
   delete _occGridContent;
   delete _gridCoords;
+}
+
+bool ThreadGrid::requestStoreTsdGrid(void)
+{
+  _storeGridMutex.lock();
+  if(_storeTsdGridRequest)
+  {
+    _storeGridMutex.unlock();
+    return false;
+  }
+  else
+  {
+    _storeTsdGridRequest = true;
+    _storeGridMutex.unlock();
+    return true;
+  }
 }
 
 void ThreadGrid::eventLoop(void)
@@ -103,6 +124,16 @@ void ThreadGrid::eventLoop(void)
       }
     }
     _gridPub.publish(*_occGrid);
+    _storeGridMutex.lock();
+    if(_storeTsdGridRequest)
+    {
+      if(!_grid->storeGrid(_storeGridPath))
+      {
+        std::cout << __PRETTY_FUNCTION__ << " error! Storing of grid at " << _storeGridPath << " failed!" << std::endl;
+      }
+      _storeTsdGridRequest = false;
+    }
+    _storeGridMutex.unlock();
   }
 }
 

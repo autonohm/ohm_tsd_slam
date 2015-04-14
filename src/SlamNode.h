@@ -16,6 +16,7 @@
 #include "obvision/reconstruct/grid/TsdGrid.h"
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obcore/base/Logger.h"
+#include <std_srvs/Empty.h>
 
 #include <boost/thread.hpp>
 
@@ -41,7 +42,7 @@ public:
   /**
    * Default constructor
    */
-  SlamNode(void);
+  SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource source = obvious::FILE);
 
   /**
    * Destructor
@@ -69,12 +70,16 @@ private:
    */
   void run(void);
 
+  void localizeOnly(void);
+
   /**
    * laserScanCallBack
    * Callback method to laser subscriber
    * @param scan Laser scan
    */
   void laserScanCallBack(const sensor_msgs::LaserScan& scan);
+
+  bool storeMapServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
 
   /**
    * Main node handle
@@ -161,6 +166,8 @@ private:
    * Desired loop rate
    */
   double _loopRate;
+
+  bool _localizeOnly;
 
 //  double _footPrintWidth;
 //

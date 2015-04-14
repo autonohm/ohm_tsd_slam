@@ -18,6 +18,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_broadcaster.h>
+#include <std_srvs/Empty.h>
 
 #define ITERATIONS 25
 #define TRNS_THRESH 0.25            //Thresholds for registration. If the gained transformation is out of these bounds,
@@ -82,10 +83,14 @@ private:
    */
   bool isPoseChangeSignificant(obvious::Matrix* lastPose, obvious::Matrix* curPose);
 
-  ros::NodeHandle _nh;
+  bool togglePushServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
+
+  ros::NodeHandle* _nh;
 
   const double _gridOffSetX;
   const double _gridOffSetY;
+
+  ros::ServiceServer _togglePushService;
 
   /**
    * Pointer to main node instance
@@ -213,6 +218,11 @@ private:
   bool _ransac;
 
   unsigned int _ransacReduceFactor;
+
+  /**
+   * Flag to disable push (active = no altering of the map)
+   */
+  bool _noPush;
 
 };
 

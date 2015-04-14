@@ -85,9 +85,52 @@ private:
 
   bool togglePushServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
 
+  /**
+   * doRegistration
+   * Encapsulate the registration process. For most parameters the member variable are used.
+   * It is possible to use Ransac or not.
+   * @param sensor Sensor used for SLAM
+   * @param M Unfiltered matrix of the model scan.
+   * @param N Unfiltered matrix of the model normals.
+   * @param S Unfiltered matrix of the scene scan.
+   * @param useRansac Set true if pre registration with ransac is required
+   */
+  obvious::Matrix doRegistration(obvious::SensorPolar2D* sensor,
+                                                obvious::Matrix* M,
+                                                obvious::Matrix* Mvalid,
+                                                obvious::Matrix* N,
+                                                obvious::Matrix* Nvalid,
+                                                obvious::Matrix* S,
+                                                obvious::Matrix* Svalid,
+                                                const bool useRansac
+                                                );
+  /**
+   * isRegistrationError
+   * Proves if the calculated transformation between two scans
+   * is bigger than member variables _rotMax and _transMax.
+   * @param T Transformation between scene and model scan.
+   * @return True if the difference is to big. False if it is reasonable.
+   */
+  bool isRegistrationError(obvious::Matrix* T);
+
+
+  /**
+   * sendTransform
+   * Publishes the new sensor position and updates TF
+   * @param T Transformation Matrix with current Sensor Pose (after sucessful registration)
+   */
+  void sendTransform(obvious::Matrix* T);
+
+  /**
+   * sendNanTransform
+   * Publish a NAN message in ROS to signal everybody a registration error
+   */
+  void sendNanTransform();
+
   ros::NodeHandle* _nh;
 
   const double _gridOffSetX;
+
   const double _gridOffSetY;
 
   ros::ServiceServer _togglePushService;

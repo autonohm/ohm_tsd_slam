@@ -13,7 +13,6 @@
 #include "obvision/reconstruct/grid/RayCastPolar2D.h"
 #include "obvision/registration/icp/icp_def.h"
 
-#include <boost/signal.hpp>
 #include <boost/thread.hpp>
 
 #include <ros/ros.h>

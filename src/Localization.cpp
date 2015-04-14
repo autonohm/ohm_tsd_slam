@@ -207,7 +207,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _poseStamped.pose.position.x = NAN;
     _poseStamped.pose.position.y = NAN;
     _poseStamped.pose.position.z = NAN;
-    tf::Quaternion quat(NAN, NAN, NAN);
+    tf::Quaternion quat;
+    quat.setEuler(NAN, NAN, NAN);
     _poseStamped.pose.orientation.w = quat.w();
     _poseStamped.pose.orientation.x = quat.x();
     _poseStamped.pose.orientation.y = quat.y();
@@ -238,7 +239,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     _poseStamped.pose.position.x = posX;
     _poseStamped.pose.position.y = posY;
     _poseStamped.pose.position.z = 0.0;
-    tf::Quaternion quat(0.0, 0.0, curTheta);
+    tf::Quaternion quat;
+    quat.setEuler(0.0, 0.0, curTheta);
     _poseStamped.pose.orientation.w = quat.w();
     _poseStamped.pose.orientation.x = quat.x();
     _poseStamped.pose.orientation.y = quat.y();

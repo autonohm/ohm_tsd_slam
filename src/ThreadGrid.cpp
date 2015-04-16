@@ -83,8 +83,8 @@ void ThreadGrid::eventLoop(void)
     {
       double x       = _gridCoords[2*i];
       double y       = _gridCoords[2*i+1];
-      unsigned int u = static_cast<int>(x / _cellSize + 0.5);
-      unsigned int v = static_cast<int>(y / _cellSize + 0.5);
+      unsigned int u = static_cast<unsigned int>(x / _cellSize + 0.5);
+      unsigned int v = static_cast<unsigned int>(y / _cellSize + 0.5);
       if(u > 0 && u < _width && v > 0 && v < _height)
       {
         _occGrid->data[v * _width + u] = 100;               //set grid cell to occupied

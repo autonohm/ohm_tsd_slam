@@ -147,11 +147,6 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
   //obvious::Matrix Nvalid = maskMatrix(&N, _maskM, measurementSize, validModelPoints);
 
-  for(unsigned int i=0; i<validScenePoints; i++)
-    _maskS[i] = measurementMask[i];
-  for(unsigned int i=validScenePoints; i<measurementSize; i++)
-    _maskS[i] = false;
-
   obvious::Matrix S(measurementSize, 2, _scene);
   obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
 

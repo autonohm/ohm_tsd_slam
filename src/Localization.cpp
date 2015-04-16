@@ -169,7 +169,6 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
 
   /** Align Laser scans */
   obvious::Matrix T = doRegistration(sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, _ransac);  //3x3 Transformation Matrix
-  T.print();
 
   /** analyze registration result */
   _tf.stamp_ = ros::Time::now();

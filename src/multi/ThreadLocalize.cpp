@@ -71,6 +71,7 @@ bool ThreadLocalize::setData(const sensor_msgs::LaserScan& scan)
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   _sensor->setRealMeasurementMask(_mask);
   _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
+  _sensor->maskZeroDepth();
   _newScan = true;
   _dataMutex.unlock();
   return true;

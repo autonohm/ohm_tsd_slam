@@ -158,39 +158,9 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix N(measurementSize, 2, _modelNormals);
   obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
 
-//  for(unsigned int i = 0; i < validScenePoints; i++)
-//    _maskS[i] = sensor->getRealMeasurementMask()[i];
-//  for(unsigned int i = validScenePoints; i < measurementSize; i++)
-//    _maskS[i] = false;
-//
-//
-
   unsigned int size = sensor->dataToCartesianVector(_scene);
   obvious::Matrix S(measurementSize, 2, _scene);
   obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
-
-  //proof
-  cout<<"\n\n\n\n"<<endl;
-  int ct = 0;
-  for(unsigned int i=0; i < measurementSize; i++) {
-    if(_maskS[i]) {
-      ct++;
-      cout<<S(i,0)<<","<<S(i,1)<<";"<<endl;
-      double dist = sqrt(S(i,0)*S(i,0) + S(i,1)*S(i,1));
-      assert(dist > 1e-6);
-      assert(dist <= 30.0);
-    }
-  }
-  assert(ct == validScenePoints);
-  for(unsigned int i=0; i < Svalid.getRows(); i++) {
-
-        double dist = sqrt(S(i,0)*S(i,0) + S(i,1)*S(i,1));
-        assert(dist > 1e-6);
-        assert(dist <= 30.0);
-
-    }
-
-
 
   /** Align Laser scans */
   obvious::Matrix T = doRegistration(sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, _ransac);  //3x3 Transformation Matrix

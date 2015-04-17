@@ -56,7 +56,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
 
   //reduce size for ransac
   int iVar = 0;
-  prvNh.param<int>(nameSpace + "ransac_reduce_factor", iVar, 1);
+  prvNh.param<int>(nameSpace + "ransac_reduce_factor", iVar , (unsigned int) 1);
   _ransacReduceFactor = static_cast<unsigned int>(iVar);
 
   _noPush = false;   //start in slam mode (nopush = false)
@@ -167,19 +167,23 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
 
   /** analyze registration result */
   _tf.stamp_ = ros::Time::now();
-  const bool regErrorT = isRegistrationError(&T);
-  
+  const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
+
 //  if(regErrorT && !_ransac) //icp only, we can use the ransac to get it back
 //  {
 //    std::cout << __PRETTY_FUNCTION__ << "regError! Trying to recapture with ICPSac\n";
 //    obvious::Matrix secondT = doRegistration(sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
-//    if(isRegistrationError(&secondT))
+//    if(isRegistrationError(&secondT,_trnsMax*2.0, _rotMax*2.0))
 //    {
 //      std::cout << __PRETTY_FUNCTION__ << "Could not recapture \n";
 //      sendNanTransform();
 //    }
 //    else
-//      std::cout << __PRETTY_FUNCTION__ << "Lucky You! Got back in place\n"; /todo push
+//      std::cout << __PRETTY_FUNCTION__ << "Lucky You! Got back in place\n";
+//      sensor->transform(&T);
+//      obvious::Matrix curPose = sensor->getTransformation();
+//
+//      sendTransform(&curPose);
 //
 //  }
 //  else
@@ -238,11 +242,13 @@ obvious::Matrix Localization::doRegistration(obvious::SensorPolar2D* sensor,
       RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
       const double phiMax = _rotMax;
       obvious::Matrix T(3, 3);
-      if(factor == 1)
+      if(factor == 1){
         T = ransac.match(M, _maskM, S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
+      }
       else
-        T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
-            _trnsMax, sensor->getAngularResolution() * (double) factor);
+      {
+        T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax, _trnsMax, sensor->getAngularResolution() * (double) factor);
+      }
       T.invert();
       T44(0, 0) = T(0, 0);
       T44(0, 1) = T(0, 1);
@@ -255,7 +261,7 @@ obvious::Matrix Localization::doRegistration(obvious::SensorPolar2D* sensor,
     _icp->reset();
     obvious::Matrix P = sensor->getTransformation();
     _filterBounds->setPose(&P);
-    _icp->setModel(Svalid, Nvalid);
+    _icp->setModel(Svalid, NULL);
     _icp->setScene(Mvalid);
     double rms = 0.0;
     unsigned int pairs = 0;
@@ -268,14 +274,14 @@ obvious::Matrix Localization::doRegistration(obvious::SensorPolar2D* sensor,
 
 }
 
-bool Localization::isRegistrationError(obvious::Matrix* T)
+bool Localization::isRegistrationError(obvious::Matrix* T, const double trnsMax, const double rotMax)
 {
   double deltaX = (*T)(0, 2);
   double deltaY = (*T)(1, 2);
   double trnsAbs = std::sqrt(deltaX * deltaX + deltaY * deltaY);
   double deltaPhi = this->calcAngle(T);
 
-  return (trnsAbs > _trnsMax) || (std::fabs(std::sin(deltaPhi)) > _rotMax);
+  return (trnsAbs > trnsMax) || (std::fabs(std::sin(deltaPhi)) > rotMax);
 }
 
 void Localization::sendTransform(obvious::Matrix* T)

@@ -111,7 +111,7 @@ private:
    * @param T Transformation between scene and model scan.
    * @return True if the difference is to big. False if it is reasonable.
    */
-  bool isRegistrationError(obvious::Matrix* T);
+  bool isRegistrationError(obvious::Matrix* T, const double trnsMax, const  double rotMax);
 
 
   /**
@@ -260,6 +260,12 @@ private:
    */
   bool _ransac;
 
+  /*
+   * RANSAC Reduction: Use to scale down the number of points for ransac
+   * Example: Points in Scan = 1080
+   *          ransacReduceFactor = 4
+   *          -> points for ransac = 1080 /ransacReduceFactor = 270;
+   */
   unsigned int _ransacReduceFactor;
 
   /**

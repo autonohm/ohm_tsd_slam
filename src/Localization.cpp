@@ -56,7 +56,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
 
   //reduce size for ransac
   int iVar = 0;
-  prvNh.param<int>(nameSpace + "ransac_reduce_factor", iVar , (unsigned int) 1);
+  prvNh.param<int>(nameSpace + "ransac_reduce_factor", iVar , 1);
   _ransacReduceFactor = static_cast<unsigned int>(iVar);
 
   _noPush = false;   //start in slam mode (nopush = false)
@@ -242,13 +242,12 @@ obvious::Matrix Localization::doRegistration(obvious::SensorPolar2D* sensor,
       RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
       const double phiMax = _rotMax;
       obvious::Matrix T(3, 3);
-      if(factor == 1){
+      if(factor == 1)
         T = ransac.match(M, _maskM, S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
-      }
       else
-      {
-        T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax, _trnsMax, sensor->getAngularResolution() * (double) factor);
-      }
+        T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
+            _trnsMax, sensor->getAngularResolution() * (double) factor);
+
       T.invert();
       T44(0, 0) = T(0, 0);
       T44(0, 1) = T(0, 1);

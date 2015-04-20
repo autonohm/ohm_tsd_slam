@@ -142,7 +142,7 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
   if(!_localizeOnly)
   {
     _threadMapping = new ThreadMapping(_grid);
-    const obfloat t[2] = {startX, startY};
+    const obfloat t[2] = {startX + footPrintXoffset, startY};
     if(!_grid->freeFootprint(t, footPrintWidth, footPrintHeight))
       std::cout << __PRETTY_FUNCTION__ << " warning! Footprint could not be freed!\n";
     _threadMapping->initPush(_sensor);

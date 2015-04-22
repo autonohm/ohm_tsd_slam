@@ -273,6 +273,11 @@ private:
    */
   bool _noPush;
 
+  /**
+   * namespace for all topics and services
+   */
+  std::string _nameSpace;
+
 };
 
 obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints);

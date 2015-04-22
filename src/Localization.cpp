@@ -35,43 +35,42 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _maskS = NULL;
 
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
-  if(nameSpace.size())   //given namespace
-    nameSpace += "/";
+  _nameSpace = nameSpace;
+  if(_nameSpace.size())   //given namespace
+    _nameSpace += "/";
 
   //pose
   std::string poseTopic;
-  prvNh.param(nameSpace + "pose_topic", poseTopic, std::string("default_ns/pose"));
-  poseTopic = nameSpace + poseTopic;
+  prvNh.param(_nameSpace + "pose_topic", poseTopic, std::string("default_ns/pose"));
+  poseTopic = _nameSpace + poseTopic;
 
-  //base frame
+  //frames
   std::string tfBaseFrameId;
   prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
 
-  //child frame
   std::string tfChildFrameId;
-  prvNh.param(nameSpace + "tf_child_frame", tfChildFrameId, std::string("default_ns/laser"));
-
-  //use icpsac?
-  prvNh.param<bool>(nameSpace + "use_icpsac", _ransac, false);
+  prvNh.param(_nameSpace + "tf_child_frame", tfChildFrameId, std::string("default_ns/laser"));
 
   //reduce size for ransac
   int iVar = 0;
-  prvNh.param<int>(nameSpace + "ransac_reduce_factor", iVar , 1);
+  prvNh.param<int>(_nameSpace + "ransac_reduce_factor", iVar , 1);
   _ransacReduceFactor = static_cast<unsigned int>(iVar);
 
   _noPush = false;   //start in slam mode (nopush = false)
 
   std::string togglePushServiceTopic;
-  prvNh.param<std::string>(nameSpace + "toggle_push", togglePushServiceTopic, "toggle_push");
-  _togglePushService = _nh->advertiseService(togglePushServiceTopic, &Localization::togglePushServiceCallBack, this);
+  prvNh.param<std::string>(_nameSpace + "toggle_push", togglePushServiceTopic, _nameSpace + "toggle_push");
+  _togglePushService = _nh->advertiseService(_nameSpace + togglePushServiceTopic, &Localization::togglePushServiceCallBack, this);
 
   //ICP Options
   double distFilterMax = 0.0;
   double distFilterMin = 0.0;
   int icpIterations = 0;
-  prvNh.param<double>(nameSpace + "dist_filter_min", distFilterMin, 0.2);
-  prvNh.param<double>(nameSpace + "dist_filter_max", distFilterMax, 1.0);
-  prvNh.param<int>(nameSpace+"icp_iterations", icpIterations, 25);
+  prvNh.param<double>(_nameSpace + "dist_filter_min", distFilterMin, 0.2);
+  prvNh.param<double>(_nameSpace + "dist_filter_max", distFilterMax, 1.0);
+  prvNh.param<int>(_nameSpace + "icp_iterations", icpIterations, 25);
+
+  prvNh.param<bool>(_nameSpace + "use_icpsac", _ransac, false);
 
   //Maximum allowed offset between to aligned scans
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
@@ -102,7 +101,7 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _posePub = _nh->advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;
   _tf.frame_id_                = tfBaseFrameId;
-  _tf.child_frame_id_          = nameSpace + tfChildFrameId;
+  _tf.child_frame_id_          = _nameSpace + tfChildFrameId;
 }
 
 Localization::~Localization()
@@ -378,6 +377,7 @@ obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSi
 
 bool Localization::togglePushServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
 {
+  std::cout << __PRETTY_FUNCTION__ << "No Push for "<<_nameSpace<<" set to: "<< !_noPush<<"\n";
   _noPush = !_noPush;
   return true;
 }

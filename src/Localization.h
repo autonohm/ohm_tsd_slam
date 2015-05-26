@@ -50,7 +50,7 @@ public:
    * @param parentNode Pointer to main node instance
    */
   Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor,
-       std::string nameSpace = "");
+      std::string nameSpace = "");
 
   /**
    * Destructor
@@ -96,14 +96,14 @@ private:
    * @param useRansac Set true if pre registration with ransac is required
    */
   obvious::Matrix doRegistration(obvious::SensorPolar2D* sensor,
-                                                obvious::Matrix* M,
-                                                obvious::Matrix* Mvalid,
-                                                obvious::Matrix* N,
-                                                obvious::Matrix* Nvalid,
-                                                obvious::Matrix* S,
-                                                obvious::Matrix* Svalid,
-                                                const bool useRansac
-                                                );
+      obvious::Matrix* M,
+      obvious::Matrix* Mvalid,
+      obvious::Matrix* N,
+      obvious::Matrix* Nvalid,
+      obvious::Matrix* S,
+      obvious::Matrix* Svalid,
+      const bool useRansac
+  );
   /**
    * isRegistrationError
    * Proves if the calculated transformation between two scans
@@ -254,7 +254,7 @@ private:
    * Starting y offset
    */
   double _yOffFactor;
-  
+
   /**
    * RANSAC registration flag
    */
@@ -273,6 +273,10 @@ private:
    */
   bool _noPush;
 
+  unsigned int _ranTrials;
+  double _ranEpsThresh;
+  unsigned int _ranSizeCtrlSet;
+
   /**
    * namespace for all topics and services
    */
@@ -283,7 +287,7 @@ private:
 obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints);
 void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigned int maskSize);
 void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
-                      unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
+    unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
 } /* namespace ohm_tsd_slam*/
 

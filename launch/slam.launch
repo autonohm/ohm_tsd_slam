@@ -30,6 +30,9 @@
 	  <param name = "reg_trs_max"             type = "double" value = "1.25"  />
 	  <param name = "reg_sin_rot_max"         type = "double" value = "0.4"   /> 
 	  <param name = "ransac_reduce_factor"    type = "int"    value = "1"/>	 
-	  <param name = "node_control_topic"      type = "string" value = "node_control"/>	 
+	  <param name = "node_control_topic"      type = "string" value = "node_control"/>
+	  <param name = "ransac_trials"           type = "int"    value = "100" />	
+	  <param name = "ransac_eps_thresh"	      type = "double" value = "0.30" />
+	  <param name = "ransac_ctrlset_size"	  type = "int"    value = "270" /> 
   </node>
 </launch>

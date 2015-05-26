@@ -19,8 +19,8 @@ namespace ohm_tsd_slam
 
 Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, 
     std::string nameSpace):
-                _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-                _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor)
+                    _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+                    _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor)
 {
   _nh = &nh;
   ros::NodeHandle prvNh("~");
@@ -75,6 +75,13 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   //Maximum allowed offset between to aligned scans
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
+
+  int paramInt = 0;
+  prvNh.param<int>(nameSpace + "ransac_trials", paramInt, 50);
+  _ranTrials = static_cast<unsigned int>(paramInt);
+  prvNh.param<double>(nameSpace + "ransac_eps_thresh", _ranEpsThresh, 0.15);
+  prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, 180);
+  _ranSizeCtrlSet = static_cast<unsigned int>(paramInt);
 
   /** Initialize member modules **/
   _lastPose         = new obvious::Matrix(3, 3);
@@ -168,26 +175,32 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   _tf.stamp_ = ros::Time::now();
   const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
 
-//  if(regErrorT && !_ransac) //icp only, we can use the ransac to get it back
-//  {
-//    std::cout << __PRETTY_FUNCTION__ << "regError! Trying to recapture with ICPSac\n";
-//    obvious::Matrix secondT = doRegistration(sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
-//    if(isRegistrationError(&secondT,_trnsMax*2.0, _rotMax*2.0))
-//    {
-//      std::cout << __PRETTY_FUNCTION__ << "Could not recapture \n";
-//      sendNanTransform();
-//    }
-//    else
-//      std::cout << __PRETTY_FUNCTION__ << "Lucky You! Got back in place\n";
-//      sensor->transform(&T);
-//      obvious::Matrix curPose = sensor->getTransformation();
-//
-//      sendTransform(&curPose);
-//
-//  }
-//  else
+  if(regErrorT && !_ransac) //icp only, we can use the ransac to get it back
+  {
+    std::cout << __PRETTY_FUNCTION__ << "regError! Trying to recapture with ICPSac\n";
+    obvious::Matrix secondT = doRegistration(sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
+    if(isRegistrationError(&secondT,_trnsMax * 1.5, _rotMax * 1.5))
+    {
+      std::cout << __PRETTY_FUNCTION__ << "Could not recapture \n";
+      sendNanTransform();
+    }
+    else
+    {
+      std::cout << __PRETTY_FUNCTION__ << "Lucky You! Got back in place\n";
+      sensor->transform(&secondT);
+      obvious::Matrix curPose = sensor->getTransformation();
 
-  if(regErrorT)    //already used ransac, we can do nothing to get the pose right. Let's hope for the next scan
+      sendTransform(&curPose);
+//      if(this->isPoseChangeSignificant(_lastPose, &curPose) && !_noPush)
+//      {
+//        *_lastPose = curPose;
+//        _mapper->queuePush(sensor);
+//      }
+    }
+  }
+  //  else
+
+  else if(regErrorT)    //already used ransac, we can do nothing to get the pose right. Let's hope for the next scan
   {
     std::cout << __PRETTY_FUNCTION__ << "regError! \n";
     sendNanTransform();
@@ -201,74 +214,74 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     /** Update MAP if necessary */
     if(this->isPoseChangeSignificant(_lastPose, &curPose) && !_noPush)
     {
-         *_lastPose = curPose;
-         _mapper->queuePush(sensor);
+      *_lastPose = curPose;
+      _mapper->queuePush(sensor);
     }
   }
 }
 
 obvious::Matrix Localization::doRegistration(obvious::SensorPolar2D* sensor,
-                                              obvious::Matrix* M,
-                                              obvious::Matrix* Mvalid,
-                                              obvious::Matrix* N,
-                                              obvious::Matrix* Nvalid,
-                                              obvious::Matrix* S,
-                                              obvious::Matrix* Svalid,
-                                              const bool useRansac
-                                              )
+    obvious::Matrix* M,
+    obvious::Matrix* Mvalid,
+    obvious::Matrix* N,
+    obvious::Matrix* Nvalid,
+    obvious::Matrix* S,
+    obvious::Matrix* Svalid,
+    const bool useRansac
+)
 {
 
-    const unsigned int measurementSize = sensor->getRealMeasurementSize();
-    obvious::Matrix T44(4, 4);
-    T44.setIdentity();
+  const unsigned int measurementSize = sensor->getRealMeasurementSize();
+  obvious::Matrix T44(4, 4);
+  T44.setIdentity();
 
-    // RANSAC pre-registration (rough)
-    if(useRansac)
-    {
-      const unsigned int factor = _ransacReduceFactor;
-      const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270
-      obvious::Matrix Sreduced(reducedSize, 2);
-      obvious::Matrix Mreduced(reducedSize, 2);
-      bool* maskSRed = new bool[reducedSize];
-      bool* maskMRed = new bool[reducedSize];
-      if( factor != 1) {
-        reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
-        reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
-      }
-
-      //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
-      //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
-      RansacMatching ransac(50, 0.15, 180); //toDo: launch parameters
-      const double phiMax = _rotMax;
-      obvious::Matrix T(3, 3);
-      if(factor == 1)
-        T = ransac.match(M, _maskM, S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
-      else
-        T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
-            _trnsMax, sensor->getAngularResolution() * (double) factor);
-
-      T.invert();
-      T44(0, 0) = T(0, 0);
-      T44(0, 1) = T(0, 1);
-      T44(0, 3) = T(0, 2);
-      T44(1, 0) = T(1, 0);
-      T44(1, 1) = T(1, 1);
-      T44(1, 3) = T(1, 2);
+  // RANSAC pre-registration (rough)
+  if(useRansac)
+  {
+    const unsigned int factor = _ransacReduceFactor;
+    const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270
+    obvious::Matrix Sreduced(reducedSize, 2);
+    obvious::Matrix Mreduced(reducedSize, 2);
+    bool* maskSRed = new bool[reducedSize];
+    bool* maskMRed = new bool[reducedSize];
+    if( factor != 1) {
+      reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
+      reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
     }
 
-    _icp->reset();
-    obvious::Matrix P = sensor->getTransformation();
-    _filterBounds->setPose(&P);
-    _icp->setModel(Svalid, NULL);
-    _icp->setScene(Mvalid);
-    double rms = 0.0;
-    unsigned int pairs = 0;
-    unsigned int it = 0;
-    _icp->iterate(&rms, &pairs, &it, &T44);
-    obvious::Matrix T = _icp->getFinalTransformation();
-    T.invert();
+    //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
+    //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
+    RansacMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet); //toDo: launch parameters
+    const double phiMax = _rotMax;
+    obvious::Matrix T(3, 3);
+    if(factor == 1)
+      T = ransac.match(M, _maskM, S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
+    else
+      T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
+          _trnsMax, sensor->getAngularResolution() * (double) factor);
 
-    return T;
+    T.invert();
+    T44(0, 0) = T(0, 0);
+    T44(0, 1) = T(0, 1);
+    T44(0, 3) = T(0, 2);
+    T44(1, 0) = T(1, 0);
+    T44(1, 1) = T(1, 1);
+    T44(1, 3) = T(1, 2);
+  }
+
+  _icp->reset();
+  obvious::Matrix P = sensor->getTransformation();
+  _filterBounds->setPose(&P);
+  _icp->setModel(Svalid, NULL);
+  _icp->setScene(Mvalid);
+  double rms = 0.0;
+  unsigned int pairs = 0;
+  unsigned int it = 0;
+  _icp->iterate(&rms, &pairs, &it, &T44);
+  obvious::Matrix T = _icp->getFinalTransformation();
+  T.invert();
+
+  return T;
 
 }
 

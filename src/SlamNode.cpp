@@ -49,7 +49,7 @@ SlamNode::SlamNode(void)
   unsigned int cellsPerSide = std::pow(2, uiVar);
   std::cout << __PRETTY_FUNCTION__ << " creating representation with " << cellsPerSide << "x" << cellsPerSide;
   double sideLength = static_cast<double>(cellsPerSide) * cellsize;
-  std::cout << " cells, representating "<< sideLength << "x" << sideLength << "m^2" << std::endl;
+  std::cout << " cells, representing "<< sideLength << "x" << sideLength << "m^2" << std::endl;
 
   _sensor        = NULL;
   _localizer     = NULL;

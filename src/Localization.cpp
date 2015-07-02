@@ -6,7 +6,7 @@
 #include "obcore/base/Logger.h"
 
 #include "obvision/registration/ransacMatching/RansacMatching.h"
-#include "obvision/registration/ransacMatching/PCAMatching.h"
+#include "obvision/registration/ransacMatching/RandomNormalMatching.h"
 
 #include <boost/bind.hpp>
 
@@ -158,7 +158,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   unsigned int trials = 25;
   double epsThresh = 0.15;
   unsigned int sizeControlSet = 180;
-  PCAMatching ransac(trials, epsThresh, sizeControlSet);
+  RandomNormalMatching ransac(trials, epsThresh, sizeControlSet);
   //RansacMatching ransac;  // old implementation
   double phiMax = deg2rad(60.0);
   if(_ransac)

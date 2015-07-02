@@ -6,6 +6,7 @@
 #include "obcore/base/Logger.h"
 
 #include "obvision/registration/ransacMatching/RansacMatching.h"
+#include "obvision/registration/ransacMatching/PCAMatching.h"
 
 #include <boost/bind.hpp>
 
@@ -154,13 +155,17 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   T44.setIdentity();
 
   // RANSAC pre-registration (rough)
-  RansacMatching ransac;
-  double phiMax = M_PI / 3.0;
+  unsigned int trials = 25;
+  double epsThresh = 0.15;
+  unsigned int sizeControlSet = 180;
+  PCAMatching ransac(trials, epsThresh, sizeControlSet);
+  //RansacMatching ransac;  // old implementation
+  double phiMax = deg2rad(60.0);
   if(_ransac)
   {
     //ransac.activateTrace();
-    obvious::Matrix T = ransac.match(&M, _maskM, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
-    T.invert();
+    obvious::Matrix T = ransac.match(&M, _maskM, &N, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
+    //T.invert();
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
     T44(0, 3) = T(0, 2);
@@ -173,14 +178,14 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   //_icp->activateTrace();
   obvious::Matrix P = sensor->getTransformation();
   _filterBounds->setPose(&P);
-  _icp->setModel(&Svalid, NULL);
-  _icp->setScene(&Mvalid);
+  _icp->setModel(&Mvalid, NULL);
+  _icp->setScene(&Svalid);
   double rms = 0.0;
   unsigned int pairs = 0;
   unsigned int it = 0;
   _icp->iterate(&rms, &pairs, &it, &T44);
   obvious::Matrix T = _icp->getFinalTransformation();
-  T.invert();
+  //T.invert();
 
   // analyze registration result
   double deltaX = T(0, 2);
@@ -189,12 +194,10 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double deltaPhi = this->calcAngle(&T);
   _tf.stamp_ = ros::Time::now();
 
-  //cout << "Registration: " << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
-
-  if(abs(deltaY) > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > phiMax)
+  if((trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > phiMax)
   {
     cout << "Registration error - deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
-    // ransac.serializeTrace("/tmp/ransac/");
+    //ransac.serializeTrace("/tmp/ransac/");
 
     // localization error broadcast invalid tf
 
@@ -225,6 +228,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   }
   else            //transformation valid -> transform sensor
   {
+    cout << "Registration: deltaX=" << deltaX << " deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
     sensor->transform(&T);
     obvious::Matrix curPose = sensor->getTransformation();
     double curTheta = this->calcAngle(&curPose);

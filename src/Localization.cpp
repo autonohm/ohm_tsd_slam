@@ -146,7 +146,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix M(measurementSize, 2, _modelCoords);
   obvious::Matrix N(measurementSize, 2, _modelNormals);
   obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
-  //obvious::Matrix Nvalid = maskMatrix(&N, _maskM, measurementSize, validModelPoints);
+  obvious::Matrix Nvalid = maskMatrix(&N, _maskM, measurementSize, validModelPoints);
 
   obvious::Matrix S(measurementSize, 2, _scene);
   obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
@@ -165,7 +165,6 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   {
     //ransac.activateTrace();
     obvious::Matrix T = ransac.match(&M, _maskM, &N, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
-    //T.invert();
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
     T44(0, 3) = T(0, 2);
@@ -178,7 +177,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   //_icp->activateTrace();
   obvious::Matrix P = sensor->getTransformation();
   _filterBounds->setPose(&P);
-  _icp->setModel(&Mvalid, NULL);
+  _icp->setModel(&Mvalid, &Nvalid);
   _icp->setScene(&Svalid);
   double rms = 0.0;
   unsigned int pairs = 0;
@@ -194,10 +193,10 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   double deltaPhi = this->calcAngle(&T);
   _tf.stamp_ = ros::Time::now();
 
-  if((trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > phiMax)
+  if(abs(deltaY) > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > phiMax)
   {
     cout << "Registration error - deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
-    //ransac.serializeTrace("/tmp/ransac/");
+     //ransac.serializeTrace("/tmp/ransac/");
 
     // localization error broadcast invalid tf
 

@@ -155,6 +155,7 @@ target_link_libraries(slam_node
                                         ann
                                         flann
                                         ${Boost_LIBRARIES}
+                                        tinyxml2
                                         )
                                         
 target_link_libraries(multi_slam_node
@@ -166,6 +167,7 @@ target_link_libraries(multi_slam_node
                                         ann
                                         flann
                                         ${Boost_LIBRARIES}
+                                        tinyxml2
                                         ) 
 
 #############
@@ -201,9 +203,15 @@ install(TARGETS slam_node multi_slam_node
     launch/slam.launch
     launch/multi_slam.launch
     launch/multi_slam_sim.launch
+    launch/slam_config.launch
 #   # myfile2
-   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
  )
+
+install(FILES
+    config/registration_conf.xml
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
+)
 
 #############
 ## Testing ##

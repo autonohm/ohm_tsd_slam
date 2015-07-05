@@ -39,6 +39,11 @@ class ThreadMapping;
  */
 class Localization
 {
+  enum EnumRegModes
+  {
+    ICP = 0, ///< Registration with Icp only
+    ICP_SAC_RSC ///< Registration can be rescued by pre registration using ransac
+  };
 public:
 
   /**
@@ -258,7 +263,8 @@ private:
   /**
    * RANSAC registration flag
    */
-  bool _ransac;
+  //bool _ransac;
+  bool _ranRescueActive;
 
   /*
    * RANSAC Reduction: Use to scale down the number of points for ransac

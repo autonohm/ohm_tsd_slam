@@ -1,4 +1,6 @@
+
 #include "Localization.h"
+
 #include "MultiSlamNode.h"
 #include "ThreadMapping.h"
 
@@ -10,18 +12,28 @@
 
 #include <cstring>
 #include <string>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
+#include <tinyxml2.h>
 
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/tf.h>
+#include <ros/console.h>
 
 namespace ohm_tsd_slam
 {
 
 Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, 
     std::string nameSpace):
-                    _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-                    _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor)
+                            _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+                            _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor)
 {
+  if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) )
+  {
+     ros::console::notifyLoggerLevelsChanged();
+  }
+
   _nh = &nh;
   ros::NodeHandle prvNh("~");
   // _pubMutex         = pubMutex;
@@ -46,42 +58,94 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
 
   //frames
   std::string tfBaseFrameId;
-  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
+  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));  //toDo: move into slam base? It is not specific to robot (same for all units)
 
   std::string tfChildFrameId;
   prvNh.param(_nameSpace + "tf_child_frame", tfChildFrameId, std::string("default_ns/laser"));
 
-  //reduce size for ransac
-  int iVar = 0;
-  prvNh.param<int>(_nameSpace + "ransac_reduce_factor", iVar , 1);
-  _ransacReduceFactor = static_cast<unsigned int>(iVar);
-
   _noPush = false;   //start in slam mode (nopush = false)
-
   std::string togglePushServiceTopic;
   prvNh.param<std::string>(_nameSpace + "toggle_push", togglePushServiceTopic, _nameSpace + "toggle_push");
   _togglePushService = _nh->advertiseService(_nameSpace + togglePushServiceTopic, &Localization::togglePushServiceCallBack, this);
 
-  //ICP Options
+  //open xml config file for reading registration parameters  toDo: maybe move into subclass to ease up reading
   double distFilterMax = 0.0;
   double distFilterMin = 0.0;
   int icpIterations = 0;
-  prvNh.param<double>(_nameSpace + "dist_filter_min", distFilterMin, 0.2);
-  prvNh.param<double>(_nameSpace + "dist_filter_max", distFilterMax, 1.0);
-  prvNh.param<int>(_nameSpace + "icp_iterations", icpIterations, 25);
+  std::string configFileRegistration;
+  prvNh.param<std::string>(_nameSpace + "config_file_registration", configFileRegistration, "config/registration_conf.xml");
+  tinyxml2::XMLDocument config;
+  int xmlErrorID = config.LoadFile(configFileRegistration.c_str());
+  if(xmlErrorID != tinyxml2::XML_NO_ERROR)
+  {
+    if(xmlErrorID == tinyxml2::XML_ERROR_FILE_NOT_FOUND)
+    {
+      ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error opening config file " << configFileRegistration << std::endl);
+    }
+    else if(xmlErrorID == tinyxml2::XML_ERROR_FILE_COULD_NOT_BE_OPENED)
+    {
+      ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " config file " << configFileRegistration << " invalid" << std::endl);
+    }
+    else
+    {
+      ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " reading xml config failed with error code " << xmlErrorID << std::endl);
+    }
+    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " xml config failed for robot " << _nameSpace << " setting parameters to default" << std::endl);
+    _ranRescueActive = false;   //mode = ICP only  toDo: store the mode? Make code better readable
+    _ransacReduceFactor = 1;
+    distFilterMin = 0.2;
+    distFilterMax = 1.0;
+    icpIterations = 25;
+    _trnsMax = TRNS_THRESH;
+    _rotMax = ROT_THRESH;
+    _ranTrials = 50;
+    _ranEpsThresh = 0.15;
+    _ranSizeCtrlSet = 180;
+  }
+  else  //opening of config file succeeded fill in parameters
+  {
+    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " xml config file " << configFileRegistration << " opened" << std::endl);
+    int mode = std::atoi(config.FirstChildElement("reg_config")->FirstChildElement("reg_mode")->GetText());
+    if(mode == ICP)
+      _ranRescueActive = false;
+    if(mode == ICP_SAC_RSC)
+      _ranRescueActive = true;
+    icpIterations = std::atoi(config.FirstChildElement("reg_config")->FirstChildElement("icp")->FirstChildElement("icp_iterations")->GetText());
+    distFilterMax = std::atof(config.FirstChildElement("reg_config")->FirstChildElement("icp")->FirstChildElement("dist_filter_max")->GetText());
+    distFilterMin = std::atof(config.FirstChildElement("reg_config")->FirstChildElement("icp")->FirstChildElement("dist_filter_min")->GetText());
+    _trnsMax      = std::atof(config.FirstChildElement("reg_config")->FirstChildElement("icp")->FirstChildElement("reg_trs_max")->GetText());
+    _rotMax       = std::atof(config.FirstChildElement("reg_config")->FirstChildElement("icp")->FirstChildElement("reg_sin_rot_max")->GetText());
+    _ransacReduceFactor = static_cast<unsigned int>(std::atoi(config.FirstChildElement("reg_config")->FirstChildElement("ransac_rsc")->FirstChildElement("ransac_reduce_factor")->GetText()));
+    _ranTrials          = static_cast<unsigned int>(std::atoi(config.FirstChildElement("reg_config")->FirstChildElement("ransac_rsc")->FirstChildElement("ransac_trials")->GetText()));
+    _ranEpsThresh       = std::atof(config.FirstChildElement("reg_config")->FirstChildElement("ransac_rsc")->FirstChildElement("ransac_eps_thresh")->GetText());
+    _ranSizeCtrlSet     = static_cast<unsigned int>(std::atoi(config.FirstChildElement("reg_config")->FirstChildElement("ransac_rsc")->FirstChildElement("ransac_ctrlset_size")->GetText()));
+    std::cout << __PRETTY_FUNCTION__ << " config finished!" << std::endl;
+  }
 
-  prvNh.param<bool>(_nameSpace + "use_icpsac", _ransac, false);
 
-  //Maximum allowed offset between to aligned scans
-  prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
-  prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
-
-  int paramInt = 0;
-  prvNh.param<int>(nameSpace + "ransac_trials", paramInt, 50);
-  _ranTrials = static_cast<unsigned int>(paramInt);
-  prvNh.param<double>(nameSpace + "ransac_eps_thresh", _ranEpsThresh, 0.15);
-  prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, 180);
-  _ranSizeCtrlSet = static_cast<unsigned int>(paramInt);
+//  //reduce size for ransac
+//  int iVar = 0;
+//  prvNh.param<int>(_nameSpace + "ransac_reduce_factor", iVar , 1);
+//  _ransacReduceFactor = static_cast<unsigned int>(iVar);
+//
+//  //ICP Options
+//
+//  prvNh.param<double>(_nameSpace + "dist_filter_min", distFilterMin, 0.2);
+//  prvNh.param<double>(_nameSpace + "dist_filter_max", distFilterMax, 1.0);
+//  prvNh.param<int>(_nameSpace + "icp_iterations", icpIterations, 25);
+//
+//  //prvNh.param<bool>(_nameSpace + "use_icpsac", _ransac, false);
+//
+//  //Maximum allowed offset between to aligned scans
+//  prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
+//  prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
+//
+//  int paramInt = 0;
+//  prvNh.param<int>(nameSpace + "ransac_trials", paramInt, 50);
+//  _ranTrials = static_cast<unsigned int>(paramInt);
+//  prvNh.param<double>(nameSpace + "ransac_eps_thresh", _ranEpsThresh, 0.15);
+//  prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, 180);
+//  _ranSizeCtrlSet = static_cast<unsigned int>(paramInt);
 
   /** Initialize member modules **/
   _lastPose         = new obvious::Matrix(3, 3);
@@ -169,20 +233,20 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
 
   /** Align Laser scans */
-  obvious::Matrix T = doRegistration(sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, _ransac);  //3x3 Transformation Matrix
+  obvious::Matrix T = doRegistration(sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, false);  //3x3 Transformation Matrix
 
   /** analyze registration result */
   _tf.stamp_ = ros::Time::now();
   const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
 
-  if(regErrorT && !_ransac) //icp only, we can use the ransac to get it back
+  if(regErrorT && _ranRescueActive) //rescue with ransac pre- registering
   {
-    std::cout << __PRETTY_FUNCTION__ << "regError! Trying to recapture with ICPSac\n";
+    std::cout << __PRETTY_FUNCTION__ << "regError! Trying to recapture with ICPSac (REMOVE)\n";
     obvious::Matrix secondT = doRegistration(sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
-    if(isRegistrationError(&secondT,_trnsMax * 1.5, _rotMax * 1.5))
+    if(isRegistrationError(&secondT,_trnsMax * 1.5, _rotMax * 1.5)) //toDo: config file for error
     {
       std::cout << __PRETTY_FUNCTION__ << "Could not recapture \n";
-      sendNanTransform();
+      sendNanTransform();  //toDo: maybe make this if else statement smaller by use of return in error case
     }
     else
     {
@@ -190,17 +254,15 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
       sensor->transform(&secondT);
       obvious::Matrix curPose = sensor->getTransformation();
 
-      sendTransform(&curPose);
-//      if(this->isPoseChangeSignificant(_lastPose, &curPose) && !_noPush)
-//      {
-//        *_lastPose = curPose;
-//        _mapper->queuePush(sensor);
-//      }
+      sendTransform(&curPose);  //toDo: make a push in this case?
+      //      if(this->isPoseChangeSignificant(_lastPose, &curPose) && !_noPush)
+      //      {
+      //        *_lastPose = curPose;
+      //        _mapper->queuePush(sensor);
+      //      }
     }
   }
-  //  else
-
-  else if(regErrorT)    //already used ransac, we can do nothing to get the pose right. Let's hope for the next scan
+  else if(regErrorT)
   {
     std::cout << __PRETTY_FUNCTION__ << "regError! \n";
     sendNanTransform();

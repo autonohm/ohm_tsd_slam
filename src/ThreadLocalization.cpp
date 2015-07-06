@@ -1,9 +1,10 @@
-#include "Localization.h"
+#include "ThreadLocalization.h"
 #include "SlamNode.h"
 #include "ThreadMapping.h"
 
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
+#include "obcore/base/Timer.h"
 
 #include "obvision/registration/ransacMatching/RansacMatching.h"
 #include "obvision/registration/ransacMatching/RandomNormalMatching.h"
@@ -19,7 +20,7 @@
 namespace ohm_tsd_slam
 {
 
-Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, const bool ransac) :
+ThreadLocalization::ThreadLocalization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, const bool ransac) :
     _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor), _gridOffSetY(-1.0 * grid->getCellsY()
         * grid->getCellSize() * yOffFactor)
 {
@@ -74,9 +75,11 @@ Localization::Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::N
   _poseStamped.header.frame_id = tfBaseFrameId;
   _tf.frame_id_ = tfBaseFrameId;
   _tf.child_frame_id_ = tfChildFrameId;
+
+  _sensor = NULL;
 }
 
-Localization::~Localization()
+ThreadLocalization::~ThreadLocalization()
 {
   delete _rayCaster;
   delete _assigner;
@@ -96,6 +99,8 @@ Localization::~Localization()
     delete[] _maskS;
   if(_maskM)
     delete[] _maskM;
+
+  _thread->join();
 }
 
 obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints)
@@ -116,7 +121,7 @@ obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSi
   return retMat;
 }
 
-void Localization::localize(obvious::SensorPolar2D* sensor)
+void ThreadLocalization::localize(obvious::SensorPolar2D* sensor)
 {
   unsigned int measurementSize = sensor->getRealMeasurementSize();
   bool* measurementMask = sensor->getRealMeasurementMask();
@@ -130,6 +135,8 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
     *_lastPose    = sensor->getTransformation();
   }
 
+  obvious::Timer t;
+  t.start();
   // reconstruction
 
   unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(_grid, sensor, _modelCoords, _modelNormals, _maskM);
@@ -227,7 +234,7 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
   }
   else            //transformation valid -> transform sensor
   {
-    cout << "Registration: deltaX=" << deltaX << " deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
+    //cout << "Registration: deltaX=" << deltaX << " deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
     sensor->transform(&T);
     obvious::Matrix curPose = sensor->getTransformation();
     double curTheta = this->calcAngle(&curPose);
@@ -256,9 +263,36 @@ void Localization::localize(obvious::SensorPolar2D* sensor)
       _mapper->queuePush(sensor);
     }
   }
+  //cout << "Localisation::elapsed: " << t.elapsed() << endl;
 }
 
-double Localization::calcAngle(obvious::Matrix* T)
+bool ThreadLocalization::isIdle()
+{
+  return (_sensor==NULL);
+}
+
+void ThreadLocalization::triggerRegistration(obvious::SensorPolar2D* sensor)
+{
+  if(_sensor==NULL)
+  {
+    _sensor = sensor;
+    this->unblock();
+  }
+}
+
+void ThreadLocalization::eventLoop()
+{
+  while(_stayActive)
+ {
+   _sleepMutex.lock();
+   _sleepCond.wait(_sleepMutex);
+   _sleepMutex.unlock();
+   localize(_sensor);
+   _sensor = NULL;
+ }
+}
+
+double ThreadLocalization::calcAngle(obvious::Matrix* T)
 {
   double angle = 0.0;
   const double ARCSIN = asin((*T)(1, 0));
@@ -271,7 +305,7 @@ double Localization::calcAngle(obvious::Matrix* T)
   return (angle);
 }
 
-bool Localization::isPoseChangeSignificant(obvious::Matrix* lastPose, obvious::Matrix* curPose)
+bool ThreadLocalization::isPoseChangeSignificant(obvious::Matrix* lastPose, obvious::Matrix* curPose)
 {
   double deltaX = (*curPose)(0, 2) - (*lastPose)(0, 2);
   double deltaY = (*curPose)(1, 2) - (*lastPose)(1, 2);

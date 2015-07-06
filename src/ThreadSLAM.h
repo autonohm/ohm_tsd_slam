@@ -2,7 +2,6 @@
 #define THREADSLAM_H_
 
 #include <boost/thread.hpp>
-//#include "obvision/reconstruct/grid/TsdGrid.h"
 
 namespace ohm_tsd_slam
 {

@@ -1,19 +1,14 @@
-/*
- * Localization.h
- *
- *  Created on: 17.04.2014
- *      Author: Philipp Koch, Stefan May
- */
-
-#ifndef LOCALIZATION_H_
-#define LOCALIZATION_H_
+#ifndef THREADLOCALIZATION_H_
+#define THREADLOCALIZATION_H_
 
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obvision/reconstruct/grid/TsdGrid.h"
 #include "obvision/reconstruct/grid/RayCastPolar2D.h"
 #include "obvision/registration/icp/icp_def.h"
+#include "ThreadSLAM.h"
 
 #include <boost/thread.hpp>
+#include <queue>
 
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
@@ -34,11 +29,11 @@ class SlamNode;
 class ThreadMapping;
 
 /**
- * @class Localization
+ * @class ThreadLocalization
  * @brief Localizes a laser scanner in a obvious::TsdGrid
  * @author Philipp Koch, Stefan May
  */
-class Localization
+class ThreadLocalization : public ThreadSLAM
 {
 public:
 
@@ -51,12 +46,12 @@ public:
    * @param parentNode Pointer to main node instance
    * @param ransac use RANSAC pre-registration
    */
-  Localization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, const bool ransac=true);
+  ThreadLocalization(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle& nh, const double xOffFactor, const double yOffFactor, const bool ransac=true);
 
   /**
    * Destructor
    */
-  virtual ~Localization();
+  virtual ~ThreadLocalization();
 
   /**
    * localize
@@ -65,7 +60,25 @@ public:
    */
   void localize(obvious::SensorPolar2D* sensor);
 
+  /**
+   * Idle flag indicating whether localization is still in progress
+   * @return idle flag
+   */
+  bool isIdle();
+
+  /**
+   * Trigger registration of newly available data (if localization module is idle)
+   * @param sensor Sensor instance
+   */
+  void triggerRegistration(obvious::SensorPolar2D* sensor);
+
 private:
+
+  /**
+   * eventLoop
+   * Thread event loop
+   */
+  virtual void eventLoop(void);
 
   /**
    * calcAngle
@@ -206,8 +219,19 @@ private:
    * RANSAC registration flag
    */
   bool _ransac;
+
+  /**
+   * Mutex for triggering registration of new data
+   */
+  boost::mutex _pushMutex;
+
+  /**
+   * Pointer to recent sensor instance
+   */
+  obvious::SensorPolar2D* _sensor;
+
 };
 
 } /* namespace ohm_tsd_slam*/
 
-#endif /* LOCALIZATION_H_ */
+#endif /* THREADLOCALIZATION_H_ */

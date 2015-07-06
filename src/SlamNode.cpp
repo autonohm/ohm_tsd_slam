@@ -6,7 +6,7 @@
  */
 
 #include "SlamNode.h"
-#include "Localization.h"
+#include "ThreadLocalization.h"
 #include "ThreadMapping.h"
 #include "ThreadGrid.h"
 #include "obcore/math/mathbase.h"
@@ -51,10 +51,10 @@ SlamNode::SlamNode(void)
   double sideLength = static_cast<double>(cellsPerSide) * cellsize;
   std::cout << " cells, representing "<< sideLength << "x" << sideLength << "m^2" << std::endl;
 
-  _sensor        = NULL;
-  _localizer     = NULL;
-  _threadMapping = NULL;
-  _threadGrid    = NULL;
+  _sensor          = NULL;
+  _threadLocalizer = NULL;
+  _threadMapping   = NULL;
+  _threadGrid      = NULL;
 }
 
 SlamNode::~SlamNode()
@@ -63,11 +63,11 @@ SlamNode::~SlamNode()
   {
     _threadMapping->terminateThread();
     _threadGrid->terminateThread();
+    _threadLocalizer->terminateThread();
     delete _threadGrid;
     delete _threadMapping;
+    delete _threadLocalizer;
   }
-  if(_localizer)
-    delete _localizer;
   if(_grid)
     delete _grid;
   if(_sensor)
@@ -125,7 +125,7 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
     std::cout << __PRETTY_FUNCTION__ << " warning! Footprint could not be freed!\n";
   _threadMapping->initPush(_sensor);
 
-  _localizer   = new Localization(_grid, _threadMapping, _nh, xOffFactor, yOffFactor, icpSac);
+  _threadLocalizer   = new ThreadLocalization(_grid, _threadMapping, _nh, xOffFactor, yOffFactor, icpSac);
   _threadGrid  = new ThreadGrid(_grid, _nh, xOffFactor, yOffFactor);
   _initialized = true;
 }
@@ -154,27 +154,31 @@ void SlamNode::run(void)
 
 void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
 {
-  sensor_msgs::LaserScan tmpScan = scan;
-  for(std::vector<float>::iterator iter = tmpScan.ranges.begin(); iter != tmpScan.ranges.end(); iter++)
-  {
-    if(isnan(*iter))
-      *iter = 0.0;
-    else if(*iter > _maxRange)
-      *iter = INFINITY;
+    sensor_msgs::LaserScan tmpScan = scan;
+    for(std::vector<float>::iterator iter = tmpScan.ranges.begin(); iter != tmpScan.ranges.end(); iter++)
+    {
+      if(isnan(*iter))
+        *iter = 0.0;
+      else if(*iter > _maxRange)
+        *iter = INFINITY;
+    }
+    if(!_initialized)
+    {
+      std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";
+      this->initialize(tmpScan);
+      std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
+      return;
+    }
+
+    if(_threadLocalizer->isIdle())
+    {
+    _sensor->setRealMeasurementData(scan.ranges, 1.0);
+    _sensor->resetMask();
+    _sensor->maskZeroDepth();
+    _sensor->maskInvalidDepth();
+    _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
+    _threadLocalizer->triggerRegistration(_sensor);
   }
-  if(!_initialized)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";
-    this->initialize(tmpScan);
-    std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
-    return;
-  }
-  _sensor->setRealMeasurementData(scan.ranges, 1.0);
-  _sensor->resetMask();
-  _sensor->maskZeroDepth();
-  _sensor->maskInvalidDepth();
-  _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
-  _localizer->localize(_sensor);
 }
 
 } /* namespace ohm_tsdSlam2 */

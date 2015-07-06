@@ -27,7 +27,9 @@ void ThreadMapping::eventLoop(void)
 {
   while(_stayActive)
   {
+    _sleepMutex.lock();
     _sleepCond.wait(_sleepMutex);
+    _sleepMutex.unlock();
     while(_stayActive && !_sensors.empty())
     {
       obvious::SensorPolar2D* sensor = _sensors.front();

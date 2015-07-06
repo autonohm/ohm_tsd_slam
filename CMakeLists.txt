@@ -116,7 +116,7 @@ link_directories(
 ## Declare a cpp executable
 add_executable(slam_node src/slam_node.cpp
                                  src/SlamNode.cpp
-                                 src/Localization.cpp
+                                 src/ThreadLocalization.cpp
                                  src/ThreadSLAM.cpp
                                  src/ThreadMapping.cpp
                                  src/ThreadGrid.cpp

@@ -1,10 +1,3 @@
-/*
- * SlamNode.h
- *
- *  Created on: 05.05.2014
- *      Author: phil
- */
-
 #ifndef SLAMNODE_H_
 #define SLAMNODE_H_
 
@@ -24,7 +17,7 @@
 
 namespace ohm_tsd_slam
 {
-class Localization;
+class ThreadLocalization;
 class ThreadSLAM;
 class ThreadMapping;
 class ThreadGrid;
@@ -102,9 +95,9 @@ private:
   obvious::SensorPolar2D* _sensor;
 
   /**
-   * Localization instance
+   * Localization thread instance
    */
-  Localization* _localizer;
+  ThreadLocalization* _threadLocalizer;
 
   /**
    * Mapping thread instance

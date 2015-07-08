@@ -17,7 +17,6 @@
 
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obcore/base/Logger.h"
-#include "ohm_srvs/NodeControl.h"
 
 #include <boost/thread.hpp>
 
@@ -36,13 +35,15 @@ class Localization;
 class ThreadSLAM;
 class ThreadMapping;
 class ThreadGrid;
+class ThreadLocalize;
+class LaserCallBackObject;
 
 /**
  * @class SlamNode
  * @brief Main node management of the 2D SLAM
  * @author Philipp Koch
  */
-class SlamNode : public SlamBase
+class SlamNode //: public SlamBase
 {
 public:
 
@@ -60,8 +61,8 @@ public:
    * start
    * Method to start the SLAM
    */
-  //void start(void);
-
+  void start(void){this->run();}
+  bool reset(void);
 private:
 
   /**
@@ -69,7 +70,7 @@ private:
    * Method to initialize the necessary parameters with the first received scan
    * @param initScan Initial scan
    */
-  void initialize(const sensor_msgs::LaserScan& initScan);
+//  void initialize(const sensor_msgs::LaserScan& initScan);
 
   /**
    * run
@@ -82,15 +83,34 @@ private:
    * Callback method to laser subscriber
    * @param scan Laser scan
    */
-  void laserScanCallBack(const sensor_msgs::LaserScan& scan);
+  //void laserScanCallBack(const sensor_msgs::LaserScan& scan);
 
-  bool nodeControlServiceCallBack(ohm_srvs::NodeControl::Request& req, ohm_srvs::NodeControl::Response& res);
+//  bool pause(void);
+//
+//  bool unPause(void);
 
-  bool pause(void);
+  void init(void);
+    std::vector<ThreadLocalize*> _localizers;
+    std::vector<LaserCallBackObject*> _laserCallBacks;
 
-  bool unPause(void);
-
-  bool reset(void);
+    void timedGridPub(void);
+      bool resetGrid(void);
+      ros::NodeHandle _nh;
+      obvious::TsdGrid* _grid;
+      ThreadMapping* _threadMapping;
+      ThreadGrid* _threadGrid;
+      boost::mutex _pubMutex;
+      double _xOffFactor;
+      double _yOffFactor;
+      double _yawOffset;
+      double _rateVar;
+      ros::Rate* _loopRate;
+      bool _initialized;
+      ros::Duration* _gridInterval;
+      //bool _icpSac;
+      unsigned int _octaveFactor;
+      double _truncationRadius;
+      double _cellSize;
 
   /**
    * Main node handle
@@ -100,7 +120,7 @@ private:
   /**
    * Laser subscriber
    */
-  ros::Subscriber _laserSubs;
+ // ros::Subscriber _laserSubs;
 
   /**
    * Initilized flag
@@ -115,17 +135,17 @@ private:
   /**
    * obvious::Sensor instance containing data and pose
    */
-  obvious::SensorPolar2D* _sensor;
+//  obvious::SensorPolar2D* _sensor;
 
   /**
    * Mask for lasr data
    */
-  bool* _mask;
+  //bool* _mask;
 
   /**
    * Localization instance
    */
-  Localization* _localizer;
+//  Localization* _localizer;
 
   /**
    * Mapping thread instance
@@ -181,7 +201,6 @@ private:
 
   std::string _laserTopic;
 
-  ros::ServiceServer _nodeControlSrv;
 };
 
 } /* namespace ohm_tsdSlam */

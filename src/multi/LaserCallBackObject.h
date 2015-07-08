@@ -13,17 +13,16 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
-#include "ohm_srvs/NodeControl.h"
 
 namespace ohm_tsd_slam
 {
 
-class MultiSlamNode;
+class SlamNode;
 
 class LaserCallBackObject
 {
 public:
-  LaserCallBackObject(MultiSlamNode& parentNode, ThreadLocalize* localizeThread,
+  LaserCallBackObject(SlamNode& parentNode, ThreadLocalize* localizeThread,
                       ros::NodeHandle* const nh, const std::string& laserTopic, const std::string& nameSpace);
   virtual ~LaserCallBackObject();
   void laserCallBack(const sensor_msgs::LaserScan& scan);
@@ -31,8 +30,7 @@ public:
   bool unPause(void);
   bool resetMapping(void);
 private:
-  bool nodeControlCallBack(ohm_srvs::NodeControl::Request& req, ohm_srvs::NodeControl::Response& res);
-  MultiSlamNode& _parentNode;
+  SlamNode& _parentNode;
   ThreadLocalize* _localizeThread;
   std::string _laserTopic;
   ros::NodeHandle* const _nh;

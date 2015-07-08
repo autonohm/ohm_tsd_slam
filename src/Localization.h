@@ -42,7 +42,8 @@ class Localization
   enum EnumRegModes
   {
     ICP = 0, ///< Registration with Icp only
-    ICP_SAC_RSC ///< Registration can be rescued by pre registration using ransac
+    EXP,
+    ICP_EXP_RSC ///< Registration can be rescued by pre registration using ransac
   };
 public:
 

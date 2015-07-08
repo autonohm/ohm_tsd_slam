@@ -121,26 +121,28 @@ add_executable(slam_node src/slam_node.cpp
                                  src/SlamNode.cpp
                                  src/SlamBase.cpp
                                  src/Localization.cpp
+                                 src/multi/ThreadLocalize.cpp
                                  src/ThreadSLAM.cpp
                                  src/ThreadMapping.cpp
                                  src/ThreadGrid.cpp
+                                 src/multi/LaserCallBackObject.cpp
                                  )
 
-add_executable(multi_slam_node src/multi/multi_slam_node.cpp
-                               src/multi/MultiSlamNode.cpp
-                               src/SlamBase.cpp
-                               src/Localization.cpp
-                               src/multi/ThreadLocalize.cpp
-                               src/ThreadSLAM.cpp
-                               src/ThreadMapping.cpp
-                               src/ThreadGrid.cpp
-                               src/multi/LaserCallBackObject.cpp
-                               )
+#add_executable(multi_slam_node src/multi/multi_slam_node.cpp
+#                               src/multi/MultiSlamNode.cpp
+#                               src/SlamBase.cpp
+#                               src/Localization.cpp
+#                               src/multi/ThreadLocalize.cpp
+#                               src/ThreadSLAM.cpp
+#                               src/ThreadMapping.cpp
+#                               src/ThreadGrid.cpp
+#                               src/multi/LaserCallBackObject.cpp
+#                               )
                                   
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 add_dependencies(slam_node ohm_srvs_generate_messages_cpp)
-add_dependencies(multi_slam_node ohm_srvs_generate_messages_cpp)
+#add_dependencies(multi_slam_node ohm_srvs_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(ohm_tsd_slam_node
@@ -158,17 +160,17 @@ target_link_libraries(slam_node
                                         tinyxml2
                                         )
                                         
-target_link_libraries(multi_slam_node
-                                        ${catkin_LIBRARIES}
-                                        obvision
-                                        obcore
-                                        gsl
-                                        gslcblas
-                                        ann
-                                        flann
-                                        ${Boost_LIBRARIES}
-                                        tinyxml2
-                                        ) 
+#target_link_libraries(multi_slam_node
+#                                        ${catkin_LIBRARIES}
+#                                        obvision
+#                                        obcore
+#                                        gsl
+#                                        gslcblas
+#                                        ann
+#                                        flann
+#                                        ${Boost_LIBRARIES}
+#                                        tinyxml2
+#                                        ) 
 
 #############
 ## Install ##
@@ -185,7 +187,7 @@ target_link_libraries(multi_slam_node
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS slam_node multi_slam_node
+install(TARGETS slam_node #multi_slam_node
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

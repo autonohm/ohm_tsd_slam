@@ -51,9 +51,8 @@ ThreadLocalize::~ThreadLocalize()
   delete _mask;
 }
 
-bool ThreadLocalize::setData(const sensor_msgs::LaserScan& scan)
+bool ThreadLocalize::setData(const sensor_msgs::LaserScan& scan) //toDo: move callback here?
 {
-
   if(!_dataMutex.try_lock())
     return false;
   if(!_initialized)
@@ -72,7 +71,7 @@ bool ThreadLocalize::setData(const sensor_msgs::LaserScan& scan)
   _sensor->setRealMeasurementMask(_mask);
   _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _sensor->maskZeroDepth();
-  _newScan = true;
+  _newScan = true;    //toDO: use thread unblock to add new scan
   _dataMutex.unlock();
   return true;
 }

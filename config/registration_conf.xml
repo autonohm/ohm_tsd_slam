@@ -10,8 +10,8 @@
 	</icp>
 	<ransac_rsc>
 		<ransac_reduce_factor>1</ransac_reduce_factor>
-		<ransac_trials>100</ransac_trials>
-		<ransac_eps_thresh>0.30</ransac_eps_thresh>
-		<ransac_ctrlset_size>270</ransac_ctrlset_size>
+		<ransac_trials>25</ransac_trials>
+		<ransac_eps_thresh>0.15</ransac_eps_thresh>
+		<ransac_ctrlset_size>180</ransac_ctrlset_size>
 	</ransac_rsc>
 </reg_config>

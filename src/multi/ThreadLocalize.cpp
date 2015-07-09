@@ -14,6 +14,7 @@
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
 #include "obvision/registration/ransacMatching/RansacMatching.h"
+#include "obvision/registration/ransacMatching/RandomNormalMatching.h"
 
 #include <boost/bind.hpp>
 
@@ -99,6 +100,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
       ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " reading xml config failed with error code " << xmlErrorID << std::endl);
     }
     ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " xml config failed for robot " << _nameSpace << " setting parameters to default" << std::endl);
+    _mode = ICP;                 //mode = ICP only  toDo: store the mode? Make code better readable
     _ranRescueActive = false;   //mode = ICP only  toDo: store the mode? Make code better readable
     _ransacReduceFactor = 1;
     distFilterMin = 0.2;
@@ -235,14 +237,18 @@ void ThreadLocalize::eventLoop(void)
       obvious::Matrix S(measurementSize, 2, _scene);
       obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
 
-      /** Align Laser scans */
-      obvious::Matrix T = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, false);  //3x3 Transformation Matrix
+      obvious::Matrix T(4, 4);
 
+      /** Align Laser scans */
+      if(_mode == ICP)
+        T = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, false);  //3x3 Transformation Matrix
+      else if(_mode == EXP)
+        T = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
       /** analyze registration result */
       _tf.stamp_ = ros::Time::now();
       const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
 
-      if(regErrorT && _ranRescueActive) //rescue with ransac pre- registering
+      if(regErrorT && _mode == ICP_EXP_RSC) //rescue with ransac pre- registering
       {
         std::cout << __PRETTY_FUNCTION__ << "regError! Trying to recapture with ICPSac (REMOVE)\n";
         obvious::Matrix secondT = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
@@ -370,9 +376,11 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
 
     //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
     //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
-    RansacMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet); //toDo: launch parameters
+    //RansacMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet); //toDo: launch parameters
+    obvious::RandomNormalMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
     const double phiMax = _rotMax;
     obvious::Matrix T(3, 3);
+    obvious::Matrix T = ransac.match(&M, _maskM, &N, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
     if(factor == 1)
       T = ransac.match(M, _maskM, S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
     else

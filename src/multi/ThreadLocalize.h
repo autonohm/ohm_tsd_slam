@@ -65,7 +65,7 @@ private:
   void sendNanTransform();
 
   ros::NodeHandle* _nh;
-  ros::Subscriber _lasSubs;
+  //ros::Subscriber _lasSubs;
   obvious::TsdGrid& _grid;
   ThreadMapping& _mapper;
   obvious::SensorPolar2D* _sensor;
@@ -201,6 +201,7 @@ private:
      */
     //bool _ransac;
     bool _ranRescueActive;
+    EnumRegModes _mode;
 
     /*
      * RANSAC Reduction: Use to scale down the number of points for ransac

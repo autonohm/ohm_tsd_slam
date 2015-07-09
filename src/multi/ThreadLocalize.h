@@ -63,6 +63,10 @@ private:
   bool isRegistrationError(obvious::Matrix* T, const double trnsMax, const  double rotMax);
   void sendTransform(obvious::Matrix* T);
   void sendNanTransform();
+  obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints);
+  void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigned int maskSize);
+  void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
+      unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
   ros::NodeHandle* _nh;
   //ros::Subscriber _lasSubs;
@@ -227,10 +231,7 @@ private:
 
 };
 
-obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints);
-void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigned int maskSize);
-void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
-    unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
+
 
 } /* namespace ohm_tsd_slam */
 

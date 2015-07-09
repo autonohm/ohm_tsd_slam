@@ -115,11 +115,11 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   else  //opening of config file succeeded fill in parameters
   {
     ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " xml config file " << configFileRegistration << " opened" << std::endl);
-    int mode = std::atoi(config.FirstChildElement("reg_config")->FirstChildElement("reg_mode")->GetText());
-    if(mode == ICP)
-      _ranRescueActive = false;
-    if(mode == ICP_EXP_RSC)
-      _ranRescueActive = true;
+    _mode = static_cast<EnumRegModes>(std::atoi(config.FirstChildElement("reg_config")->FirstChildElement("reg_mode")->GetText()));
+//    if(mode == ICP)
+//      _ranRescueActive = false;
+//    else if(mode == ICP_EXP_RSC)
+//      _ranRescueActive = true;
     icpIterations = std::atoi(config.FirstChildElement("reg_config")->FirstChildElement("icp")->FirstChildElement("icp_iterations")->GetText());
     distFilterMax = std::atof(config.FirstChildElement("reg_config")->FirstChildElement("icp")->FirstChildElement("dist_filter_max")->GetText());
     distFilterMin = std::atof(config.FirstChildElement("reg_config")->FirstChildElement("icp")->FirstChildElement("dist_filter_min")->GetText());
@@ -237,13 +237,19 @@ void ThreadLocalize::eventLoop(void)
       obvious::Matrix S(measurementSize, 2, _scene);
       obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
 
-      obvious::Matrix T(4, 4);
+      obvious::Matrix T(3, 3);
 
       /** Align Laser scans */
       if(_mode == ICP)
+      {
+       // std::cout << __PRETTY_FUNCTION__ << " icp" << std::endl;
         T = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, false);  //3x3 Transformation Matrix
+      }
       else if(_mode == EXP)
+      {
+        //std::cout << __PRETTY_FUNCTION__ << " ranscac" << std::endl;
         T = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
+      }
       /** analyze registration result */
       _tf.stamp_ = ros::Time::now();
       const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
@@ -278,7 +284,9 @@ void ThreadLocalize::eventLoop(void)
       }
       else //transformation valid -> transform sensor and publish new sensor pose
       {
+        //std::cout << __PRETTY_FUNCTION__ << " here?" << std::endl;
         _sensor->transform(&T);
+        //std::cout << __PRETTY_FUNCTION__ << " not" << std::endl;
         obvious::Matrix curPose = _sensor->getTransformation();
 
         sendTransform(&curPose);
@@ -355,7 +363,6 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     const bool useRansac
 )
 {
-
   const unsigned int measurementSize = sensor->getRealMeasurementSize();
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
@@ -376,16 +383,17 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
 
     //    maskToOneDegreeRes(_maskS, sensor->getAngularResolution(), measurementSize);
     //      maskToOneDegreeRes(_maskM, sensor->getAngularResolution(), measurementSize);
-    //RansacMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet); //toDo: launch parameters
+
+    //RansacMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
     obvious::RandomNormalMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
     const double phiMax = _rotMax;
     obvious::Matrix T(3, 3);
-    obvious::Matrix T = ransac.match(&M, _maskM, &N, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
+    //obvious::Matrix T = ransac.match(&M, _maskM, &N, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
     if(factor == 1)
-      T = ransac.match(M, _maskM, S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
-    else
-      T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
-          _trnsMax, sensor->getAngularResolution() * (double) factor);
+      T = ransac.match(M, _maskM, N, S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
+//    else
+//      T = ransac.match(&Mreduced, maskMRed, &Sreduced, maskSRed, phiMax,
+//          _trnsMax, sensor->getAngularResolution() * (double) factor);
 
     T.invert();
     T44(0, 0) = T(0, 0);
@@ -417,7 +425,7 @@ bool ThreadLocalize::isRegistrationError(obvious::Matrix* T, const double trnsMa
   double trnsAbs = std::sqrt(deltaX * deltaX + deltaY * deltaY);
   double deltaPhi = this->calcAngle(T);
 
-  return (trnsAbs > trnsMax) || (std::fabs(std::sin(deltaPhi)) > rotMax);
+  return (trnsAbs > trnsMax) || (std::abs(std::sin(deltaPhi)) > rotMax);
 }
 
 void ThreadLocalize::sendTransform(obvious::Matrix* T)
@@ -440,10 +448,8 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
   _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
   _tf.setRotation(quat);
 
-  //_pubMutex->lock();   //toDo: test if this mutex is necessary (other threads use this too)
   _posePub.publish(_poseStamped);
   _tfBroadcaster.sendTransform(_tf);
-  //_pubMutex->unlock();
 }
 
 void ThreadLocalize::sendNanTransform()
@@ -493,7 +499,7 @@ bool ThreadLocalize::isPoseChangeSignificant(obvious::Matrix* lastPose, obvious:
   return (deltaPhi > ROT_MIN) || (trnsAbs > TRNS_MIN);
 }
 
-obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints)
+obvious::Matrix ThreadLocalize::maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints)
 {
   assert(Mat->getRows() == maskSize);
   assert(Mat->getCols() == 2);
@@ -511,7 +517,7 @@ obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSi
   return retMat;
 }
 
-void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigned int maskSize)
+void ThreadLocalize::maskToOneDegreeRes(bool* const mask, const double resolution, const unsigned int maskSize)
 {
   const double desResRad = 1.0 * M_PI / 180.0;
   const unsigned int factor = static_cast<unsigned int>(desResRad / resolution + 0.5);
@@ -524,9 +530,10 @@ void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigne
   }
 }
 
-void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
+void ThreadLocalize::reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
     const unsigned int pointsIn, const unsigned int pointsOut, const unsigned int reductionFactor)
 {
+  std::cout << __PRETTY_FUNCTION__ << " entry" << std::endl;
   assert(pointsIn > pointsOut);
   //fixme we only support scan with even number of points like 1080. if a scan has 1081 points is not usable for subsampling here!
   const unsigned int factor = pointsIn / pointsOut;
@@ -550,6 +557,7 @@ void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* co
     }
   }
   assert(cnt == pointsOut);
+  std::cout << __PRETTY_FUNCTION__ << " exit" << std::endl;
 }
 
 } /* namespace ohm_tsd_slam */

@@ -7,9 +7,8 @@
 
 #include "ThreadLocalize.h"
 
-#include "MultiSlamNode.h"
+#include "SlamNode.h"
 #include "ThreadMapping.h"
-#include "Localization.h"
 
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"

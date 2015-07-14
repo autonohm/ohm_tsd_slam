@@ -6,11 +6,9 @@
  */
 
 #include "SlamNode.h"
-#include "Localization.h"
 #include "ThreadMapping.h"
 #include "ThreadGrid.h"
 #include "ThreadLocalize.h"
-#include "LaserCallBackObject.h"
 
 #include "obcore/math/mathbase.h"
 
@@ -67,7 +65,6 @@ SlamNode::SlamNode(void)
   _initialized = true;  //toDo: obsolete
 
   ThreadLocalize* threadLocalize = NULL;
-  LaserCallBackObject* laserCallBackObject = NULL;
   ros::Subscriber subs;
   std::string nameSpace;
 

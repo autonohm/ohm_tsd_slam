@@ -8,13 +8,12 @@
 #ifndef SLAMNODE_H_
 #define SLAMNODE_H_
 
-#include "SlamBase.h"
-
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 
 #include <vector>
 
+#include "obvision/reconstruct/grid/TsdGrid.h"
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obcore/base/Logger.h"
 
@@ -28,15 +27,14 @@
 #define MAP_T 2.0        //time between map generations
 #define INIT_PSHS 1      //number of initial pushes into the grid
 #define LAS_OFFS_X -0.19 //offset of the laser scanner to the base footprint
+#define THREAD_TERM_MS 1   //time in ms waiting for thread to terminate
 
 namespace ohm_tsd_slam
 {
-class Localization;
 class ThreadSLAM;
 class ThreadMapping;
 class ThreadGrid;
 class ThreadLocalize;
-class LaserCallBackObject;
 
 /**
  * @class SlamNode
@@ -91,7 +89,6 @@ private:
 
   void init(void);
     std::vector<ThreadLocalize*> _localizers;
-    std::vector<LaserCallBackObject*> _laserCallBacks;
 
     void timedGridPub(void);
       bool resetGrid(void);

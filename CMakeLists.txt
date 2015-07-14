@@ -125,7 +125,7 @@ add_executable(slam_node src/slam_node.cpp
                                  src/ThreadSLAM.cpp
                                  src/ThreadMapping.cpp
                                  src/ThreadGrid.cpp
-                                 src/multi/LaserCallBackObject.cpp
+                                 #src/multi/LaserCallBackObject.cpp
                                  )
 
 #add_executable(multi_slam_node src/multi/multi_slam_node.cpp

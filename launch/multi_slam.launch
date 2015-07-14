@@ -1,5 +1,5 @@
 <launch>
-  <node name = "multi_slam_node" pkg = "ohm_tsd_slam" type = "multi_slam_node" output = "screen">
+  <node name = "multi_slam_node" pkg = "ohm_tsd_slam" type = "slam_node" output = "screen">
   	<param name = "robot_nbr" type = "int" value = "2"/>
     <param name = "x_off_factor"            type = "double" value = "0.5"   />
     <param name = "y_off_factor"            type = "double" value = "0.5"   />  	
@@ -7,7 +7,7 @@
     <param name = "cellsize"                type = "double" value = "0.01" />
     <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
     <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />
-    <param name = "truncation_radius" type = "double" value = "7.0" />
+    <param name = "truncation_radius" type = "double" value = "2.0" />
     <param name = "object_inflation_factor" type = "int" value = "1"/>
     <param name = "use_object_inflation" type = "bool" value = "true" /> 
 	<param name = "reg_trs_max"             type = "double" value = "0.5"  />
@@ -16,7 +16,7 @@
   	<param name = "robot0/namespace" type = "string" value = "georg"/>
   	<param name = "/georg/tf_child_frame" type = "string" value = "laser"/>
   	<param name = "/georg/pose_topic" type = "string" value = "pose"/>
-    <param name = "/georg/x_offset" type = "double" value = "1.0"/>
+    <param name = "/georg/x_offset" type = "double" value = "0.0"/>
 	<param name = "/georg/y_offset" type = "double" value = "0.0"/>
 	<param name = "/georg/yaw_offset" type = "double" value = "0.0"/>
 	<param name = "/georg/footprint_width" type = "double" value = "1.0"/>
@@ -38,7 +38,7 @@
   	<param name = "robot1/namespace" type = "string" value = "simon"/>
 	<param name = "/simon/tf_child_frame" type = "string" value = "laser"/>
 	<param name = "/simon/pose_topic" type = "string" value = "pose"/>
-	<param name = "/simon/x_offset" type = "double" value = "1.8"/>
+	<param name = "/simon/x_offset" type = "double" value = "-0.8"/>
     <param name = "/simon/y_offset" type = "double" value = "0.0"/>
 	<param name = "/simon/yaw_offset" type = "double" value = "0.0"/>
 	<param name = "/simon/footprint_width" type = "double" value = "1.0"/>

@@ -25,7 +25,7 @@
 namespace ohm_tsd_slam
 {
 
-class MultiSlamNode;
+class SlamNode;
 class ThreadMapping;
 class Localization;
 
@@ -43,6 +43,7 @@ public:
       const double xOffFactor, const double yOffFactor);
   virtual ~ThreadLocalize();
   bool setData(const sensor_msgs::LaserScan& scan);
+  void laserCallBack(const sensor_msgs::LaserScan& scan);
 protected:
   virtual void eventLoop(void);
 private:
@@ -52,14 +53,14 @@ private:
 
   //bool togglePushServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res); //toDo: not in release?
   obvious::Matrix doRegistration(obvious::SensorPolar2D* sensor,
-        obvious::Matrix* M,
-        obvious::Matrix* Mvalid,
-        obvious::Matrix* N,
-        obvious::Matrix* Nvalid,
-        obvious::Matrix* S,
-        obvious::Matrix* Svalid,
-        const bool useRansac
-    );
+      obvious::Matrix* M,
+      obvious::Matrix* Mvalid,
+      obvious::Matrix* N,
+      obvious::Matrix* Nvalid,
+      obvious::Matrix* S,
+      obvious::Matrix* Svalid,
+      const bool useRansac
+  );
   bool isRegistrationError(obvious::Matrix* T, const double trnsMax, const  double rotMax);
   void sendTransform(obvious::Matrix* T);
   void sendNanTransform();
@@ -73,161 +74,148 @@ private:
   obvious::TsdGrid& _grid;
   ThreadMapping& _mapper;
   obvious::SensorPolar2D* _sensor;
-  Localization* _localizer;
   bool _newScan;
   bool _initialized;
-  std::string _nameSpace;
+  //std::string _nameSpace;
   double _gridWidth;
   double _gridHeight;
-  double _xOffFactor;
-  double _yOffFactor;
+  //  double _xOffFactor;
+  //  double _yOffFactor;
   bool* _mask;
   boost::mutex _dataMutex;
   const double _gridOffSetX;
   const double _gridOffSetY;
 
-    /**
-     * Buffer for model coordinates
-     */
-    double* _modelCoords;
+  /**
+   * Buffer for model coordinates
+   */
+  double* _modelCoords;
 
-    /**
-     * Buffer for model normals
-     */
-    double* _modelNormals;
+  /**
+   * Buffer for model normals
+   */
+  double* _modelNormals;
 
-    /**
-     * Mask of model
-     */
-    bool* _maskM;
+  /**
+   * Mask of model
+   */
+  bool* _maskM;
 
-    /**
-     * reconstruction
-     */
-    obvious::RayCastPolar2D* _rayCaster;
+  /**
+   * reconstruction
+   */
+  obvious::RayCastPolar2D* _rayCaster;
 
-    /**
-     * Representation
-     */
+  /**
+   * Representation
+   */
 
-    /**
-     * Buffer for scene coordinates
-     */
-    double* _scene;
+  /**
+   * Buffer for scene coordinates
+   */
+  double* _scene;
 
-    /**
-     * Mask of scene
-     */
-    bool* _maskS;
+  /**
+   * Mask of scene
+   */
+  bool* _maskS;
 
-    /**
-     * ICP pair assigner
-     */
-    obvious::PairAssignment* _assigner;
+  /**
+   * ICP pair assigner
+   */
+  obvious::PairAssignment* _assigner;
 
-    /**
-     * ICP out of bounds filter
-     */
-    obvious::OutOfBoundsFilter2D* _filterBounds;
+  /**
+   * ICP out of bounds filter
+   */
+  obvious::OutOfBoundsFilter2D* _filterBounds;
 
-    /**
-     * ICP distance filter
-     */
-    obvious::DistanceFilter* _filterDist;
+  /**
+   * ICP distance filter
+   */
+  obvious::DistanceFilter* _filterDist;
 
-    /**
-     * ICP reciprogal filter
-     */
-    obvious::ReciprocalFilter* _filterReciprocal;
+  /**
+   * ICP reciprogal filter
+   */
+  obvious::ReciprocalFilter* _filterReciprocal;
 
-    /**
-     * ICP transformation estimator
-     */
-    obvious::IRigidEstimator* _estimator;
+  /**
+   * ICP transformation estimator
+   */
+  obvious::IRigidEstimator* _estimator;
 
-    /**
-     * ICP main icp instance
-     */
-    obvious::Icp* _icp;
+  /**
+   * ICP main icp instance
+   */
+  obvious::Icp* _icp;
 
-    /**
-     * ICP translation threshold
-     */
-    double _trnsMax;
+  /**
+   * ICP translation threshold
+   */
+  double _trnsMax;
 
-    /**
-     * ICP rotation threshold
-     */
-    double _rotMax;
+  /**
+   * ICP rotation threshold
+   */
+  double _rotMax;
 
-    /**
-     * Last pose
-     */
-    obvious::Matrix* _lastPose;
+  /**
+   * Last pose
+   */
+  obvious::Matrix* _lastPose;
 
-    /**
-     * Ros pose publisher
-     */
-    ros::Publisher _posePub;
+  /**
+   * Ros pose publisher
+   */
+  ros::Publisher _posePub;
 
-    /**
-     * Ros current pose
-     */
-    geometry_msgs::PoseStamped _poseStamped;
+  /**
+   * Ros current pose
+   */
+  geometry_msgs::PoseStamped _poseStamped;
 
-    /**
-     * Ros tf interface
-     */
-    tf::TransformBroadcaster _tfBroadcaster;
+  /**
+   * Ros tf interface
+   */
+  tf::TransformBroadcaster _tfBroadcaster;
 
-    /**
-     * Ros current transform
-     */
-    tf::StampedTransform _tf;
+  /**
+   * Ros current transform
+   */
+  tf::StampedTransform _tf;
 
-    /**
-     * Pointer to publishing mutex
-     */
-    //boost::mutex* _pubMutex;
+  /**
+   * Starting x offset
+   */
+  double _xOffFactor;
 
-    /**
-     * Starting x offset
-     */
-    //double _xOffFactor;
+  /**
+   * Starting y offset
+   */
+  double _yOffFactor;
 
-    /**
-     * Starting y offset
-     */
-    //double _yOffFactor;
+  /**
+   * Registration mode
+   */
+  EnumRegModes _regMode;
 
-    /**
-     * RANSAC registration flag
-     */
-    //bool _ransac;
-    bool _ranRescueActive;
-    EnumRegModes _mode;
+  /*
+   * RANSAC Reduction: Use to scale down the number of points for ransac
+   * Example: Points in Scan = 1080
+   *          ransacReduceFactor = 4
+   *          -> points for ransac = 1080 /ransacReduceFactor = 270;
+   */
+  unsigned int _ransacReduceFactor;
 
-    /*
-     * RANSAC Reduction: Use to scale down the number of points for ransac
-     * Example: Points in Scan = 1080
-     *          ransacReduceFactor = 4
-     *          -> points for ransac = 1080 /ransacReduceFactor = 270;
-     */
-    unsigned int _ransacReduceFactor;
+  unsigned int _ranTrials;
+  double _ranEpsThresh;
+  unsigned int _ranSizeCtrlSet;
 
-    /**
-     * Flag to disable push (active = no altering of the map)
-     */
-    bool _noPush;
-
-    unsigned int _ranTrials;
-    double _ranEpsThresh;
-    unsigned int _ranSizeCtrlSet;
-
-    /**
-     * namespace for all topics and services
-     */
-    //std::string _nameSpace;
+  /**
+   * namespace for all topics and services
+   */
+  std::string _nameSpace;
 
 };
 

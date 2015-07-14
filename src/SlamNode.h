@@ -201,6 +201,8 @@ private:
 
   std::string _laserTopic;
 
+  std::vector<ros::Subscriber> _subsLaser;
+
 };
 
 } /* namespace ohm_tsdSlam */

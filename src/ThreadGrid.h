@@ -95,16 +95,6 @@ private:
   ros::Publisher _gridPub;
 
   /**
-   * Representation
-   */
-  //obvious::TsdGrid* _grid;
-
-  /**
-   * Publishing mutex
-   */
-  //boost::mutex* _pubMutex;
-
-  /**
    * Object inflation factor
    */
   unsigned int _objInflateFactor;

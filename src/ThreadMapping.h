@@ -52,8 +52,6 @@ public:
    */
   void initPush(obvious::SensorPolar2D* sensor);
 
-  void posePush(obvious::Matrix& pose, const ros::Time& timeStamp, const std::string& nameSpace);
-
 protected:
 
   /**
@@ -63,22 +61,6 @@ protected:
   virtual void eventLoop(void);
 
 private:
-
-  void multiRobotPoseFilter(obvious::SensorPolar2D& sensor, const std::string& nameSpace);
-
-  struct StampedPose
-  {
-	  obvious::Matrix* _pose;
-	  ros::Time        _stamp;
-	  std::string      _nameSpace;
-	  double           _height;
-	  double           _width;
-  };
-
-  /**
-   * Representation
-   */
-  obvious::TsdGrid* _grid;
 
   /**
    * Sensor queue
@@ -91,10 +73,6 @@ private:
   boost::mutex _pushMutex;
 
   bool _initialized;
-
-  std::vector<StampedPose*> _robotPoses;
-
-  boost::mutex _poseMutex;
 };
 
 } /* namespace */

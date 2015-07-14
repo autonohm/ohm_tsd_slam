@@ -28,7 +28,7 @@ public:
    * @param pubMutex Publising mutex publishing mutex
    * @param parentNode Pointer to main mapping instance
    */
-  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor);
+  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffFactor, const double yOffFactor);
 
   /**
    * Destructor
@@ -97,12 +97,12 @@ private:
   /**
    * Representation
    */
-  obvious::TsdGrid* _grid;
+  //obvious::TsdGrid* _grid;
 
   /**
    * Publishing mutex
    */
-  boost::mutex* _pubMutex;
+  //boost::mutex* _pubMutex;
 
   /**
    * Object inflation factor

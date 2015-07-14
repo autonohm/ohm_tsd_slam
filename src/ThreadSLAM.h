@@ -2,7 +2,9 @@
 #define THREADSLAM_H_
 
 #include <boost/thread.hpp>
-//#include "obvision/reconstruct/grid/TsdGrid.h"
+#include "obvision/reconstruct/grid/TsdGrid.h"
+
+#include <ros/ros.h>
 
 namespace ohm_tsd_slam
 {
@@ -19,7 +21,7 @@ public:
   /**
    * Default constructor
    */
-  ThreadSLAM();
+  ThreadSLAM(obvious::TsdGrid& grid);
 
   /**
    * Destructor
@@ -72,6 +74,8 @@ protected:
    * Shutdown flag
    */
   bool _stayActive;
+
+  obvious::TsdGrid& _grid;
 };
 
 } /* namespace ohm_tsd_slam */

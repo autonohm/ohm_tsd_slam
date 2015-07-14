@@ -19,7 +19,6 @@
 
 #include <cstring>
 #include <unistd.h>
-#include <tinyxml2.h>
 
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/tf.h>
@@ -29,14 +28,14 @@ namespace ohm_tsd_slam
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffFactor, const double yOffFactor):
+        ThreadSLAM(*grid),
         _nh(nh),
-        _grid(*grid),
         _mapper(*mapper),
         _sensor(NULL),
         _newScan(false),
         _initialized(false),
         _nameSpace(nameSpace),
-        _mask(NULL),
+        _maskLaser(NULL),
         _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
         _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
         _scene(NULL),
@@ -127,7 +126,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 ThreadLocalize::~ThreadLocalize()
 {
   delete _sensor;
-  delete _mask;
+  delete _maskLaser;
 }
 
 void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
@@ -146,10 +145,10 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
   }
   for(unsigned int i=0;i<scan.ranges.size();i++)
   {
-    _mask[i]=!isnan(scan.ranges[i]);
+    _maskLaser[i]=!isnan(scan.ranges[i]);
   }
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
-  _sensor->setRealMeasurementMask(_mask);
+  _sensor->setRealMeasurementMask(_maskLaser);
   _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
   _sensor->maskZeroDepth();
   _newScan = true;
@@ -299,12 +298,12 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   _sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, maxRange, minRange, lowReflectivityRange);
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
 
-  _mask = new bool[scan.ranges.size()];
+  _maskLaser = new bool[scan.ranges.size()];
   for(unsigned int i=0;i<scan.ranges.size();i++)
   {
-    _mask[i]=!isnan(scan.ranges[i]);
+    _maskLaser[i]=!isnan(scan.ranges[i]);
   }
-  _sensor->setRealMeasurementMask(_mask);
+  _sensor->setRealMeasurementMask(_maskLaser);
   _sensor->transform(&Tinit);
   obfloat t[2] = {startX + footPrintXoffset, startY};
   if(!_grid.freeFootprint(t, footPrintWidth, footPrintHeight))
@@ -476,7 +475,6 @@ obvious::Matrix ThreadLocalize::maskMatrix(obvious::Matrix* Mat, bool* mask, uns
 void ThreadLocalize::reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
     const unsigned int pointsIn, const unsigned int pointsOut, const unsigned int reductionFactor)
 {
-  std::cout << __PRETTY_FUNCTION__ << " entry" << std::endl;
   assert(pointsIn > pointsOut);
   //fixme we only support scan with even number of points like 1080. if a scan has 1081 points is not usable for subsampling here!
   const unsigned int factor = pointsIn / pointsOut;
@@ -500,7 +498,6 @@ void ThreadLocalize::reduceResolution(bool* const maskIn, const obvious::Matrix*
     }
   }
   assert(cnt == pointsOut);
-  std::cout << __PRETTY_FUNCTION__ << " exit" << std::endl;
 }
 
 } /* namespace ohm_tsd_slam */

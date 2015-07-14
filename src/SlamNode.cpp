@@ -16,12 +16,8 @@ namespace ohm_tsd_slam
 {
 SlamNode::SlamNode(void)
 {
-  std::cout << __PRETTY_FUNCTION__ << " entry" << std::endl;
   ros::NodeHandle prvNh("~");
-  std::string strVar;
-  std::string nodeControlTopic;
-  prvNh.param("laser_topic", _laserTopic, std::string("scan"));
-  //prvNh.param<std::string>("node_control_topic", nodeControlTopic, "node_control");
+
   prvNh.param<double>("max_range", _maxRange, 30.0);
 
   double dVar      = 0;
@@ -29,7 +25,6 @@ SlamNode::SlamNode(void)
   prvNh.param<int>("robot_nbr", iVar, 1);
   unsigned int robotNbr = static_cast<unsigned int>(iVar);
 
-  //double truncationRadius = 0.0;
   double gridPublishInterval = 0.0;
 
   prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
@@ -42,10 +37,11 @@ SlamNode::SlamNode(void)
   _truncationRadius = static_cast<double>(iVar);
   prvNh.param<double>("occ_grid_time_interval", gridPublishInterval, 2.0);
   prvNh.param<double>("loop_rate", _rateVar, 40.0);
-  //prvNh.param<bool>("use_icpsac", _icpSac, false);
+  prvNh.param<std::string>("laser_topic", _laserTopic, "scan");
+
   _loopRate = new ros::Rate(_rateVar);
   _gridInterval = new ros::Duration(gridPublishInterval);
-  //unsigned int uiVar = static_cast<unsigned int>(octaveFactor);
+
   if(_octaveFactor > 15)
   {
     std::cout << __PRETTY_FUNCTION__ << " error! Unknown cell_octave_factor -> set to default!" << std::endl;
@@ -61,7 +57,7 @@ SlamNode::SlamNode(void)
   std::cout << " cells, representating "<< sideLength << "x" << sideLength << "m^2" << std::endl;
 
   _threadMapping = new ThreadMapping(_grid);
-  _threadGrid    = new ThreadGrid(_grid,_nh, &_pubMutex, _xOffFactor, _yOffFactor);
+  _threadGrid    = new ThreadGrid(_grid, &_nh, _xOffFactor, _yOffFactor);
   _initialized = true;  //toDo: obsolete
 
   ThreadLocalize* threadLocalize = NULL;

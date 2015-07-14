@@ -10,30 +10,30 @@
 namespace ohm_tsd_slam
 {
 
-ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex* pubMutex, const double xOffFactor, const double yOffFactor)
+ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffFactor, const double yOffFactor):
+    ThreadSLAM(*grid)
 {
-  _pubMutex       = pubMutex;
-  _grid           = grid;
+  //_grid           = grid;
   _occGridContent = new char[grid->getCellsX() * grid->getCellsY()];
   _gridCoords     = new double[grid->getCellsX() * grid->getCellsY()];
   _width          = grid->getCellsX();
   _height         = grid->getCellsY();
   _cellSize       = grid->getCellSize();
-  for(unsigned int i = 0; i < _grid->getCellsX() * _grid->getCellsY(); ++i)
+  for(unsigned int i = 0; i < _grid.getCellsX() * _grid.getCellsY(); ++i)
     _occGridContent[i] = -1;
 
   _occGrid                            = new nav_msgs::OccupancyGrid;
-  _occGrid->info.resolution           = static_cast<double>(_grid->getCellSize());
-  _occGrid->info.width                = _grid->getCellsX();
-  _occGrid->info.height               = _grid->getCellsY();
+  _occGrid->info.resolution           = static_cast<double>(_grid.getCellSize());
+  _occGrid->info.width                = _grid.getCellsX();
+  _occGrid->info.height               = _grid.getCellsY();
   _occGrid->info.origin.orientation.w = 0.0;
   _occGrid->info.origin.orientation.x = 0.0;
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;
-  _occGrid->info.origin.position.x    = 0.0 - _grid->getCellsX() * _grid->getCellSize() * xOffFactor;
-  _occGrid->info.origin.position.y    = 0.0 - _grid->getCellsY() * _grid->getCellSize() * yOffFactor;
+  _occGrid->info.origin.position.x    = 0.0 - _grid.getCellsX() * _grid.getCellSize() * xOffFactor;
+  _occGrid->info.origin.position.y    = 0.0 - _grid.getCellsY() * _grid.getCellSize() * yOffFactor;
   _occGrid->info.origin.position.z    = 0.0;
-  _occGrid->data.resize(_grid->getCellsX() * _grid->getCellsY());
+  _occGrid->data.resize(_grid.getCellsX() * _grid.getCellsY());
 
   ros::NodeHandle prvNh("~");
   std::string mapTopic;
@@ -49,8 +49,8 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, boost::mutex*
   prvNh.param<double>("robot_length", robotLength, 0.40);
   prvNh.param<double>("robot_width",  robotWidth,  0.40);
 
-  _gridPub          = nh.advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
-  _getMapServ       = nh.advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
+  _gridPub          = nh->advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
+  _getMapServ       = nh->advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
   _objInflateFactor = static_cast<unsigned int>(intVar);
 }
 
@@ -70,7 +70,7 @@ void ThreadGrid::eventLoop(void)
     _sleepCond.wait(_sleepMutex);
     unsigned int mapSize = 0;
     obvious::RayCastAxisAligned2D raycasterMap;
-    raycasterMap.calcCoords(_grid, _gridCoords, NULL, &mapSize, _occGridContent);
+    raycasterMap.calcCoords(&_grid, _gridCoords, NULL, &mapSize, _occGridContent);
     if(mapSize == 0)
     {
       std::cout << __PRETTY_FUNCTION__ << " Warning! Raycasting returned with no coordinates, map contains no data yet!\n";
@@ -107,9 +107,7 @@ void ThreadGrid::eventLoop(void)
         }
       }
     }
-    _pubMutex->lock();
     _gridPub.publish(*_occGrid);
-    _pubMutex->unlock();
   }
 }
 

@@ -76,18 +76,17 @@ private:
       unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
   ros::NodeHandle* _nh;
-  //ros::Subscriber _lasSubs;
-  obvious::TsdGrid& _grid;
+//
+//  obvious::TsdGrid& _grid;
   ThreadMapping& _mapper;
   obvious::SensorPolar2D* _sensor;
   bool _newScan;
   bool _initialized;
-  //std::string _nameSpace;
+
   double _gridWidth;
   double _gridHeight;
-  //  double _xOffFactor;
-  //  double _yOffFactor;
-  bool* _mask;
+
+  bool* _maskLaser;
   boost::mutex _dataMutex;
   const double _gridOffSetX;
   const double _gridOffSetY;

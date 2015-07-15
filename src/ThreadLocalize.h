@@ -372,6 +372,16 @@ private:
      */
   double _depthDiscontinuityThresh;
 
+  /**
+   * Factor allowing bigger error in rotation in experimental rescue mode
+   */
+  double _rescueRotationErrorFactor;
+
+  /**
+   * Factor allowing bigger error in translation in experimental rescue mode
+   */
+  double _rescueTranslationErrorFactor;
+
 };
 
 

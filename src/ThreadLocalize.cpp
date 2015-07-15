@@ -97,7 +97,9 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<int>(_nameSpace + "registration_mode", iVar, ICP);
   _regMode = static_cast<EnumRegModes>(iVar);
 
-  prvNh.param<double>("depth_discontinuity_thresh", _depthDiscontinuityThresh, 3.0);
+  prvNh.param<double>(_nameSpace + "depth_discontinuity_thresh", _depthDiscontinuityThresh, 3.0);
+  prvNh.param<double>(_nameSpace + "rescue_rotation_error_factor", _rescueRotationErrorFactor, 1.5);
+  prvNh.param<double>(_nameSpace + "rescue_translation_error_factor", _rescueTranslationErrorFactor, 1.5);
 
   /** Initialize member modules **/
   _lastPose         = new obvious::Matrix(3, 3);
@@ -217,7 +219,7 @@ void ThreadLocalize::eventLoop(void)
       ROS_INFO_STREAM("Localizer(" << _nameSpace << ") registration error! Trying to recapture with" <<
                       "experimental registration approach...\n");
       obvious::Matrix secondT = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
-      if(isRegistrationError(&secondT,_trnsMax * 1.5, _rotMax * 1.5)) //toDo: launch file parameters
+      if(isRegistrationError(&secondT,_trnsMax * _rescueTranslationErrorFactor, _rotMax * _rescueRotationErrorFactor))
       {
         ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") could not recapture registration\n");
         sendNanTransform();

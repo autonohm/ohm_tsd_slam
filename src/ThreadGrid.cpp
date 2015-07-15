@@ -23,15 +23,15 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double 
 
   _occGrid = new nav_msgs::OccupancyGrid;
   _occGrid->info.resolution = static_cast<double>(_grid->getCellSize());
-  _occGrid->info.width = _grid->getCellsX();
-  _occGrid->info.height = _grid->getCellsY();
+  _occGrid->info.width                = _grid->getCellsX();
+  _occGrid->info.height               = _grid->getCellsY();
   _occGrid->info.origin.orientation.w = 0.0;
   _occGrid->info.origin.orientation.x = 0.0;
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;
-  _occGrid->info.origin.position.x = 0.0 - _grid->getCellsX() * _grid->getCellSize() * xOffFactor;
-  _occGrid->info.origin.position.y = 0.0 - _grid->getCellsY() * _grid->getCellSize() * yOffFactor;
-  _occGrid->info.origin.position.z = 0.0;
+  _occGrid->info.origin.position.x    = 0.0 - _grid->getCellsX() * _grid->getCellSize() * xOffFactor;
+  _occGrid->info.origin.position.y    = 0.0 - _grid->getCellsY() * _grid->getCellSize() * yOffFactor;
+  _occGrid->info.origin.position.z    = 0.0;
   _occGrid->data.resize(_grid->getCellsX() * _grid->getCellsY());
 
   ros::NodeHandle prvNh("~");
@@ -59,32 +59,32 @@ ThreadGrid::~ThreadGrid()
 
 void ThreadGrid::eventLoop(void)
 {
-  unsigned int frameId = 0;
+  static unsigned int frameId = 0;
   while(_stayActive)
   {
     _sleepCond.wait(_sleepMutex);
     unsigned int mapSize = 0;
     obvious::RayCastAxisAligned2D raycasterMap;
     raycasterMap.calcCoords(_grid, _gridCoords, NULL, &mapSize, _occGridContent);
-    if(mapSize == 0)
-    {
+    if(mapSize == 0) {
       std::cout << __PRETTY_FUNCTION__ << " error! Raycasting returned with no coordinates!\n";
     }
+
     _occGrid->header.stamp       = ros::Time::now();
     _occGrid->header.seq         = frameId++;
     _occGrid->info.map_load_time = ros::Time::now();
-    unsigned int gridSize        = _width * _height;
+    const unsigned int gridSize  = _width * _height;
 
-    for(unsigned int i = 0; i < gridSize ; ++i)
-    {
+    for(unsigned int i = 0; i < gridSize ; ++i) {
       _occGrid->data[i] = _occGridContent[i];
     }
+
     for(unsigned int i = 0; i < mapSize / 2; i++)
     {
-      double x       = _gridCoords[2*i];
-      double y       = _gridCoords[2*i+1];
-      unsigned int u = static_cast<unsigned int>(x / _cellSize + 0.5);
-      unsigned int v = static_cast<unsigned int>(y / _cellSize + 0.5);
+      const double x       = _gridCoords[2*i];
+      const double y       = _gridCoords[2*i+1];
+      const unsigned int u = static_cast<unsigned int>(x / _cellSize + 0.5);
+      const unsigned int v = static_cast<unsigned int>(y / _cellSize + 0.5);
       if(u > 0 && u < _width && v > 0 && v < _height)
       {
         _occGrid->data[v * _width + u] = 100;               //set grid cell to occupied
@@ -108,11 +108,11 @@ void ThreadGrid::eventLoop(void)
 
 bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res)
 {
-  static unsigned int frameId=0;
-  res.map=*_occGrid;
-  res.map.header.stamp=ros::Time::now();
-  _occGrid->header.seq=frameId++;
-  _occGrid->info.map_load_time=ros::Time::now();
+  static unsigned int frameId  = 0;
+  res.map                      = *_occGrid;
+  res.map.header.stamp         = ros::Time::now();
+  _occGrid->header.seq         = frameId++;
+  _occGrid->info.map_load_time = ros::Time::now();
   return(true);
 }
 

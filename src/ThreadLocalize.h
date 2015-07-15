@@ -26,7 +26,7 @@
 #define TRNS_THRESH 0.25            //Thresholds for registration. If the gained transformation is out of these bounds,
 #define ROT_THRESH 0.17             //the Transformation is not taken over
 #define TRNS_MIN 0.05              //Minimal values for the pose change. Push is only needed when pose change
-#define ROT_MIN 0.09               //greater than than one of these values
+#define ROT_MIN 0.03               //greater than than one of these values
 
 namespace ohm_tsd_slam
 {
@@ -41,7 +41,7 @@ class ThreadLocalize: public ThreadSLAM
   {
     ICP = 0,    ///< Registration with Icp only
     EXP,        ///< Experimental Registration scheme, use with caution
-    ICP_EXP_RSC ///< Trys to retrieve registration error by pre registration using experimental matching
+    ICP_EXP_RSC ///< Tries to retrieve registration error by pre registration using experimental matching
   };
 
 public:
@@ -150,7 +150,7 @@ private:
 
   /**
    * maskMatrix
-   * Method to remove certain values in a matrix using a given mask
+   * Method to remove certain values in a matrix using a given mask.
    * @param Mat Input data
    * @param mask Value mask
    * @param maskSize Amount of values in the mask
@@ -166,7 +166,7 @@ private:
    * @param matIn Input data
    * @param maskOut Output mask
    * @param matOut Filtered data
-   * @param pointsIn Amount of points in unfiltered data
+   * @param pointsIn Amount of points in un filtered data
    * @param pointsOut Amount of points in filtered data
    * @param reductionFactor Reduction factor
    */
@@ -268,9 +268,14 @@ private:
   double _ranEpsThresh;
 
   /**
-   * Control size set for experimental registrationi algorithm
+   * Control size set for experimental registration algorithm
    */
   unsigned int _ranSizeCtrlSet;
+
+  /**
+   * Angle threshold for experimental registration algorithm
+   */
+  double _ranPhiMax;
 
   /**
    * namespace for all topics and services

@@ -28,19 +28,19 @@ namespace ohm_tsd_slam
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffFactor, const double yOffFactor):
-        ThreadSLAM(*grid),
-        _nh(nh),
-        _mapper(*mapper),
-        _sensor(NULL),
-        _newScan(false),
-        _initialized(false),
-        _gridWidth(grid->getCellsX() * grid->getCellSize()),
-        _gridHeight(grid->getCellsY() * grid->getCellSize()),
-        _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-        _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
-        _xOffFactor(xOffFactor),
-        _yOffFactor(yOffFactor),
-        _nameSpace(nameSpace)
+            ThreadSLAM(*grid),
+            _nh(nh),
+            _mapper(*mapper),
+            _sensor(NULL),
+            _newScan(false),
+            _initialized(false),
+            _gridWidth(grid->getCellsX() * grid->getCellSize()),
+            _gridHeight(grid->getCellsY() * grid->getCellSize()),
+            _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+            _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
+            _xOffFactor(xOffFactor),
+            _yOffFactor(yOffFactor),
+            _nameSpace(nameSpace)
 
 {
   ros::NodeHandle prvNh("~");
@@ -66,11 +66,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   double distFilterMin = 0.0;
   int icpIterations = 0;
 
-  //reduce size for ransac
-  int iVar = 0;
-  prvNh.param<int>(_nameSpace + "ransac_reduce_factor", iVar , 1);
-  _ransacReduceFactor = static_cast<unsigned int>(iVar);
-
   //ICP Options
   prvNh.param<double>(_nameSpace + "dist_filter_min", distFilterMin, 0.2);
   prvNh.param<double>(_nameSpace + "dist_filter_max", distFilterMax, 1.0);
@@ -80,12 +75,17 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
 
+  //ransac options
   int paramInt = 0;
   prvNh.param<int>(nameSpace + "ransac_trials", paramInt, 50);
   _ranTrials = static_cast<unsigned int>(paramInt);
   prvNh.param<double>(nameSpace + "ransac_eps_thresh", _ranEpsThresh, 0.15);
   prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, 180);
   _ranSizeCtrlSet = static_cast<unsigned int>(paramInt);
+  int iVar = 0;
+  prvNh.param<int>(_nameSpace + "ransac_reduce_factor", iVar , 1);
+  _ransacReduceFactor = static_cast<unsigned int>(iVar);
+  prvNh.param<double>(_nameSpace + "ransac_phi_max", _ranPhiMax, 30.0);
 
   iVar = 0;
   prvNh.param<int>(_nameSpace + "registration_mode", iVar, ICP);
@@ -99,11 +99,9 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _modelCoords = NULL;
   _modelNormals = NULL;
   _maskM = NULL;
-  _rayCaster= NULL;
+  _rayCaster = NULL;
   _scene = NULL;
   _maskS = NULL;
-
-
 
   /** Initialize member modules **/
   _lastPose         = new obvious::Matrix(3, 3);
@@ -150,8 +148,9 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
     //_dataMutex.unlock();
     return;
   }
-  for(unsigned int i=0;i<scan.ranges.size();i++)
-    _maskLaser[i]=!isnan(scan.ranges[i]);
+
+  for(unsigned int i = 0;i < scan.ranges.size(); i++)
+    _maskLaser[i] = !isnan(scan.ranges[i]);
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   _sensor->setRealMeasurementMask(_maskLaser);
   _sensor->maskDepthDiscontinuity(obvious::deg2rad(_depthDiscontinuityThresh));
@@ -159,7 +158,6 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
   _newScan = true;
   //_dataMutex.unlock();
   this->unblock();
-
 }
 
 void ThreadLocalize::eventLoop(void)
@@ -207,7 +205,7 @@ void ThreadLocalize::eventLoop(void)
 
     obvious::Matrix T(3, 3);
 
-    /** Align Laser scans */
+    /** Align Laser scans */  //toDo: if else construct -> make better!
     if(_regMode == ICP)
       T = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, false);  //3x3 Transformation Matrix
 
@@ -221,13 +219,12 @@ void ThreadLocalize::eventLoop(void)
     if(regErrorT && _regMode == ICP_EXP_RSC) //rescue with ransac pre- registration
     {
       ROS_INFO_STREAM("Localizer(" << _nameSpace << ") registration error! Trying to recapture with" <<
-                      "experimental registration approach...\n");
+          "experimental registration approach...\n");
       obvious::Matrix secondT = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
       if(isRegistrationError(&secondT,_trnsMax * _rescueTranslationErrorFactor, _rotMax * _rescueRotationErrorFactor))
       {
         ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") could not recapture registration\n");
         sendNanTransform();
-        continue;
       }
       else
       {
@@ -246,13 +243,11 @@ void ThreadLocalize::eventLoop(void)
     {
       ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") registration error! \n");
       sendNanTransform();
-      continue;
     }
     else //transformation valid -> transform sensor and publish new sensor pose
     {
       _sensor->transform(&T);
       obvious::Matrix curPose = _sensor->getTransformation();
-
       sendTransform(&curPose);
       /** Update MAP if necessary */
       if(this->isPoseChangeSignificant(_lastPose, &curPose))// && !_noPush)  toDo: integrate into release?
@@ -340,14 +335,15 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     obvious::Matrix Mreduced(reducedSize, 2);
     bool* maskSRed = new bool[reducedSize];
     bool* maskMRed = new bool[reducedSize];
-    if( factor != 1) {
+    if( factor != 1)
+    {
       reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
       reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
     }
 
     //RansacMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
     obvious::RandomNormalMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
-    const double phiMax = _rotMax;
+    const double phiMax = deg2rad(_ranPhiMax);  //toDo: use rad in the first place?
     obvious::Matrix T(3, 3);
     //obvious::Matrix T = ransac.match(&M, _maskM, &N, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
     if(factor == 1)
@@ -355,7 +351,6 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     else
       T = ransac.match(&Mreduced, maskMRed, N, &Sreduced, maskSRed, phiMax,
           _trnsMax, sensor->getAngularResolution() * (double) factor);
-
     T.invert();
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
@@ -364,7 +359,6 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     T44(1, 1) = T(1, 1);
     T44(1, 3) = T(1, 2);
   }
-
   _icp->reset();
   obvious::Matrix P = sensor->getTransformation();
   _filterBounds->setPose(&P);
@@ -385,14 +379,13 @@ bool ThreadLocalize::isRegistrationError(obvious::Matrix* T, const double trnsMa
   double deltaY = (*T)(1, 2);
   double trnsAbs = std::sqrt(deltaX * deltaX + deltaY * deltaY);
   double deltaPhi = this->calcAngle(T);
-
   return (trnsAbs > trnsMax) || (std::abs(std::sin(deltaPhi)) > rotMax);
 }
 
 void ThreadLocalize::sendTransform(obvious::Matrix* T)
 {
   double curTheta = this->calcAngle(T);
-  double posX = (*T)(0, 2) + _gridOffSetX; //Fixme this is not the right place for this
+  double posX = (*T)(0, 2) + _gridOffSetX;
   double posY = (*T)(1, 2) + _gridOffSetY;
   _poseStamped.header.stamp = ros::Time::now();
   _poseStamped.pose.position.x = posX;
@@ -454,7 +447,6 @@ bool ThreadLocalize::isPoseChangeSignificant(obvious::Matrix* lastPose, obvious:
   double deltaPhi = this->calcAngle(curPose) - this->calcAngle(lastPose);
   deltaPhi        = fabs(sin(deltaPhi));
   double trnsAbs  = sqrt(deltaX * deltaX + deltaY * deltaY);
-
   return (deltaPhi > ROT_MIN) || (trnsAbs > TRNS_MIN);
 }
 
@@ -476,6 +468,7 @@ obvious::Matrix ThreadLocalize::maskMatrix(obvious::Matrix* Mat, bool* mask, uns
   return retMat;
 }
 
+//toDo: maybe obsolete with pca matching, definitely not nice
 void ThreadLocalize::reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
     const unsigned int pointsIn, const unsigned int pointsOut, const unsigned int reductionFactor)
 {

@@ -75,6 +75,9 @@ protected:
    */
   bool _stayActive;
 
+  /**
+   * Reference to representation
+   */
   obvious::TsdGrid& _grid;
 };
 

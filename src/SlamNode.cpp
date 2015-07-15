@@ -129,7 +129,7 @@ void SlamNode::timedGridPub(void)
 
 void SlamNode::run(void)
 {
-  std::cout << __PRETTY_FUNCTION__ << " waiting for first laser scan to initialize node...\n";
+  ROS_INFO_STREAM("Waiting for first laser scan to initialize node...\n");
   while(ros::ok())
   {
     ros::spinOnce();

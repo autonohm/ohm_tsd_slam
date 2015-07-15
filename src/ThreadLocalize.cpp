@@ -34,19 +34,13 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
         _sensor(NULL),
         _newScan(false),
         _initialized(false),
-        _nameSpace(nameSpace),
-        _maskLaser(NULL),
-        _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-        _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
-        _scene(NULL),
-        _modelCoords(NULL),
-        _modelNormals(NULL),
-        _maskM(NULL),
-        _maskS(NULL),
         _gridWidth(grid->getCellsX() * grid->getCellSize()),
         _gridHeight(grid->getCellsY() * grid->getCellSize()),
+        _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+        _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
         _xOffFactor(xOffFactor),
-        _yOffFactor(yOffFactor)
+        _yOffFactor(yOffFactor),
+        _nameSpace(nameSpace)
 
 {
   ros::NodeHandle prvNh("~");
@@ -100,6 +94,16 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<double>(_nameSpace + "depth_discontinuity_thresh", _depthDiscontinuityThresh, 3.0);
   prvNh.param<double>(_nameSpace + "rescue_rotation_error_factor", _rescueRotationErrorFactor, 1.5);
   prvNh.param<double>(_nameSpace + "rescue_translation_error_factor", _rescueTranslationErrorFactor, 1.5);
+
+  _maskLaser = NULL;
+  _modelCoords = NULL;
+  _modelNormals = NULL;
+  _maskM = NULL;
+  _rayCaster= NULL;
+  _scene = NULL;
+  _maskS = NULL;
+
+
 
   /** Initialize member modules **/
   _lastPose         = new obvious::Matrix(3, 3);
@@ -197,7 +201,7 @@ void ThreadLocalize::eventLoop(void)
     obvious::Matrix N(measurementSize, 2, _modelNormals);
     obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
 
-    unsigned int size = _sensor->dataToCartesianVector(_scene);
+    _sensor->dataToCartesianVector(_scene);
     obvious::Matrix S(measurementSize, 2, _scene);
     obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
 
@@ -460,7 +464,7 @@ obvious::Matrix ThreadLocalize::maskMatrix(obvious::Matrix* Mat, bool* mask, uns
   assert(Mat->getCols() == 2);
   obvious::Matrix retMat(validPoints, 2);
   unsigned int cnt = 0;
-  for(int i = 0; i < maskSize; i++)
+  for(unsigned int i = 0; i < maskSize; i++)
   {
     if(mask[i])
     {

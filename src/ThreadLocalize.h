@@ -210,11 +210,6 @@ private:
   double _gridHeight;
 
   /**
-   * Mask to filter irregular data in laser scan (NAN)
-   */
-  bool* _maskLaser;
-
-  /**
    * Mutex to synchronize main thread (subscriber) and thread event loop toDO: either this or the flas are obsolete
    */
   boost::mutex _dataMutex;
@@ -230,66 +225,6 @@ private:
   const double _gridOffSetY;
 
   /**
-   * Buffer for model coordinates
-   */
-  double* _modelCoords;
-
-  /**
-   * Buffer for model normals
-   */
-  double* _modelNormals;
-
-  /**
-   * Mask of model
-   */
-  bool* _maskM;
-
-  /**
-   * reconstruction
-   */
-  obvious::RayCastPolar2D* _rayCaster;
-
-  /**
-   * Buffer for scene coordinates
-   */
-  double* _scene;
-
-  /**
-   * Mask of scene
-   */
-  bool* _maskS;
-
-  /**
-   * ICP pair assigner
-   */
-  obvious::PairAssignment* _assigner;
-
-  /**
-   * ICP out of bounds filter
-   */
-  obvious::OutOfBoundsFilter2D* _filterBounds;
-
-  /**
-   * ICP distance filter
-   */
-  obvious::DistanceFilter* _filterDist;
-
-  /**
-   * ICP reciprogal filter
-   */
-  obvious::ReciprocalFilter* _filterReciprocal;
-
-  /**
-   * ICP transformation estimator
-   */
-  obvious::IRigidEstimator* _estimator;
-
-  /**
-   * ICP main icp instance
-   */
-  obvious::Icp* _icp;
-
-  /**
    * ICP translation threshold
    */
   double _trnsMax;
@@ -298,31 +233,6 @@ private:
    * ICP rotation threshold
    */
   double _rotMax;
-
-  /**
-   * Last pose
-   */
-  obvious::Matrix* _lastPose;
-
-  /**
-   * Ros pose publisher
-   */
-  ros::Publisher _posePub;
-
-  /**
-   * Ros current pose
-   */
-  geometry_msgs::PoseStamped _poseStamped;
-
-  /**
-   * Ros tf interface
-   */
-  tf::TransformBroadcaster _tfBroadcaster;
-
-  /**
-   * Ros current transform
-   */
-  tf::StampedTransform _tf;
 
   /**
    * Starting x offset
@@ -368,8 +278,8 @@ private:
   std::string _nameSpace;
 
   /**
-     * Thresh for depth discontinuity filter
-     */
+   * Thresh for depth discontinuity filter
+   */
   double _depthDiscontinuityThresh;
 
   /**
@@ -381,6 +291,98 @@ private:
    * Factor allowing bigger error in translation in experimental rescue mode
    */
   double _rescueTranslationErrorFactor;
+
+  /**
+   * Mask to filter irregular data in laser scan (NAN)
+   */
+  bool* _maskLaser;
+
+  /**
+   * Buffer for model coordinates
+   */
+  double* _modelCoords;
+
+  /**
+   * Buffer for model normals
+   */
+  double* _modelNormals;
+
+  /**
+   * Mask of model
+   */
+  bool* _maskM;
+
+  /**
+   * Buffer for scene coordinates
+   */
+  double* _scene;
+
+  /**
+   * Mask of scene
+   */
+  bool* _maskS;
+
+  /**
+   * reconstruction
+   */
+  obvious::RayCastPolar2D* _rayCaster;
+
+  /**
+   * ICP pair assigner
+   */
+  obvious::PairAssignment* _assigner;
+
+  /**
+   * ICP out of bounds filter
+   */
+  obvious::OutOfBoundsFilter2D* _filterBounds;
+
+  /**
+   * ICP distance filter
+   */
+  obvious::DistanceFilter* _filterDist;
+
+  /**
+   * ICP reciprogal filter
+   */
+  obvious::ReciprocalFilter* _filterReciprocal;
+
+  /**
+   * ICP transformation estimator
+   */
+  obvious::IRigidEstimator* _estimator;
+
+  /**
+   * ICP main icp instance
+   */
+  obvious::Icp* _icp;
+
+  /**
+   * Last pose
+   */
+  obvious::Matrix* _lastPose;
+
+  /**
+   * Ros pose publisher
+   */
+  ros::Publisher _posePub;
+
+  /**
+   * Ros current pose
+   */
+  geometry_msgs::PoseStamped _poseStamped;
+
+  /**
+   * Ros tf interface
+   */
+  tf::TransformBroadcaster _tfBroadcaster;
+
+  /**
+   * Ros current transform
+   */
+  tf::StampedTransform _tf;
+
+
 
 };
 

@@ -12,12 +12,13 @@ namespace ohm_tsd_slam
 
 ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffFactor, const double yOffFactor):
         ThreadSLAM(*grid),
+        _occGrid(new nav_msgs::OccupancyGrid),
         _occGridContent(new char[grid->getCellsX() * grid->getCellsY()]),
         _gridCoords(new double[grid->getCellsX() * grid->getCellsY()]),
         _width(grid->getCellsX()),
         _height(grid->getCellsY()),
-        _cellSize(grid->getCellSize()),
-        _occGrid(new nav_msgs::OccupancyGrid)
+        _cellSize(grid->getCellSize())
+
 {
   for(unsigned int i = 0; i < _grid.getCellsX() * _grid.getCellsY(); ++i)
     _occGridContent[i] = -1;

@@ -203,14 +203,14 @@ void ThreadLocalization::localize(obvious::SensorPolar2D* sensor)
   const double deltaPhi = this->calcAngle(&T);
   _tf.stamp_ = ros::Time::now();
 
-  const double ransacMetric = ransac.getMatchMetric();
+  //const double ransacMetric = ransac.getMatchMetric();
 
   if(abs(deltaY) > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > phiMax /*|| ransacMetric < 0.1*/)
   {
     cout << "Registration error - deltaY="       << deltaY <<
                                " trnsAbs="       << trnsAbs <<
-                               " sin(deltaPhi)=" << sin(deltaPhi) <<
-                               " ransacMetric="  << ransacMetric  << endl;
+                               " sin(deltaPhi)=" << sin(deltaPhi)/* <<
+                               " ransacMetric="  << ransacMetric */ << endl;
      //ransac.serializeTrace("/tmp/ransac/");
 
     // localization error broadcast invalid tf

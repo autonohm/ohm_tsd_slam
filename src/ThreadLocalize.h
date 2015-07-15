@@ -22,7 +22,7 @@
 
 #include <string>
 
-#define ITERATIONS 25
+#define ITERATIONS 25               //toDo: remove these maybe in a nameless namespace
 #define TRNS_THRESH 0.25            //Thresholds for registration. If the gained transformation is out of these bounds,
 #define ROT_THRESH 0.17             //the Transformation is not taken over
 #define TRNS_MIN 0.05              //Minimal values for the pose change. Push is only needed when pose change
@@ -39,25 +39,82 @@ class ThreadLocalize: public ThreadSLAM
 {
   enum EnumRegModes
   {
-    ICP = 0, ///< Registration with Icp only
-    EXP,     ///< Experimental Registration scheme, use with caution
-    ICP_EXP_RSC ///< Registration can be rescued by pre registration using ransac
+    ICP = 0,    ///< Registration with Icp only
+    EXP,        ///< Experimental Registration scheme, use with caution
+    ICP_EXP_RSC ///< Trys to retrieve registration error by pre registration using experimental matching
   };
 
 public:
+  /**
+   * Constructor
+   * @param grid Pointer to representation
+   * @param mapper Pointer to mapping thread instance
+   * @param nh Pointer to main node handle
+   * @param nameSpace Namespace of this localization thread
+   * @param xOffFactor Origin x position
+   * @param yOffFactor Origin y position
+   */
   ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
       const double xOffFactor, const double yOffFactor);
+
+  /**
+   * Destructor
+   */
   virtual ~ThreadLocalize();
-  bool setData(const sensor_msgs::LaserScan& scan);
+
+  /**
+   * laserCallBack
+   * Callback method for laser scan message
+   * @param scan Laser data
+   */
   void laserCallBack(const sensor_msgs::LaserScan& scan);
 protected:
+
+  /**
+   * eventLoop
+   * Thread event loop
+   */
   virtual void eventLoop(void);
 private:
+
+  /**
+   * init
+   * Init function automatically called by firs received laser data
+   * @param scan Initial scan used to initialize parameters of the thread
+   */
   void init(const sensor_msgs::LaserScan& scan);
+
+  /**
+   * calAngle
+   * Method to analyze a 2D transformation matrix
+   * @param T Pointer to transformation matrix
+   * @return Calculated angle
+   */
   double calcAngle(obvious::Matrix* T);
+
+  /**
+   * isPoseChangeSignificant
+   * Method to determine whether the localized sensor has been moved significantly (value above thresh).
+   * A map change is only initiated in case this method returns true.
+   * @param lastPose Pointer to last known pose
+   * @param curPose Pointer to current pose
+   * @return True in case of a significant pose change
+   */
   bool isPoseChangeSignificant(obvious::Matrix* lastPose, obvious::Matrix* curPose);
 
-  //bool togglePushServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res); //toDo: not in release?
+  /**
+   * doRegistration
+   * Main registration method. Aligns two laser scans and calculates the referring 2D transformation matrix.
+   * @param sensor Laser data container
+   * @param M Pointer to model points
+   * @param Mvalid
+   * @param N Pointer to the normals of the model
+   * @param Nvalid
+   * @param S Pointer to scene points
+   * @param Svalid
+   * @param experimental Flag to enable experimental matching
+   * @return 2D transformation matrix
+   */
   obvious::Matrix doRegistration(obvious::SensorPolar2D* sensor,
       obvious::Matrix* M,
       obvious::Matrix* Mvalid,
@@ -65,30 +122,111 @@ private:
       obvious::Matrix* Nvalid,
       obvious::Matrix* S,
       obvious::Matrix* Svalid,
-      const bool useRansac
+      const bool experimental
   );
+
+  /**
+   * isRegistrationError
+   * Method to prevent registration errors by comparing the computed transformation to thresholds.
+   * @param T Current 2D transformation
+   * @param trnsMax Translation thresh
+   * @param rotMax Rotation thresh
+   * @return True in case of an error
+   */
   bool isRegistrationError(obvious::Matrix* T, const double trnsMax, const  double rotMax);
+
+  /**
+   * sendTransform
+   * Method to broadcast the gained transformation via ros::geometry_msgs::PoseStamped and ros::tf.
+   * @param T Broadcasted transformation
+   */
   void sendTransform(obvious::Matrix* T);
+
+  /**
+   * sendNanTransform
+   * Method sending an irregular pose and tf (consisting only of NAN values), broadcasting a detected registration error.
+   */
   void sendNanTransform();
+
+  /**
+   * maskMatrix
+   * Method to remove certain values in a matrix using a given mask
+   * @param Mat Input data
+   * @param mask Value mask
+   * @param maskSize Amount of values in the mask
+   * @param validPoints Value determining the number of values in the output matrix
+   * @return Filtered matrix
+   */
   obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints);
-  void maskToOneDegreeRes(bool* const mask, const double resolution, const unsigned int maskSize);
+
+  /**
+   * reduceResolution
+   * Method to reduce the values in a matrix with a given factor.
+   * @param maskIn Input mask
+   * @param matIn Input data
+   * @param maskOut Output mask
+   * @param matOut Filtered data
+   * @param pointsIn Amount of points in unfiltered data
+   * @param pointsOut Amount of points in filtered data
+   * @param reductionFactor Reduction factor
+   */
   void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
       unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
+
+  /**
+   * Pointer to main NodeHandle
+   */
   ros::NodeHandle* _nh;
-//
-//  obvious::TsdGrid& _grid;
+
+  /**
+   * Pointer to mapping thread
+   */
   ThreadMapping& _mapper;
+
+  /**
+   * Sensor container for handeling the current laser input and pose
+   */
   obvious::SensorPolar2D* _sensor;
+
+  /**
+   * Flag to synchronize between main thread (callback) and thread event loop toDO: either this or the flas are obsolete
+   */
   bool _newScan;
+
+  /**
+   * Flag signifying successful initialization of this thread
+   */
   bool _initialized;
 
+  /**
+   * Width of tsd grid in m
+   */
   double _gridWidth;
+
+  /**
+   * Height of tsd grid in m
+   */
   double _gridHeight;
 
+  /**
+   * Mask to filter irregular data in laser scan (NAN)
+   */
   bool* _maskLaser;
+
+  /**
+   * Mutex to synchronize main thread (subscriber) and thread event loop toDO: either this or the flas are obsolete
+   */
   boost::mutex _dataMutex;
+
+  /**
+   * Grid origin x offset
+   */
   const double _gridOffSetX;
+
+  /**
+   * Grid origin y offset
+   */
   const double _gridOffSetY;
 
   /**
@@ -110,10 +248,6 @@ private:
    * reconstruction
    */
   obvious::RayCastPolar2D* _rayCaster;
-
-  /**
-   * Representation
-   */
 
   /**
    * Buffer for scene coordinates
@@ -213,14 +347,30 @@ private:
    */
   unsigned int _ransacReduceFactor;
 
+  /**
+   * Iterations for experimental registration alorithm
+   */
   unsigned int _ranTrials;
+
+  /**
+   * Threshold for experimental registration algorithm
+   */
   double _ranEpsThresh;
+
+  /**
+   * Control size set for experimental registrationi algorithm
+   */
   unsigned int _ranSizeCtrlSet;
 
   /**
    * namespace for all topics and services
    */
   std::string _nameSpace;
+
+  /**
+     * Thresh for depth discontinuity filter
+     */
+  double _depthDiscontinuityThresh;
 
 };
 

@@ -71,24 +71,22 @@ void ThreadGrid::eventLoop(void)
     obvious::RayCastAxisAligned2D raycasterMap;
     raycasterMap.calcCoords(&_grid, _gridCoords, NULL, &mapSize, _occGridContent);
     if(mapSize == 0)
-    {
-      std::cout << __PRETTY_FUNCTION__ << " Warning! Raycasting returned with no coordinates, map contains no data yet!\n";
-    }
+      ROS_INFO_STREAM("OccupancyGridThread: Warning! Raycasting returned with no coordinates, map contains no data yet!\n");
+
     _occGrid->header.stamp       = ros::Time::now();
     _occGrid->header.seq         = frameId++;
     _occGrid->info.map_load_time = ros::Time::now();
-    unsigned int gridSize        = _width * _height;
+    const unsigned int gridSize        = _width * _height;
 
     for(unsigned int i = 0; i < gridSize ; ++i)
-    {
       _occGrid->data[i] = _occGridContent[i];
-    }
+
     for(unsigned int i = 0; i < mapSize / 2; i++)
     {
       double x       = _gridCoords[2*i];
       double y       = _gridCoords[2*i+1];
-      unsigned int u = static_cast<unsigned int>(x / _cellSize + 0.5);
-      unsigned int v = static_cast<unsigned int>(y / _cellSize + 0.5);
+      unsigned int u = static_cast<unsigned int>(round(x / _cellSize));
+      unsigned int v = static_cast<unsigned int>(round(y / _cellSize));
       if(u > 0 && u < _width && v > 0 && v < _height)
       {
         _occGrid->data[v * _width + u] = 100;               //set grid cell to occupied
@@ -112,11 +110,11 @@ void ThreadGrid::eventLoop(void)
 
 bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res)
 {
-  static unsigned int frameId=0;
-  res.map=*_occGrid;
-  res.map.header.stamp=ros::Time::now();
-  _occGrid->header.seq=frameId++;
-  _occGrid->info.map_load_time=ros::Time::now();
+  static unsigned int frameId = 0;
+  res.map = *_occGrid;
+  res.map.header.stamp = ros::Time::now();
+  _occGrid->header.seq = frameId++;
+  _occGrid->info.map_load_time = ros::Time::now();
   return(true);
 }
 

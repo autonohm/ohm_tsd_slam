@@ -63,7 +63,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
   //frames
   std::string tfBaseFrameId;
-  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));  //toDo: move into slam base? It is not specific to robot (same for all units)
+  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
 
   std::string tfChildFrameId;
   prvNh.param(_nameSpace + "tf_child_frame", tfChildFrameId, std::string("default_ns/laser"));
@@ -97,6 +97,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<int>(_nameSpace + "registration_mode", iVar, ICP);
   _regMode = static_cast<EnumRegModes>(iVar);
 
+  prvNh.param<double>("depth_discontinuity_thresh", _depthDiscontinuityThresh, 3.0);
 
   /** Initialize member modules **/
   _lastPose         = new obvious::Matrix(3, 3);
@@ -137,19 +138,17 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 
   if(!_initialized)
   {
-    std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";   //toDo: print ID of referring robot
+    ROS_INFO_STREAM("Localizer(" << _nameSpace << ") received first scan. Initialize node...\n");
     this->init(scan);
-    std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
+    ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
     //_dataMutex.unlock();
     return;
   }
   for(unsigned int i=0;i<scan.ranges.size();i++)
-  {
     _maskLaser[i]=!isnan(scan.ranges[i]);
-  }
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
   _sensor->setRealMeasurementMask(_maskLaser);
-  _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
+  _sensor->maskDepthDiscontinuity(obvious::deg2rad(_depthDiscontinuityThresh));
   _sensor->maskZeroDepth();
   _newScan = true;
   //_dataMutex.unlock();
@@ -179,7 +178,7 @@ void ThreadLocalize::eventLoop(void)
     unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(&_grid, _sensor, _modelCoords, _modelNormals, _maskM);
     if(validModelPoints == 0)
     {
-      std::cout << __PRETTY_FUNCTION__ << " Error! Raycasting found no coordinates!\n";
+      ROS_ERROR_STREAM("Localizer(" << _nameSpace <<") error! Raycasting found no coordinates!\n");
       return;
     }
 
@@ -204,30 +203,29 @@ void ThreadLocalize::eventLoop(void)
 
     /** Align Laser scans */
     if(_regMode == ICP)
-    {
       T = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, false);  //3x3 Transformation Matrix
-    }
+
     else if(_regMode == EXP)
-    {
       T = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
-    }
+
     /** analyze registration result */
     _tf.stamp_ = ros::Time::now();
     const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
 
-    if(regErrorT && _regMode == ICP_EXP_RSC) //rescue with ransac pre- registering
+    if(regErrorT && _regMode == ICP_EXP_RSC) //rescue with ransac pre- registration
     {
-      std::cout << __PRETTY_FUNCTION__ << "regError! Trying to recapture with experimental registration...\n";
+      ROS_INFO_STREAM("Localizer(" << _nameSpace << ") registration error! Trying to recapture with" <<
+                      "experimental registration approach...\n");
       obvious::Matrix secondT = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
-      if(isRegistrationError(&secondT,_trnsMax * 1.5, _rotMax * 1.5)) //toDo: config file for error
+      if(isRegistrationError(&secondT,_trnsMax * 1.5, _rotMax * 1.5)) //toDo: launch file parameters
       {
-        std::cout << __PRETTY_FUNCTION__ << "Could not recapture \n";
-        sendNanTransform();  //toDo: maybe make this if else statement smaller by use of return in error case
+        ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") could not recapture registration\n");
+        sendNanTransform();
         continue;
       }
       else
       {
-        ROS_INFO_STREAM("Recaptured!" << std::endl);
+        ROS_INFO_STREAM("Localizer(" << _nameSpace << ") Recaptured!" << std::endl);
         _sensor->transform(&secondT);
         obvious::Matrix curPose = _sensor->getTransformation();
         sendTransform(&curPose);
@@ -240,7 +238,7 @@ void ThreadLocalize::eventLoop(void)
     }
     else if(regErrorT)
     {
-      std::cout << __PRETTY_FUNCTION__ << "regError! \n";
+      ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") registration error! \n");
       sendNanTransform();
       continue;
     }
@@ -307,7 +305,7 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   _sensor->transform(&Tinit);
   obfloat t[2] = {startX + footPrintXoffset, startY};
   if(!_grid.freeFootprint(t, footPrintWidth, footPrintHeight))
-    std::cout << __PRETTY_FUNCTION__ << " warning! Footprint could not be freed!\n";
+    ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") warning! Footprint could not be freed!\n");
   if(!_mapper.initialized())
     _mapper.initPush(_sensor);
   _initialized = true;
@@ -320,7 +318,7 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     obvious::Matrix* Nvalid,
     obvious::Matrix* S,
     obvious::Matrix* Svalid,
-    const bool useRansac
+    const bool experimental
 )
 {
   const unsigned int measurementSize = sensor->getRealMeasurementSize();
@@ -328,7 +326,7 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   T44.setIdentity();
 
   // RANSAC pre-registration (rough)
-  if(useRansac)
+  if(experimental)
   {
     const unsigned int factor = _ransacReduceFactor;
     const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270

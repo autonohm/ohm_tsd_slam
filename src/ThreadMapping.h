@@ -43,6 +43,11 @@ public:
    */
   void queuePush(obvious::SensorPolar2D* sensor);
 
+  /**
+   * initialized
+   * Method determining whether the tsd grid contains any data yet
+   * @return true in case of an initialized grid
+   */
   bool initialized(void);
 
   /**
@@ -72,7 +77,15 @@ private:
    */
   boost::mutex _pushMutex;
 
+  /**
+   * Initialized flag
+   */
   bool _initialized;
+
+  /**
+   * Thresh for depth discontinuity filter
+   */
+  double _depthDiscontinuityThresh;
 };
 
 } /* namespace */

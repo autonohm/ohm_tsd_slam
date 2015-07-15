@@ -22,7 +22,7 @@
       <param name = "footprint_width"         type = "double" value = "1.0"   />	
 	  <param name = "footprint_height"        type = "double" value = "1.0"   />
       <param name = "footprint_x_offset"      type = "double" value = "-0.5"  /> 
-	  <paran name = "registration_mode"       type = "int"    value = "0"     />
+	  <param name = "registration_mode"       type = "int"    value = "0"     />
 	  <param name = "dist_filter_max"         type = "double" value = "2.0"   />
       <param name = "dist_filter_min"         type = "double" value = "0.1"   /> 
 	  <param name = "icp_iterations"          type = "int"    value = "25"    />

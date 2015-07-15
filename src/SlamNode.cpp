@@ -25,14 +25,14 @@ SlamNode::SlamNode(void)
   double dVar             = 0;
   int iVar                = 0;
   double truncationRadius = 0.0;
-  prvNh.param        ("laser_topic", strVar, std::string("simon/scan"));
-  prvNh.param<int>   ("cell_octave_factor", octaveFactor, 10);
-  prvNh.param<double>("cellsize", cellsize, 0.025);
-  prvNh.param<int>   ("truncation_radius", iVar, 3);
+  prvNh.param        ("laser_topic",         strVar, std::string("simon/scan"));
+  prvNh.param<int>   ("cell_octave_factor",  octaveFactor, 10);
+  prvNh.param<double>("cellsize",            cellsize, 0.01);
+  prvNh.param<int>   ("truncation_radius",   iVar, 3);
   truncationRadius = static_cast<double>(iVar);
-  prvNh.param<double>("max_range", _maxRange, 30.0);
+  prvNh.param<double>("max_range",           _maxRange, 30.0);
   prvNh.param<double>("occ_grid_time_interval", _gridPublishInterval, 2.0);
-  prvNh.param<double>("loop_rate", _loopRate, 40.0);
+  prvNh.param<double>("loop_rate",           _loopRate, 100.0);
 
   _laserSubs = _nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
 
@@ -81,27 +81,27 @@ void SlamNode::start(void)
 
 void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
 {
-  double xOffFactor = 0.0;
-  double yOffFactor = 0.0;
-  double yawOffset  = 0.0;
-  double minRange = 0.0;
-  double maxRange = 0.0;
+  double xOffFactor           = 0.0;
+  double yOffFactor           = 0.0;
+  double yawOffset            = 0.0;
+  double minRange             = 0.0;
+  double maxRange             = 0.0;
   double lowReflectivityRange = 0.0;
-  double footPrintWidth= 0.0;
-  double footPrintHeight= 0.0;
-  double footPrintXoffset= 0.0;
-  bool   icpSac = false;
+  double footPrintWidth       = 0.0;
+  double footPrintHeight      = 0.0;
+  double footPrintXoffset     = 0.0;
+  bool   icpSac               = false;
 
   ros::NodeHandle prvNh("~");
-  prvNh.param<double>("x_off_factor", xOffFactor, 0.2);
-  prvNh.param<double>("y_off_factor", yOffFactor, 0.5);
-  prvNh.param<double>("yaw_offset", yawOffset, 0.0);
-  prvNh.param<double>("min_range", minRange, 0.01);
+  prvNh.param<double>("x_off_factor",           xOffFactor, 0.2);
+  prvNh.param<double>("y_off_factor",           yOffFactor, 0.5);
+  prvNh.param<double>("yaw_offset",             yawOffset, 0.0);
+  prvNh.param<double>("min_range",              minRange, 0.01);
   prvNh.param<double>("low_reflectivity_range", lowReflectivityRange, 2.0);
-  prvNh.param<double>("footprint_width" , footPrintWidth, 0.1);
-  prvNh.param<double>("footprint_height", footPrintHeight, 0.1);
-  prvNh.param<double>("footprint_x_offset", footPrintXoffset, 0.28);
-  prvNh.param<bool>  ("use_icpsac", icpSac, true);
+  prvNh.param<double>("footprint_width" ,       footPrintWidth, 0.1);
+  prvNh.param<double>("footprint_height",       footPrintHeight, 0.1);
+  prvNh.param<double>("footprint_x_offset",     footPrintXoffset, 0.28);
+  prvNh.param<bool>  ("use_icpsac",             icpSac, true);
 
   _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, _maxRange, minRange, lowReflectivityRange);
   _sensor->setRealMeasurementData(initScan.ranges, 1.0);
@@ -126,14 +126,14 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
   _threadMapping->initPush(_sensor);
 
   _threadLocalizer   = new ThreadLocalization(_grid, _threadMapping, _nh, xOffFactor, yOffFactor, icpSac);
-  _threadGrid  = new ThreadGrid(_grid, _nh, xOffFactor, yOffFactor);
-  _initialized = true;
+  _threadGrid        = new ThreadGrid(_grid, _nh, xOffFactor, yOffFactor);
+  _initialized       = true;
 }
 
 void SlamNode::run(void)
 {
-  ros::Time lastMap=ros::Time::now();
-  ros::Duration durLastMap=ros::Duration(_gridPublishInterval);
+  ros::Time lastMap        = ros::Time::now();
+  ros::Duration durLastMap = ros::Duration(_gridPublishInterval);
   ros::Rate rate(_loopRate);
   std::cout << __PRETTY_FUNCTION__ << " waiting for first laser scan to initialize node...\n";
   while(ros::ok())
@@ -141,11 +141,11 @@ void SlamNode::run(void)
     ros::spinOnce();
     if(_initialized)
     {
-      ros::Time curTime=ros::Time::now();
+      ros::Time curTime = ros::Time::now();
       if((curTime-lastMap).toSec()>durLastMap.toSec())
       {
         _threadGrid->unblock();
-        lastMap=ros::Time::now();
+        lastMap = ros::Time::now();
       }
     }
     rate.sleep();

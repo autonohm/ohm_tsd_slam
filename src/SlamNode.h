@@ -12,8 +12,8 @@
 
 #include <boost/thread.hpp>
 
-#define INIT_PSHS 1      //number of initial pushes into the grid
-#define LAS_OFFS_X -0.19 //offset of the laser scanner to the base footprint
+const unsigned int INIT_PSHS = 1;      //number of initial pushes into the grid
+const double LAS_OFFS_X      = -0.19;      //offset of the laser scanner to the base footprint
 
 namespace ohm_tsd_slam
 {

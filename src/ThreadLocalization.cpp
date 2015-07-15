@@ -25,26 +25,31 @@ ThreadLocalization::ThreadLocalization(obvious::TsdGrid* grid, ThreadMapping* ma
         * grid->getCellSize() * yOffFactor)
 {
   ros::NodeHandle prvNh("~");
-  _mapper = mapper;
-  _grid = grid;
-  _ransac = ransac;
-  _scene = NULL;
-  _modelCoords = NULL;
+
+  _mapper       = mapper;
+  _grid         = grid;
+  _ransac       = ransac;
+  _scene        = NULL;
+  _modelCoords  = NULL;
   _modelNormals = NULL;
+  _maskS        = NULL;
+  _maskM        = NULL;
 
   double distFilterMax = 0.0;
   double distFilterMin = 0.0;
-  int icpIterations = 0;
+  int icpIterations    = 0;
 
-  prvNh.param<double>("dist_filter_max", distFilterMax, 0.2);
+  prvNh.param<double>("dist_filter_max", distFilterMax, 1.0);
   prvNh.param<double>("dist_filter_min", distFilterMin, 0.01);
-  prvNh.param<int>("icp_iterations", icpIterations, 20);
+  prvNh.param<int>(   "icp_iterations",  icpIterations, 30);
 
-  _rayCaster = new obvious::RayCastPolar2D();
-  _assigner = new obvious::FlannPairAssignment(2);
-  _filterDist = new obvious::DistanceFilter(distFilterMax, distFilterMin, icpIterations - 10);
+  _rayCaster        = new obvious::RayCastPolar2D();
+  _assigner         = new obvious::FlannPairAssignment(2);
+  _filterDist       = new obvious::DistanceFilter(distFilterMax, distFilterMin, icpIterations - 10);
   _filterReciprocal = new obvious::ReciprocalFilter();
-  _estimator = new obvious::ClosedFormEstimator2D();
+  _estimator        = new obvious::ClosedFormEstimator2D();
+
+
   //_estimator = new obvious::PointToLine2DEstimator();
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
@@ -73,8 +78,8 @@ ThreadLocalization::ThreadLocalization(obvious::TsdGrid* grid, ThreadMapping* ma
   _posePub = nh.advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
 
   _poseStamped.header.frame_id = tfBaseFrameId;
-  _tf.frame_id_ = tfBaseFrameId;
-  _tf.child_frame_id_ = tfChildFrameId;
+  _tf.frame_id_                = tfBaseFrameId;
+  _tf.child_frame_id_          = tfChildFrameId;
 
   _sensor = NULL;
 }
@@ -89,16 +94,11 @@ ThreadLocalization::~ThreadLocalization()
   delete _estimator;
   delete _icp;
   delete _lastPose;
-  if(_modelCoords)
-    delete[] _modelCoords;
-  if(_modelNormals)
-    delete[] _modelNormals;
-  if(_scene)
-    delete[] _scene;
-  if(_maskS)
-    delete[] _maskS;
-  if(_maskM)
-    delete[] _maskM;
+  delete[] _modelCoords;
+  delete[] _modelNormals;
+  delete[] _scene;
+  delete[] _maskS;
+  delete[] _maskM;
 
   _thread->join();
 }
@@ -162,12 +162,14 @@ void ThreadLocalization::localize(obvious::SensorPolar2D* sensor)
   T44.setIdentity();
 
   // RANSAC pre-registration (rough)
-  unsigned int trials = 25;
-  double epsThresh = 0.15;
-  unsigned int sizeControlSet = 180;
+  const unsigned int trials         = 15;
+  const double epsThresh            = 0.15;
+  const unsigned int sizeControlSet = 120;
+  const double phiMax               = deg2rad(30.0);
+
   RandomNormalMatching ransac(trials, epsThresh, sizeControlSet);
   //RansacMatching ransac;  // old implementation
-  double phiMax = deg2rad(60.0);
+
   if(_ransac)
   {
     //ransac.activateTrace();
@@ -186,23 +188,29 @@ void ThreadLocalization::localize(obvious::SensorPolar2D* sensor)
   _filterBounds->setPose(&P);
   _icp->setModel(&Mvalid, &Nvalid);
   _icp->setScene(&Svalid);
-  double rms = 0.0;
+
+  double rms         = 0.0;
   unsigned int pairs = 0;
-  unsigned int it = 0;
+  unsigned int it    = 0;
   _icp->iterate(&rms, &pairs, &it, &T44);
   obvious::Matrix T = _icp->getFinalTransformation();
   //T.invert();
 
   // analyze registration result
-  double deltaX = T(0, 2);
-  double deltaY = T(1, 2);
-  double trnsAbs = std::sqrt(deltaX * deltaX + deltaY * deltaY);
-  double deltaPhi = this->calcAngle(&T);
+  const double deltaX   = T(0, 2);
+  const double deltaY   = T(1, 2);
+  const double trnsAbs  = std::sqrt(deltaX * deltaX + deltaY * deltaY);
+  const double deltaPhi = this->calcAngle(&T);
   _tf.stamp_ = ros::Time::now();
 
-  if(abs(deltaY) > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > phiMax)
+  const double ransacMetric = ransac.getMatchMetric();
+
+  if(abs(deltaY) > 0.5 || (trnsAbs > _trnsMax) || std::fabs(std::sin(deltaPhi)) > phiMax /*|| ransacMetric < 0.1*/)
   {
-    cout << "Registration error - deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
+    cout << "Registration error - deltaY="       << deltaY <<
+                               " trnsAbs="       << trnsAbs <<
+                               " sin(deltaPhi)=" << sin(deltaPhi) <<
+                               " ransacMetric="  << ransacMetric  << endl;
      //ransac.serializeTrace("/tmp/ransac/");
 
     // localization error broadcast invalid tf
@@ -237,15 +245,18 @@ void ThreadLocalization::localize(obvious::SensorPolar2D* sensor)
     //cout << "Registration: deltaX=" << deltaX << " deltaY=" << deltaY << " trnsAbs=" << trnsAbs << " sin(deltaPhi)=" << sin(deltaPhi) << endl;
     sensor->transform(&T);
     obvious::Matrix curPose = sensor->getTransformation();
-    double curTheta = this->calcAngle(&curPose);
-    double posX = curPose(0, 2) + _gridOffSetX;
-    double posY = curPose(1, 2) + _gridOffSetY;
-    _poseStamped.header.stamp = ros::Time::now();
+    const double curTheta        = this->calcAngle(&curPose);
+    const double posX            = curPose(0, 2) + _gridOffSetX;
+    const double posY            = curPose(1, 2) + _gridOffSetY;
+
+    _poseStamped.header.stamp    = ros::Time::now();
     _poseStamped.pose.position.x = posX;
     _poseStamped.pose.position.y = posY;
     _poseStamped.pose.position.z = 0.0;
+
     tf::Quaternion quat;
     quat.setEuler(0.0, 0.0, curTheta);
+
     _poseStamped.pose.orientation.w = quat.w();
     _poseStamped.pose.orientation.x = quat.x();
     _poseStamped.pose.orientation.y = quat.y();
@@ -257,6 +268,7 @@ void ThreadLocalization::localize(obvious::SensorPolar2D* sensor)
 
     _posePub.publish(_poseStamped);
     _tfBroadcaster.sendTransform(_tf);
+
     if(this->isPoseChangeSignificant(_lastPose, &curPose))
     {
       *_lastPose = curPose;
@@ -295,9 +307,9 @@ void ThreadLocalization::eventLoop()
 double ThreadLocalization::calcAngle(obvious::Matrix* T)
 {
   double angle = 0.0;
-  const double ARCSIN = asin((*T)(1, 0));
+  const double ARCSIN   = asin((*T)(1, 0));
   const double ARCSINEG = asin((*T)(0, 1));
-  const double ARCOS = acos((*T)(0, 0));
+  const double ARCOS    = acos((*T)(0, 0));
   if((ARCSIN > 0.0) && (ARCSINEG < 0.0))
     angle = ARCOS;
   else if((ARCSIN < 0.0) && (ARCSINEG > 0.0))
@@ -307,11 +319,11 @@ double ThreadLocalization::calcAngle(obvious::Matrix* T)
 
 bool ThreadLocalization::isPoseChangeSignificant(obvious::Matrix* lastPose, obvious::Matrix* curPose)
 {
-  double deltaX = (*curPose)(0, 2) - (*lastPose)(0, 2);
-  double deltaY = (*curPose)(1, 2) - (*lastPose)(1, 2);
-  double deltaPhi = this->calcAngle(curPose) - this->calcAngle(lastPose);
-  deltaPhi = fabs(sin(deltaPhi));
-  double trnsAbs = sqrt(deltaX * deltaX + deltaY * deltaY);
+  const double deltaX  = (*curPose)(0, 2) - (*lastPose)(0, 2);
+  const double deltaY  = (*curPose)(1, 2) - (*lastPose)(1, 2);
+  double deltaPhi      = this->calcAngle(curPose) - this->calcAngle(lastPose);
+  deltaPhi             = fabs(sin(deltaPhi));
+  const double trnsAbs = sqrt(deltaX * deltaX + deltaY * deltaY);
 
   return (deltaPhi > ROT_MIN) || (trnsAbs > TRNS_MIN);
 }

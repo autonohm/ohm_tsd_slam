@@ -283,11 +283,6 @@ private:
   std::string _nameSpace;
 
   /**
-   * Thresh for depth discontinuity filter
-   */
-  double _depthDiscontinuityThresh;
-
-  /**
    * Factor allowing bigger error in rotation in experimental rescue mode
    */
   double _rescueRotationErrorFactor;
@@ -392,7 +387,9 @@ private:
    */
   double _maxRange;
 
+  std::deque<obvious::SensorPolar2D*> _laserData;
 
+  bool _deleteQueue;
 
 };
 

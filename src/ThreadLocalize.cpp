@@ -40,7 +40,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
                 _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
                 _xOffFactor(xOffFactor),
                 _yOffFactor(yOffFactor),
-                _nameSpace(nameSpace)
+                _nameSpace(nameSpace),
+                _deleteQueue(false)
 
 {
   ros::NodeHandle prvNh("~");
@@ -91,7 +92,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<int>(_nameSpace + "registration_mode", iVar, ICP);
   _regMode = static_cast<EnumRegModes>(iVar);
 
-  prvNh.param<double>(_nameSpace + "depth_discontinuity_thresh", _depthDiscontinuityThresh, 3.0);
   prvNh.param<double>(_nameSpace + "rescue_rotation_error_factor", _rescueRotationErrorFactor, 1.5);
   prvNh.param<double>(_nameSpace + "rescue_translation_error_factor", _rescueTranslationErrorFactor, 1.5);
 
@@ -138,26 +138,20 @@ ThreadLocalize::~ThreadLocalize()
 
 void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 {
-  //if(!_newScan)
-  //if(!_dataMutex.try_lock())
-//  return;
-
-  _maxRange = 40.0;
-
-  sensor_msgs::LaserScan tmpScan = scan;
-  for(std::vector<float>::iterator iter = tmpScan.ranges.begin(); iter != tmpScan.ranges.end(); iter++)
-  {
-    if(isnan(*iter))
-      *iter = 0.0;
-    else if(*iter > _maxRange)
-      *iter = INFINITY;
-  }
+//  sensor_msgs::LaserScan tmpScan = scan;
+//  for(std::vector<float>::iterator iter = tmpScan.ranges.begin(); iter != tmpScan.ranges.end(); iter++)
+//  {
+//    if(isnan(*iter))
+//      *iter = 0.0;
+//    else if(*iter > _maxRange)
+//      *iter = INFINITY;
+//  }
 
 
   if(!_initialized)
   {
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") received first scan. Initialize node...\n");
-    this->init(tmpScan);
+    this->init(scan);
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
     //  _dataMutex.unlock();
     return;
@@ -172,27 +166,63 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
     if(scan.ranges[i] > _maxRange)
       filteredScan.ranges[i] = INFINITY;
   }*/
-  if(!_newScan)
+//  prvNh.param<double>(_nameSpace + "/x_offset"              , xOffset             , 0.0);
+//   prvNh.param<double>(_nameSpace + "/y_offset"              , yOffset             , 0.0);
+//   prvNh.param<double>(_nameSpace + "/yaw_offset"            , yawOffset           , 0.0);
+//   prvNh.param<double>(_nameSpace + "/max_range"             , _maxRange            , 30.0);
+//   prvNh.param<double>(_nameSpace + "/min_range"             , minRange            , 0.001);
+//   prvNh.param<double>(_nameSpace + "/low_reflectivity_range", lowReflectivityRange, 2.0);
+//   prvNh.param<double>(_nameSpace + "/footprint_width"       , footPrintWidth      , 0.0);
+//   prvNh.param<double>(_nameSpace + "/footprint_height"      , footPrintHeight     , 0.0);
+//   prvNh.param<double>(_nameSpace + "/footprint_x_offset"    , footPrintXoffset    , 0.28);
+
+
+
+
+  obvious::SensorPolar2D* localSensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, 30.0, 0.001, 2.0);
+  localSensor->setRealMeasurementData(scan.ranges, 1.0);
+  localSensor->setStandardMask();
+  _dataMutex.lock();
+  if(_deleteQueue)
   {
-    _sensor->setRealMeasurementData(tmpScan.ranges, 1.0);
-    //_sensor->setRealMeasurementMask(_maskLaser);
-    _sensor->setStandardMask();
-//    _sensor->resetMask();
-//    _sensor->maskDepthDiscontinuity(obvious::deg2rad(_depthDiscontinuityThresh));
-//    _sensor->maskZeroDepth();
-//    _sensor->maskInvalidDepth();
-    _newScan = true;
-    // _dataMutex.unlock();
-    this->unblock();
+    for(std::deque<obvious::SensorPolar2D*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
+      delete *iter;
+    _laserData.clear();
+    _deleteQueue = false;
   }
+  _laserData.push_back(localSensor);
+  _dataMutex.unlock();
+  //this->unblock();
+
+//  if(!_newScan)
+//  {
+//    _sensor->setRealMeasurementData(scan.ranges, 1.0);
+//    _sensor->setStandardMask();
+//    _newScan = true;
+//    this->unblock();
+//  }
 }
 
 void ThreadLocalize::eventLoop(void)
 {
+  ros::Rate r(100.0);
+  _sleepCond.wait(_sleepMutex);
   while(_stayActive)
   {
-    _sleepCond.wait(_sleepMutex);
-    //_dataMutex.lock();
+
+    _dataMutex.lock();
+    if(!_laserData.size())
+    {
+      _dataMutex.unlock();
+      r.sleep();
+      continue;
+    }
+
+    _sensor->setRealMeasurementData(_laserData.front()->getRealMeasurementData());
+    _sensor->setStandardMask();
+    _deleteQueue = true;
+    _dataMutex.unlock();
+
     const unsigned int measurementSize = _sensor->getRealMeasurementSize();
 
     if(!_scene)   //first call, initialize buffers
@@ -294,6 +324,7 @@ void ThreadLocalize::eventLoop(void)
     }
     //_dataMutex.unlock();
     _newScan = false;
+    r.sleep();
   }
 }
 
@@ -352,6 +383,7 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   if(!_mapper.initialized())
     _mapper.initPush(_sensor);
   _initialized = true;
+  this->unblock();
 }
 
 obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,

@@ -387,6 +387,11 @@ private:
    */
   tf::StampedTransform _tf;
 
+  /**
+   * Maximum range of laser scanner
+   */
+  double _maxRange;
+
 
 
 };

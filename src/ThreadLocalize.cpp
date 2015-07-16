@@ -28,19 +28,19 @@ namespace ohm_tsd_slam
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffFactor, const double yOffFactor):
-            ThreadSLAM(*grid),
-            _nh(nh),
-            _mapper(*mapper),
-            _sensor(NULL),
-            _newScan(false),
-            _initialized(false),
-            _gridWidth(grid->getCellsX() * grid->getCellSize()),
-            _gridHeight(grid->getCellsY() * grid->getCellSize()),
-            _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-            _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
-            _xOffFactor(xOffFactor),
-            _yOffFactor(yOffFactor),
-            _nameSpace(nameSpace)
+                ThreadSLAM(*grid),
+                _nh(nh),
+                _mapper(*mapper),
+                _sensor(NULL),
+                _newScan(false),
+                _initialized(false),
+                _gridWidth(grid->getCellsX() * grid->getCellSize()),
+                _gridHeight(grid->getCellsY() * grid->getCellSize()),
+                _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+                _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
+                _xOffFactor(xOffFactor),
+                _yOffFactor(yOffFactor),
+                _nameSpace(nameSpace)
 
 {
   ros::NodeHandle prvNh("~");
@@ -121,6 +121,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _icp->setMaxIterations(icpIterations);
   _icp->setConvergenceCounter(icpIterations);
 
+  std::cout << __PRETTY_FUNCTION__ << " icp iters = " << icpIterations << "disfiltermin " << distFilterMin << " distfiltermax " << distFilterMax <<std::endl;
+
 
   _posePub = _nh->advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;
@@ -136,28 +138,53 @@ ThreadLocalize::~ThreadLocalize()
 
 void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 {
-  if(_newScan)
-    //if(!_dataMutex.try_lock())
-    return;
+  //if(!_newScan)
+  //if(!_dataMutex.try_lock())
+//  return;
+
+  _maxRange = 40.0;
+
+  sensor_msgs::LaserScan tmpScan = scan;
+  for(std::vector<float>::iterator iter = tmpScan.ranges.begin(); iter != tmpScan.ranges.end(); iter++)
+  {
+    if(isnan(*iter))
+      *iter = 0.0;
+    else if(*iter > _maxRange)
+      *iter = INFINITY;
+  }
+
 
   if(!_initialized)
   {
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") received first scan. Initialize node...\n");
-    this->init(scan);
+    this->init(tmpScan);
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
-    //_dataMutex.unlock();
+    //  _dataMutex.unlock();
     return;
   }
 
-  for(unsigned int i = 0;i < scan.ranges.size(); i++)
+  //sensor_msgs::LaserScan filteredScan = scan;
+  /*for(unsigned int i = 0;i < scan.ranges.size(); i++)
+  {
     _maskLaser[i] = !isnan(scan.ranges[i]);
-  _sensor->setRealMeasurementData(scan.ranges, 1.0);
-  _sensor->setRealMeasurementMask(_maskLaser);
-  _sensor->maskDepthDiscontinuity(obvious::deg2rad(_depthDiscontinuityThresh));
-  _sensor->maskZeroDepth();
-  _newScan = true;
-  //_dataMutex.unlock();
-  this->unblock();
+    if(isnan(scan.ranges[i]))
+        filteredScan.ranges[i] = 0.0;
+    if(scan.ranges[i] > _maxRange)
+      filteredScan.ranges[i] = INFINITY;
+  }*/
+  if(!_newScan)
+  {
+    _sensor->setRealMeasurementData(tmpScan.ranges, 1.0);
+    //_sensor->setRealMeasurementMask(_maskLaser);
+    _sensor->setStandardMask();
+//    _sensor->resetMask();
+//    _sensor->maskDepthDiscontinuity(obvious::deg2rad(_depthDiscontinuityThresh));
+//    _sensor->maskZeroDepth();
+//    _sensor->maskInvalidDepth();
+    _newScan = true;
+    // _dataMutex.unlock();
+    this->unblock();
+  }
 }
 
 void ThreadLocalize::eventLoop(void)
@@ -183,12 +210,14 @@ void ThreadLocalize::eventLoop(void)
     if(validModelPoints == 0)
     {
       ROS_ERROR_STREAM("Localizer(" << _nameSpace <<") error! Raycasting found no coordinates!\n");
-      return;
+      _newScan = false;
+      continue;
     }
 
     //get current scan
     unsigned int validScenePoints = 0;
     validScenePoints = _sensor->dataToCartesianVectorMask(_scene, _maskS);
+    //_sensor->dataToCartesianVector(_scene);
 
     /**
      *  Create Point Matrixes with structure [x1 y1; x2 y2; ..]
@@ -198,48 +227,55 @@ void ThreadLocalize::eventLoop(void)
     obvious::Matrix M(measurementSize, 2, _modelCoords);
     obvious::Matrix N(measurementSize, 2, _modelNormals);
     obvious::Matrix Mvalid = maskMatrix(&M, _maskM, measurementSize, validModelPoints);
+    obvious::Matrix Nvalid = maskMatrix(&N, _maskM, measurementSize, validModelPoints);
 
-    _sensor->dataToCartesianVector(_scene);
+
     obvious::Matrix S(measurementSize, 2, _scene);
     obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
 
     obvious::Matrix T(3, 3);
 
     /** Align Laser scans */  //toDo: if else construct -> make better!
-    if(_regMode == ICP)
-      T = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, false);  //3x3 Transformation Matrix
+    bool ransac = true;
+    //    if(_regMode == ICP)
+    //      ransac = false;
+    //    else if(_regMode == EXP)
+    //      ransac = true;
+    //    else
+    //      ransac = false;
 
-    else if(_regMode == EXP)
-      T = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
+    T = doRegistration(_sensor, &M, &Mvalid, &N, &Nvalid, &S, &Svalid, ransac);  //3x3 Transformation Matrix
 
     /** analyze registration result */
     _tf.stamp_ = ros::Time::now();
-    const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
+    //const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
+    const bool regErrorT = isRegistrationError(&T, 1.0, 0.5);
 
-    if(regErrorT && _regMode == ICP_EXP_RSC) //rescue with ransac pre- registration
-    {
-      ROS_INFO_STREAM("Localizer(" << _nameSpace << ") registration error! Trying to recapture with" <<
-          "experimental registration approach...\n");
-      obvious::Matrix secondT = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
-      if(isRegistrationError(&secondT,_trnsMax * _rescueTranslationErrorFactor, _rotMax * _rescueRotationErrorFactor))
-      {
-        ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") could not recapture registration\n");
-        sendNanTransform();
-      }
-      else
-      {
-        ROS_INFO_STREAM("Localizer(" << _nameSpace << ") Recaptured!" << std::endl);
-        _sensor->transform(&secondT);
-        obvious::Matrix curPose = _sensor->getTransformation();
-        sendTransform(&curPose);
-        if(this->isPoseChangeSignificant(_lastPose, &curPose))
-        {
-          *_lastPose = curPose;
-          _mapper.queuePush(_sensor);
-        }
-      }
-    }
-    else if(regErrorT)
+
+//    if(regErrorT && _regMode == ICP_EXP_RSC) //rescue with ransac pre- registration
+//    {
+//      ROS_INFO_STREAM("Localizer(" << _nameSpace << ") registration error! Trying to recapture with" <<
+//          "experimental registration approach...\n");
+//      obvious::Matrix secondT = doRegistration(_sensor, &M, &Mvalid, &N, NULL, &S, &Svalid, true);  //3x3 Transformation Matrix
+//      if(isRegistrationError(&secondT,_trnsMax * _rescueTranslationErrorFactor, _rotMax * _rescueRotationErrorFactor))
+//      {
+//        ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") could not recapture registration\n");
+//        sendNanTransform();
+//      }
+//      else
+//      {
+//        ROS_INFO_STREAM("Localizer(" << _nameSpace << ") Recaptured!" << std::endl);
+//        _sensor->transform(&secondT);
+//        obvious::Matrix curPose = _sensor->getTransformation();
+//        sendTransform(&curPose);
+//        if(this->isPoseChangeSignificant(_lastPose, &curPose))
+//        {
+//          *_lastPose = curPose;
+//          _mapper.queuePush(_sensor);
+//        }
+//      }
+//    }
+    if(regErrorT)
     {
       ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") registration error! \n");
       sendNanTransform();
@@ -266,7 +302,7 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   double xOffset   = 0.0;
   double yOffset= 0.0;
   double yawOffset= 0.0;
-  double maxRange = 0.0;
+  //double maxRange = 0.0;
   double minRange = 0.0;
   double lowReflectivityRange = 0.0;
   double footPrintWidth= 0.0;
@@ -278,7 +314,7 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   prvNh.param<double>(_nameSpace + "/x_offset"              , xOffset             , 0.0);
   prvNh.param<double>(_nameSpace + "/y_offset"              , yOffset             , 0.0);
   prvNh.param<double>(_nameSpace + "/yaw_offset"            , yawOffset           , 0.0);
-  prvNh.param<double>(_nameSpace + "/max_range"             , maxRange            , 30.0);
+  prvNh.param<double>(_nameSpace + "/max_range"             , _maxRange            , 30.0);
   prvNh.param<double>(_nameSpace + "/min_range"             , minRange            , 0.001);
   prvNh.param<double>(_nameSpace + "/low_reflectivity_range", lowReflectivityRange, 2.0);
   prvNh.param<double>(_nameSpace + "/footprint_width"       , footPrintWidth      , 0.0);
@@ -294,15 +330,21 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   obvious::Matrix Tinit(3, 3);
   Tinit.setData(tf);
 
-  _sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, maxRange, minRange, lowReflectivityRange);
+  std::cout << __PRETTY_FUNCTION__ << " maxrange = " << _maxRange << " minRange = " << minRange << " lowrefle "<< lowReflectivityRange << std::endl;
+  _sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, _maxRange, minRange, lowReflectivityRange);
   _sensor->setRealMeasurementData(scan.ranges, 1.0);
 
-  _maskLaser = new bool[scan.ranges.size()];
-  for(unsigned int i=0;i<scan.ranges.size();i++)
-  {
-    _maskLaser[i]=!isnan(scan.ranges[i]);
-  }
-  _sensor->setRealMeasurementMask(_maskLaser);
+  //  _maskLaser = new bool[scan.ranges.size()];
+  //  for(unsigned int i=0;i<scan.ranges.size();i++)
+  //  {
+  //    _maskLaser[i]=!isnan(scan.ranges[i]);
+  //  }
+  //_sensor->setRealMeasurementMask(_maskLaser);
+  _sensor->setStandardMask();
+//  _sensor->resetMask();
+//  _sensor->maskDepthDiscontinuity(obvious::deg2rad(_depthDiscontinuityThresh));
+//  _sensor->maskZeroDepth();
+//  _sensor->maskInvalidDepth();
   _sensor->transform(&Tinit);
   obfloat t[2] = {startX + footPrintXoffset, startY};
   if(!_grid.freeFootprint(t, footPrintWidth, footPrintHeight))
@@ -335,23 +377,29 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     obvious::Matrix Mreduced(reducedSize, 2);
     bool* maskSRed = new bool[reducedSize];
     bool* maskMRed = new bool[reducedSize];
-    if( factor != 1)
-    {
-      reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
-      reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
-    }
+//    if(0)// factor != 1)
+//    {
+//      reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
+//      reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
+//    }
+    const unsigned int trials         = 20;
+    const double epsThresh            = 0.15;
+    const unsigned int sizeControlSet = 180;
+    const double phiMax               = deg2rad(45.0);
+
 
     //RansacMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
-    obvious::RandomNormalMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
-    const double phiMax = deg2rad(_ranPhiMax);  //toDo: use rad in the first place?
+    //obvious::RandomNormalMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
+    obvious::RandomNormalMatching ransac(trials, epsThresh, sizeControlSet);
+    //const double phiMax = deg2rad(_ranPhiMax);  //toDo: use rad in the first place?
     obvious::Matrix T(3, 3);
     //obvious::Matrix T = ransac.match(&M, _maskM, &N, &S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
-    if(factor == 1)
-      T = ransac.match(M, _maskM, N, S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
-    else
-      T = ransac.match(&Mreduced, maskMRed, N, &Sreduced, maskSRed, phiMax,
-          _trnsMax, sensor->getAngularResolution() * (double) factor);
-    T.invert();
+    //if(1)//factor == 1)
+    T = ransac.match(M, _maskM, N, S, _maskS, phiMax, _trnsMax, sensor->getAngularResolution());
+//    else
+//      T = ransac.match(&Mreduced, maskMRed, N, &Sreduced, maskSRed, phiMax,
+//          _trnsMax, sensor->getAngularResolution() * (double) factor);
+    //T.invert();
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
     T44(0, 3) = T(0, 2);
@@ -362,14 +410,17 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   _icp->reset();
   obvious::Matrix P = sensor->getTransformation();
   _filterBounds->setPose(&P);
-  _icp->setModel(Svalid, NULL);
-  _icp->setScene(Mvalid);
+  //  _icp->setModel(Svalid, NULL);
+  //  _icp->setScene(Mvalid);
+
+  _icp->setModel(Mvalid, Nvalid);
+  _icp->setScene(Svalid);
   double rms = 0.0;
   unsigned int pairs = 0;
   unsigned int it = 0;
   _icp->iterate(&rms, &pairs, &it, &T44);
   obvious::Matrix T = _icp->getFinalTransformation();
-  T.invert();
+  //T.invert();
   return T;
 }
 

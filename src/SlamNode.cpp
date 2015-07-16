@@ -105,6 +105,7 @@ void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
 
   _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, _maxRange, minRange, lowReflectivityRange);
   _sensor->setRealMeasurementData(initScan.ranges, 1.0);
+  _sensor->setStandardMask();
 
   const double phi        = yawOffset;
   const double gridWidth  = _grid->getCellsX() * _grid->getCellSize();
@@ -154,18 +155,10 @@ void SlamNode::run(void)
 
 void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
 {
-    sensor_msgs::LaserScan tmpScan = scan;
-    for(std::vector<float>::iterator iter = tmpScan.ranges.begin(); iter != tmpScan.ranges.end(); iter++)
-    {
-      if(isnan(*iter))
-        *iter = 0.0;
-      else if(*iter > _maxRange)
-        *iter = INFINITY;
-    }
     if(!_initialized)
     {
       std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";
-      this->initialize(tmpScan);
+      this->initialize(scan);
       std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
       return;
     }
@@ -173,10 +166,7 @@ void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
     if(_threadLocalizer->isIdle())
     {
     _sensor->setRealMeasurementData(scan.ranges, 1.0);
-    _sensor->resetMask();
-    _sensor->maskZeroDepth();
-    _sensor->maskInvalidDepth();
-    _sensor->maskDepthDiscontinuity(obvious::deg2rad(3.0));
+    _sensor->setStandardMask();
     _threadLocalizer->triggerRegistration(_sensor);
   }
 }

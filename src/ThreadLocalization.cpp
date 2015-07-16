@@ -162,10 +162,10 @@ void ThreadLocalization::localize(obvious::SensorPolar2D* sensor)
   T44.setIdentity();
 
   // RANSAC pre-registration (rough)
-  const unsigned int trials         = 15;
+  const unsigned int trials         = 20;
   const double epsThresh            = 0.15;
-  const unsigned int sizeControlSet = 120;
-  const double phiMax               = deg2rad(30.0);
+  const unsigned int sizeControlSet = 180;
+  const double phiMax               = deg2rad(45.0);
 
   RandomNormalMatching ransac(trials, epsThresh, sizeControlSet);
   //RansacMatching ransac;  // old implementation

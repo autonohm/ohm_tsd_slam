@@ -15,7 +15,7 @@
       <param name = "pose_topic" type = "string" value = "pose" />
       <param name = "tf_base_frame" type = "string" value = "/map" />
       <param name = "tf_child_frame" type = "string" value = "base_footprint" />
-      <param name = "truncation_radius" type = "double" value = "2.0" />
+      <param name = "truncation_radius" type = "double" value = "5.0" />
       <param name = "object_inflation_factor" type = "int" value = "0"/>
       <param name = "use_object_inflation" type = "bool" value = "false" />
       <param name = "robot_length" type = "double" value = "0.75" />

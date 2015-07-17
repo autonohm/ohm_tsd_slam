@@ -83,6 +83,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, 180);
   _ranSizeCtrlSet = static_cast<unsigned int>(paramInt);
 
+  prvNh.param<double>(nameSpace + "thread_update_rate", _threadUpdateRate, 50.0);
+
   //prvNh.param<int>(_nameSpace + "ransac_reduce_factor", iVar , 1);
   //_ransacReduceFactor = static_cast<unsigned int>(iVar);
   prvNh.param<double>(_nameSpace + "ransac_phi_max", _ranPhiMax, 30.0);
@@ -91,12 +93,12 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<int>(_nameSpace + "registration_mode", iVar, ICP);
   _regMode = static_cast<EnumRegModes>(iVar);
 
-  _modelCoords = NULL;
+  _modelCoords  = NULL;
   _modelNormals = NULL;
-  _maskM = NULL;
-  _rayCaster = NULL;
-  _scene = NULL;
-  _maskS = NULL;
+  _maskM        = NULL;
+  _rayCaster    = NULL;
+  _scene        = NULL;
+  _maskS        = NULL;
 
   /** Initialize member modules **/
   _lastPose         = new obvious::Matrix(3, 3);
@@ -107,7 +109,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _estimator        = new obvious::ClosedFormEstimator2D();
 
   //configure ICP
-  _filterBounds     = new obvious::OutOfBoundsFilter2D(grid->getMinX(), grid->getMaxX(), grid->getMinY(), grid->getMaxY());
+  _filterBounds = new obvious::OutOfBoundsFilter2D(grid->getMinX(), grid->getMaxX(), grid->getMinY(), grid->getMaxY());
   _assigner->addPreFilter(_filterBounds);
   _assigner->addPostFilter(_filterDist);
   _assigner->addPostFilter(_filterReciprocal);
@@ -161,11 +163,10 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 
 void ThreadLocalize::eventLoop(void)
 {
-  ros::Rate r(100.0);
+  ros::Rate r(_threadUpdateRate);
   _sleepCond.wait(_sleepMutex);
   while(_stayActive)
   {
-
     _dataMutex.lock();
     if(!_laserData.size())
     {
@@ -258,7 +259,6 @@ void ThreadLocalize::eventLoop(void)
         _mapper.queuePush(_sensor);
       }
     }
-    r.sleep();
   }
 }
 

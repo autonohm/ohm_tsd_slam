@@ -272,6 +272,11 @@ private:
   double _ranPhiMax;
 
   /**
+   * Desired update rate of the thread
+   */
+  double _threadUpdateRate;
+
+  /**
    * namespace for all topics and services
    */
   std::string _nameSpace;

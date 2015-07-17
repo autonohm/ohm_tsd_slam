@@ -40,8 +40,7 @@ class ThreadLocalize: public ThreadSLAM
   enum EnumRegModes
   {
     ICP = 0,    ///< Registration with Icp only
-    EXP,        ///< Experimental Registration scheme, use with caution
-    ICP_EXP_RSC ///< Tries to retrieve registration error by pre registration using experimental matching
+    EXP         ///< Experimental Registration scheme, use with caution
   };
 
 public:
@@ -190,11 +189,6 @@ private:
   obvious::SensorPolar2D* _sensor;
 
   /**
-   * Flag to synchronize between main thread (callback) and thread event loop toDO: either this or the flas are obsolete
-   */
-  bool _newScan;
-
-  /**
    * Flag signifying successful initialization of this thread
    */
   bool _initialized;
@@ -202,12 +196,12 @@ private:
   /**
    * Width of tsd grid in m
    */
-  double _gridWidth;
+  const double _gridWidth;
 
   /**
    * Height of tsd grid in m
    */
-  double _gridHeight;
+  const double _gridHeight;
 
   /**
    * Mutex to synchronize main thread (subscriber) and thread event loop toDO: either this or the flas are obsolete
@@ -237,12 +231,12 @@ private:
   /**
    * Starting x offset
    */
-  double _xOffFactor;
+  const double _xOffFactor;
 
   /**
    * Starting y offset
    */
-  double _yOffFactor;
+  const double _yOffFactor;
 
   /**
    * Registration mode
@@ -255,7 +249,7 @@ private:
    *          ransacReduceFactor = 4
    *          -> points for ransac = 1080 /ransacReduceFactor = 270;
    */
-  unsigned int _ransacReduceFactor;
+  //unsigned int _ransacReduceFactor;
 
   /**
    * Iterations for experimental registration alorithm
@@ -283,19 +277,14 @@ private:
   std::string _nameSpace;
 
   /**
-   * Factor allowing bigger error in rotation in experimental rescue mode
+   * Container for laser sensor data (filled by callback)
    */
-  double _rescueRotationErrorFactor;
+  std::deque<sensor_msgs::LaserScan*> _laserData;
 
   /**
-   * Factor allowing bigger error in translation in experimental rescue mode
+   * Flag for signalling the callback to empty its data queue
    */
-  double _rescueTranslationErrorFactor;
-
-  /**
-   * Mask to filter irregular data in laser scan (NAN)
-   */
-  bool* _maskLaser;
+  bool _deleteQueue;
 
   /**
    * Buffer for model coordinates
@@ -381,16 +370,6 @@ private:
    * Ros current transform
    */
   tf::StampedTransform _tf;
-
-  /**
-   * Maximum range of laser scanner
-   */
-  double _maxRange;
-
-  std::deque<obvious::SensorPolar2D*> _laserData;
-
-  bool _deleteQueue;
-
 };
 
 

@@ -56,6 +56,7 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
 
 ThreadGrid::~ThreadGrid()
 {
+  _stayActive = false;
   _thread->join();
   delete _occGrid;
   delete _occGridContent;

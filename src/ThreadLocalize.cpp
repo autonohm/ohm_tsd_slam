@@ -82,7 +82,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<double>(nameSpace + "ransac_eps_thresh", _ranEpsThresh, 0.15);
   prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, 180);
   _ranSizeCtrlSet = static_cast<unsigned int>(paramInt);
-  prvNh.param<double>(nameSpace + "aaaaa", _threadUpdateRate, 50);
+  prvNh.param<double>(nameSpace + "thread_update_rate", _threadUpdateRate, 50);
 
   //prvNh.param<int>(_nameSpace + "ransac_reduce_factor", iVar , 1);
   //_ransacReduceFactor = static_cast<unsigned int>(iVar);
@@ -163,14 +163,13 @@ void ThreadLocalize::eventLoop(void)
   ros::Rate r(_threadUpdateRate);
   while(_stayActive)
   {
-    _dataMutex.lock();
     if(!_laserData.size())
     {
-      _dataMutex.unlock();
       r.sleep();
       continue;
     }
 
+    _dataMutex.lock();
     _sensor->setRealMeasurementData(_laserData.front()->ranges);
     _sensor->setStandardMask();
     _deleteQueue = true;
@@ -189,7 +188,7 @@ void ThreadLocalize::eventLoop(void)
     }
 
     // reconstruction
-    unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(&_grid, _sensor, _modelCoords, _modelNormals, _maskM);
+    const unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(&_grid, _sensor, _modelCoords, _modelNormals, _maskM);
     if(validModelPoints == 0)
     {
       ROS_ERROR_STREAM("Localizer(" << _nameSpace <<") error! Raycasting found no coordinates!\n");
@@ -276,11 +275,11 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   prvNh.param<double>(_nameSpace + "/y_offset"              , yOffset             , 0.0);
   prvNh.param<double>(_nameSpace + "/yaw_offset"            , yawOffset           , 0.0);
   prvNh.param<double>(_nameSpace + "/max_range"             , maxRange            , 30.0);
-  prvNh.param<double>(_nameSpace + "/min_range"             , minRange            , 0.001);
+  prvNh.param<double>(_nameSpace + "/min_range"             , minRange            , 0.1);
   prvNh.param<double>(_nameSpace + "/low_reflectivity_range", lowReflectivityRange, 2.0);
   prvNh.param<double>(_nameSpace + "/footprint_width"       , footPrintWidth      , 0.0);
   prvNh.param<double>(_nameSpace + "/footprint_height"      , footPrintHeight     , 0.0);
-  prvNh.param<double>(_nameSpace + "/footprint_x_offset"    , footPrintXoffset    , 0.28);
+  prvNh.param<double>(_nameSpace + "/footprint_x_offset"    , footPrintXoffset    , 0.0);
 
   const double phi    = yawOffset;
   const double startX = _gridWidth * _xOffFactor + xOffset;

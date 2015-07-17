@@ -82,8 +82,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<double>(nameSpace + "ransac_eps_thresh", _ranEpsThresh, 0.15);
   prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, 180);
   _ranSizeCtrlSet = static_cast<unsigned int>(paramInt);
-
-  prvNh.param<double>(nameSpace + "thread_update_rate", _threadUpdateRate, 50.0);
+  prvNh.param<double>(nameSpace + "aaaaa", _threadUpdateRate, 50);
 
   //prvNh.param<int>(_nameSpace + "ransac_reduce_factor", iVar , 1);
   //_ransacReduceFactor = static_cast<unsigned int>(iVar);
@@ -117,9 +116,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _icp->setMaxRMS(0.0);
   _icp->setMaxIterations(icpIterations);
   _icp->setConvergenceCounter(icpIterations);
-
-  std::cout << __PRETTY_FUNCTION__ << " icp iters = " << icpIterations << "disfiltermin " << distFilterMin << " distfiltermax " << distFilterMax <<std::endl;
-
 
   _posePub = _nh->advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;
@@ -163,8 +159,8 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 
 void ThreadLocalize::eventLoop(void)
 {
-  ros::Rate r(_threadUpdateRate);
   _sleepCond.wait(_sleepMutex);
+  ros::Rate r(_threadUpdateRate);
   while(_stayActive)
   {
     _dataMutex.lock();

@@ -315,31 +315,32 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     const bool experimental
 )
 {
-  //const unsigned int measurementSize = sensor->getRealMeasurementSize();
+  const unsigned int measurementSize = sensor->getRealMeasurementSize();
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
 
   // RANSAC pre-registration (rough)
   if(experimental)
   {
-//    const unsigned int factor = _ransacReduceFactor;
-//    const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270
-//    obvious::Matrix Sreduced(reducedSize, 2);
-//    obvious::Matrix Mreduced(reducedSize, 2);
-//    bool* maskSRed = new bool[reducedSize];
-//    bool* maskMRed = new bool[reducedSize];
-//    if(0)// factor != 1)
-//    {
-//      reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
-//      reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
-//    }
+    const unsigned int factor = 4;//_ransacReduceFactor;
+    const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270
+    obvious::Matrix Sreduced(reducedSize, 2);
+    obvious::Matrix Mreduced(reducedSize, 2);
+    bool* maskSRed = new bool[reducedSize];
+    bool* maskMRed = new bool[reducedSize];
+    //if(0)// factor != 1)
+    {
+      reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
+      reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
+    }
     obvious::RandomNormalMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
     //if(factor == 1)
-    obvious::Matrix T = ransac.match(M, _maskM, N, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+//    obvious::Matrix T = ransac.match(M, _maskM, N, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
 //    else
-//      T = ransac.match(&Mreduced, maskMRed, N, &Sreduced, maskSRed, phiMax,
-//          _trnsMax, sensor->getAngularResolution() * (double) factor);
-
+    std::cout << __PRETTY_FUNCTION__ << " here?" << std::endl;
+    obvious::Matrix T = ransac.match(&Mreduced, maskMRed, N, &Sreduced, maskSRed, _ranPhiMax,
+          _trnsMax, sensor->getAngularResolution() * (double) factor);
+    std::cout << __PRETTY_FUNCTION__ << " not.." << std::endl;
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
     T44(0, 3) = T(0, 2);

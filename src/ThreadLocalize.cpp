@@ -28,20 +28,18 @@ namespace ohm_tsd_slam
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffFactor, const double yOffFactor):
-                ThreadSLAM(*grid),
-                _nh(nh),
-                _mapper(*mapper),
-                _sensor(NULL),
-                _initialized(false),
-                _gridWidth(grid->getCellsX() * grid->getCellSize()),
-                _gridHeight(grid->getCellsY() * grid->getCellSize()),
-                _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-                _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
-                _xOffFactor(xOffFactor),
-                _yOffFactor(yOffFactor),
-                _nameSpace(nameSpace),
-                _deleteQueue(false)
-
+                    ThreadSLAM(*grid),
+                    _nh(nh),
+                    _mapper(*mapper),
+                    _sensor(NULL),
+                    _initialized(false),
+                    _gridWidth(grid->getCellsX() * grid->getCellSize()),
+                    _gridHeight(grid->getCellsY() * grid->getCellSize()),
+                    _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
+                    _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
+                    _xOffFactor(xOffFactor),
+                    _yOffFactor(yOffFactor),
+                    _nameSpace(nameSpace)
 {
   ros::NodeHandle prvNh("~");
 
@@ -82,7 +80,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<double>(nameSpace + "ransac_eps_thresh", _ranEpsThresh, 0.15);
   prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, 180);
   _ranSizeCtrlSet = static_cast<unsigned int>(paramInt);
-  prvNh.param<double>(nameSpace + "aaaaa", _threadUpdateRate, 50);
 
   //prvNh.param<int>(_nameSpace + "ransac_reduce_factor", iVar , 1);
   //_ransacReduceFactor = static_cast<unsigned int>(iVar);
@@ -127,7 +124,7 @@ ThreadLocalize::~ThreadLocalize()
 {
   delete _sensor;
   for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
-     delete *iter;
+    delete *iter;
   _stayActive = false;
   _thread->join();
   _laserData.clear();
@@ -142,38 +139,32 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
     return;
   }
-
   sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
   *scanCopy = scan;
   _dataMutex.lock();
-  if(_deleteQueue)
-  {
-    for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
-      delete *iter;
-    _laserData.clear();
-    _deleteQueue = false;
-  }
-  _laserData.push_back(scanCopy);
+  _laserData.push_front(scanCopy);
   _dataMutex.unlock();
+  this->unblock();
 }
 
 void ThreadLocalize::eventLoop(void)
 {
   _sleepCond.wait(_sleepMutex);
-  ros::Rate r(_threadUpdateRate);
   while(_stayActive)
   {
     _dataMutex.lock();
     if(!_laserData.size())
     {
       _dataMutex.unlock();
-      r.sleep();
-      continue;
+      _sleepCond.wait(_sleepMutex);
     }
 
     _sensor->setRealMeasurementData(_laserData.front()->ranges);
     _sensor->setStandardMask();
-    _deleteQueue = true;
+
+    for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
+      delete *iter;
+    _laserData.clear();
     _dataMutex.unlock();
 
     const unsigned int measurementSize = _sensor->getRealMeasurementSize();
@@ -193,12 +184,11 @@ void ThreadLocalize::eventLoop(void)
     if(validModelPoints == 0)
     {
       ROS_ERROR_STREAM("Localizer(" << _nameSpace <<") error! Raycasting found no coordinates!\n");
-      r.sleep();
       continue;
     }
 
     //get current scan
-     const unsigned int validScenePoints = _sensor->dataToCartesianVectorMask(_scene, _maskS);
+    const unsigned int validScenePoints = _sensor->dataToCartesianVectorMask(_scene, _maskS);
     //_sensor->dataToCartesianVector(_scene);
 
     /**
@@ -323,24 +313,24 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   if(experimental)
   {
     const unsigned int factor = 4;//_ransacReduceFactor;
-    const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270
+    const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270  toDo: this could result in wrong calculations..round?
     obvious::Matrix Sreduced(reducedSize, 2);
     obvious::Matrix Mreduced(reducedSize, 2);
     bool* maskSRed = new bool[reducedSize];
     bool* maskMRed = new bool[reducedSize];
     //if(0)// factor != 1)
-    {
-      reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
-      reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
-    }
+
+    reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
+    reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
+
     obvious::RandomNormalMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
     //if(factor == 1)
-//    obvious::Matrix T = ransac.match(M, _maskM, N, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-//    else
-    std::cout << __PRETTY_FUNCTION__ << " here?" << std::endl;
-    obvious::Matrix T = ransac.match(&Mreduced, maskMRed, N, &Sreduced, maskSRed, _ranPhiMax,
-          _trnsMax, sensor->getAngularResolution() * (double) factor);
-    std::cout << __PRETTY_FUNCTION__ << " not.." << std::endl;
+    obvious::Matrix T = ransac.match(M, _maskM, N, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+    //    else
+    //    std::cout << __PRETTY_FUNCTION__ << " here?" << std::endl;
+    //    obvious::Matrix T = ransac.match(&Mreduced, maskMRed, N, &Sreduced, maskSRed, obvious::deg2rad(45.0),
+    //          _trnsMax, sensor->getAngularResolution() * (double) factor);
+    //    std::cout << __PRETTY_FUNCTION__ << " not.." << std::endl;
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
     T44(0, 3) = T(0, 2);

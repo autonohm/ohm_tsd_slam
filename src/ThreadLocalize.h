@@ -272,11 +272,6 @@ private:
   double _ranPhiMax;
 
   /**
-   * Desired update rate of the thread
-   */
-  double _threadUpdateRate;
-
-  /**
    * namespace for all topics and services
    */
   std::string _nameSpace;
@@ -285,11 +280,6 @@ private:
    * Container for laser sensor data (filled by callback)
    */
   std::deque<sensor_msgs::LaserScan*> _laserData;
-
-  /**
-   * Flag for signalling the callback to empty its data queue
-   */
-  bool _deleteQueue;
 
   /**
    * Buffer for model coordinates

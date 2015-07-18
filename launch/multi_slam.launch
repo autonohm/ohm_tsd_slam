@@ -26,11 +26,11 @@
     <param name = "/georg/max_range"               type = "double" value = "30.0"  />    
     <param name = "/georg/min_range"               type = "double" value = "0.01"  />
     <param name = "/georg/ransac_reduce_factor"    type = "int"    value = "1"     />
-    <param name = "/georg/registration_mode"       type = "int"    value = "0"     />
-    <param name = "/georg/icp_iterations"          type = "int"    value = "100"   />
-    <param name = "/georg/dist_filter_max"         type = "double" value = "2.0"   />
-    <param name = "/georg/dist_filter_min"         type = "double" value = "0.1"   /> 
-    <param name = "/georg/ransac_trials"           type = "int"    value = "50"    />	
+    <param name = "/georg/registration_mode"       type = "int"    value = "1"     />
+    <param name = "/georg/icp_iterations"          type = "int"    value = "50"   />
+    <param name = "/georg/dist_filter_max"         type = "double" value = "1.0"   />
+    <param name = "/georg/dist_filter_min"         type = "double" value = "0.01"   /> 
+    <param name = "/georg/ransac_trials"           type = "int"    value = "20"    />	
 	<param name = "/georg/ransac_eps_thresh"	   type = "double" value = "0.15"  />
 	<param name = "/georg/ransac_ctrlset_size"	   type = "int"    value = "180"   />			
 		
@@ -47,8 +47,8 @@
     <param name = "/simon/max_range"               type = "double" value = "30.0"  />    
     <param name = "/simon/min_range"               type = "double" value = "0.01"  />
     <param name = "/simon/ransac_reduce_factor"    type = "int"    value = "4"     />
-    <param name = "/simon/registration_mode"       type = "int"    value = "0"     />
-    <param name = "/simon/icp_iterations"          type = "int"    value = "100"   />
+    <param name = "/simon/registration_mode"       type = "int"    value = "1"     />
+    <param name = "/simon/icp_iterations"          type = "int"    value = "50"   />
     <param name = "/simon/dist_filter_max"         type = "double" value = "2.0"   />
     <param name = "/simon/dist_filter_min"         type = "double" value = "0.1"   /> 
 	<param name = "/simon/ransac_trials"           type = "int"    value = "50"    />	

@@ -22,18 +22,22 @@
 
 #include <string>
 
-#define ITERATIONS 25               //toDo: remove these maybe in a nameless namespace
-#define TRNS_THRESH 0.25            //Thresholds for registration. If the gained transformation is out of these bounds,
-#define ROT_THRESH 0.17             //the Transformation is not taken over
-#define TRNS_MIN 0.05              //Minimal values for the pose change. Push is only needed when pose change
-#define ROT_MIN 0.03               //greater than than one of these values
-
 namespace ohm_tsd_slam
 {
 
 class SlamNode;
 class ThreadMapping;
 class Localization;
+
+
+namespace
+{   //default values in case no launch parameters are set
+const unsigned int ITERATIONS = 25;
+const double TRNS_THRESH = 0.25;            //Thresholds for registration. If the gained transformation is out of these bounds,
+const double ROT_THRESH = 0.17;             //the Transformation is not taken over
+const double TRNS_MIN = 0.05;              //Minimal values for the pose change. Push is only needed when pose change
+const double ROT_MIN = 0.03;               //greater than than one of these values
+}
 
 class ThreadLocalize: public ThreadSLAM
 {

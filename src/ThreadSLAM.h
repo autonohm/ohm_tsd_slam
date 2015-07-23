@@ -11,7 +11,7 @@ namespace ohm_tsd_slam
 
 /**
  * @class ThreadSLAM
- * @brief Base class implementing boost thread funcionality
+ * @brief Base class implementing boost thread functionality
  * @author Philipp Koch, Stefan May
  */
 class ThreadSLAM
@@ -19,7 +19,7 @@ class ThreadSLAM
 public:
 
   /**
-   * Default constructor
+   * Constructor
    */
   ThreadSLAM(obvious::TsdGrid& grid);
 

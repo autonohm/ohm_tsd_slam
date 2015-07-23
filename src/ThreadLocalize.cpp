@@ -149,13 +149,13 @@ void ThreadLocalize::eventLoop(void)
   _sleepCond.wait(_sleepMutex);
   while(_stayActive)
   {
-    _dataMutex.lock();
+
     if(!_laserData.size())
     {
-      _dataMutex.unlock();
       _sleepCond.wait(_sleepMutex);
     }
 
+    _dataMutex.lock();
     _sensor->setRealMeasurementData(_laserData.front()->ranges);
     _sensor->setStandardMask();
 

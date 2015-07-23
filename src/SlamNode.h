@@ -97,11 +97,6 @@ private:
   double _yOffFactor;
 
   /**
-   * Maximum range threshold
-   */
-  double _maxRange;
-
-  /**
    * Rate used for occupancy grid generation
    */
   ros::Duration* _gridInterval;
@@ -123,6 +118,6 @@ private:
 
 };
 
-} /* namespace ohm_tsdSlam */
+} /* namespace ohm_tsd_slam */
 
 #endif /* SLAMNODE_H_ */

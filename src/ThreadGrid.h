@@ -25,7 +25,6 @@ public:
    * Constructor
    * @param grid Representation
    * @param nh Ros nodehandle
-   * @param pubMutex Publising mutex publishing mutex
    * @param parentNode Pointer to main mapping instance
    */
   ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffFactor, const double yOffFactor);
@@ -50,7 +49,7 @@ private:
    * Ros service callback method for the get map service
    * @param req Request
    * @param res Response
-   * @return success
+   * @return true in case of success
    */
   bool getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res);
 

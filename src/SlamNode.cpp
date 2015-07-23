@@ -17,22 +17,17 @@ namespace ohm_tsd_slam
 SlamNode::SlamNode(void)
 {
   ros::NodeHandle prvNh("~");
-
-  prvNh.param<double>("max_range", _maxRange, 30.0);
-
-  int iVar         = 0;
+  int iVar                   = 0;
   double gridPublishInterval = 0.0;
-  double loopRateVar = 0.0;
-  double truncationRadius = 0.0;
-  double cellSize = 0.0;
-  unsigned int octaveFactor = 0;
+  double loopRateVar         = 0.0;
+  double truncationRadius    = 0.0;
+  double cellSize            = 0.0;
+  unsigned int octaveFactor  = 0;
   std::string topicLaser;
   prvNh.param<int>("robot_nbr", iVar, 1);
   unsigned int robotNbr = static_cast<unsigned int>(iVar);
-
   prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
   prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
-
   prvNh.param<int>("cell_octave_factor", iVar, 10);
   octaveFactor = static_cast<unsigned int>(iVar);
   prvNh.param<double>("cellsize", cellSize, 0.025);
@@ -50,15 +45,14 @@ SlamNode::SlamNode(void)
     ROS_ERROR_STREAM("Error! Unknown cell_octave_factor -> set to default!" << std::endl);
     octaveFactor = 10;
   }
-
+  //instanciate representation
   _grid = new obvious::TsdGrid(cellSize, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(octaveFactor));  //obvious::LAYOUT_8192x8192
   _grid->setMaxTruncation(truncationRadius * cellSize);
-
   unsigned int cellsPerSide = pow(2, octaveFactor);
   double sideLength = static_cast<double>(cellsPerSide) * cellSize;
   ROS_INFO_STREAM("Creating representation with " << cellsPerSide << "x" << cellsPerSide << "cells, representating " <<
                   sideLength << "x" << sideLength << "m^2" << std::endl);
-
+  //instanciate mapping threads
   _threadMapping = new ThreadMapping(_grid);
   _threadGrid    = new ThreadGrid(_grid, &_nh, _xOffFactor, _yOffFactor);
 
@@ -66,6 +60,7 @@ SlamNode::SlamNode(void)
   ros::Subscriber subs;
   std::string nameSpace;
 
+  //instanciate localization threads
   if(robotNbr == 1)  //single slam
   {
     nameSpace = "";   //empty namespace
@@ -96,6 +91,7 @@ SlamNode::SlamNode(void)
 
 SlamNode::~SlamNode()
 {
+  //stop all localization threads
   for(std::vector<ThreadLocalize*>::iterator iter = _localizers.begin(); iter < _localizers.end(); iter++)
   {
     (*iter)->terminateThread();
@@ -105,6 +101,7 @@ SlamNode::~SlamNode()
   }
   delete _loopRate;
   delete _gridInterval;
+  //stop mapping threads
   _threadGrid->terminateThread();
   while(_threadGrid->alive(THREAD_TERM_MS))
     usleep(THREAD_TERM_MS);
@@ -139,4 +136,4 @@ void SlamNode::run(void)
 
 }
 
-} /* namespace ohm_tsdSlam2 */
+} /* namespace ohm_tsd_slam */

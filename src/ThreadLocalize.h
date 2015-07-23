@@ -32,11 +32,17 @@ class Localization;
 
 namespace
 {   //default values in case no launch parameters are set
-const unsigned int ITERATIONS = 25;
+const unsigned int ICP_ITERATIONS = 25;
 const double TRNS_THRESH = 0.25;            //Thresholds for registration. If the gained transformation is out of these bounds,
 const double ROT_THRESH = 0.17;             //the Transformation is not taken over
 const double TRNS_MIN = 0.05;              //Minimal values for the pose change. Push is only needed when pose change
 const double ROT_MIN = 0.03;               //greater than than one of these values
+const double DIST_FILT_MIN = 0.1;
+const double DIST_FILT_MAX = 1.0;
+const int RANSAC_TRIALS =  50;
+const double RANSAC_EPS_THRESH = 0.15;
+const int RANSAC_CTRL_SET_SIZE = 180;
+const double RANSAC_PHI_MAX = 30.0;
 }
 
 class ThreadLocalize: public ThreadSLAM

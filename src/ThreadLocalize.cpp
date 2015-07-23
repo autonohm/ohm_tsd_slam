@@ -65,9 +65,9 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   int icpIterations = 0;
 
   //ICP Options
-  prvNh.param<double>(_nameSpace + "dist_filter_min", distFilterMin, 0.2);
-  prvNh.param<double>(_nameSpace + "dist_filter_max", distFilterMax, 1.0);
-  prvNh.param<int>(_nameSpace + "icp_iterations", icpIterations, 25);
+  prvNh.param<double>(_nameSpace + "dist_filter_min", distFilterMin, DIST_FILT_MIN);
+  prvNh.param<double>(_nameSpace + "dist_filter_max", distFilterMax, DIST_FILT_MAX);
+  prvNh.param<int>(_nameSpace + "icp_iterations", icpIterations, ICP_ITERATIONS);
 
   //Maximum allowed offset between to aligned scans
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
@@ -75,14 +75,11 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
   //ransac options
   int paramInt = 0;
-  prvNh.param<int>(nameSpace + "ransac_trials", paramInt, 50);
+  prvNh.param<int>(nameSpace + "ransac_trials", paramInt, RANSAC_TRIALS);
   _ranTrials = static_cast<unsigned int>(paramInt);
-  prvNh.param<double>(nameSpace + "ransac_eps_thresh", _ranEpsThresh, 0.15);
-  prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, 180);
+  prvNh.param<double>(nameSpace + "ransac_eps_thresh", _ranEpsThresh, RANSAC_EPS_THRESH);
+  prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, RANSAC_CTRL_SET_SIZE);
   _ranSizeCtrlSet = static_cast<unsigned int>(paramInt);
-
-  //prvNh.param<int>(_nameSpace + "ransac_reduce_factor", iVar , 1);
-  //_ransacReduceFactor = static_cast<unsigned int>(iVar);
   prvNh.param<double>(_nameSpace + "ransac_phi_max", _ranPhiMax, 30.0);
 
   int iVar = 0;

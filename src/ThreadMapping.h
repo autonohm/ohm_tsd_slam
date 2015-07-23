@@ -81,11 +81,6 @@ private:
    * Initialized flag
    */
   bool _initialized;
-
-  /**
-   * Thresh for depth discontinuity filter
-   */
-  double _depthDiscontinuityThresh;
 };
 
 } /* namespace */

@@ -13,8 +13,6 @@ ThreadMapping::ThreadMapping(obvious::TsdGrid* grid):
     ThreadSLAM(*grid),
     _initialized(false)
 {
-  ros::NodeHandle prvNh("~");
-  prvNh.param<double>("depth_discontinuity_thresh", _depthDiscontinuityThresh, 3.0);
 }
 
 ThreadMapping::~ThreadMapping()
@@ -67,8 +65,7 @@ void ThreadMapping::queuePush(obvious::SensorPolar2D* sensor)
                                                                    sensor->getMaximumRange(), sensor->getMinimumRange(), sensor->getLowReflectivityRange());
   sensorLocal->setTransformation(sensor->getTransformation());
   sensorLocal->setRealMeasurementData(sensor->getRealMeasurementData());
-  sensorLocal->setRealMeasurementMask(sensor->getRealMeasurementMask());
-  sensorLocal->maskDepthDiscontinuity(obvious::deg2rad(_depthDiscontinuityThresh));
+  sensorLocal->setStandardMask();
   _sensors.push(sensorLocal);
   _pushMutex.unlock();
   this->unblock();

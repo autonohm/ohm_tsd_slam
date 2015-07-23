@@ -100,7 +100,6 @@ catkin_package(
 include_directories(
   ${catkin_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}/src
-  ${PROJECT_SOURCE_DIR}/src/multi
   $ENV{OBVIOUSLY_ROOT}
 )
 
@@ -133,27 +132,15 @@ add_executable(slam_node src/slam_node.cpp
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(slam_node
-                                        ${catkin_LIBRARIES}
-                                        obvision
-                                        obcore
-                                        gsl
-                                        gslcblas
-                                        ann
-                                        flann
-                                        ${Boost_LIBRARIES}
-                                        )
-                                        
-#target_link_libraries(multi_slam_node
-#                                        ${catkin_LIBRARIES}
-#                                        obvision
-#                                        obcore
-#                                        gsl
-#                                        gslcblas
-#                                        ann
-#                                        flann
-#                                        ${Boost_LIBRARIES}
-#                                        tinyxml2
-#                                        ) 
+                                 ${catkin_LIBRARIES}
+                                 obvision
+                                 obcore
+                                 gsl
+                                 gslcblas
+                                 ann
+                                 flann
+                                 ${Boost_LIBRARIES}
+                                 )
 
 #############
 ## Install ##
@@ -170,10 +157,10 @@ target_link_libraries(slam_node
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS slam_node #multi_slam_node
+install(TARGETS slam_node
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 ## Mark cpp header files for installation
@@ -187,16 +174,9 @@ install(TARGETS slam_node #multi_slam_node
  install(FILES
     launch/slam.launch
     launch/multi_slam.launch
-    launch/multi_slam_sim.launch
-    launch/slam_config.launch
 #   # myfile2
    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
  )
-
-install(FILES
-    config/registration_conf.xml
-    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
-)
 
 #############
 ## Testing ##

@@ -3,12 +3,17 @@
 
 #include <boost/thread.hpp>
 
+#include "obvision/reconstruct/grid/TsdGrid.h"
+
+#include <ros/ros.h>
+
+
 namespace ohm_tsd_slam
 {
 
 /**
  * @class ThreadSLAM
- * @brief Base class implementing boost thread funcionality
+ * @brief Base class implementing boost thread functionality
  * @author Philipp Koch, Stefan May
  */
 class ThreadSLAM
@@ -16,9 +21,9 @@ class ThreadSLAM
 public:
 
   /**
-   * Default constructor
+   * Constructor
    */
-  ThreadSLAM();
+  ThreadSLAM(obvious::TsdGrid& grid);
 
   /**
    * Destructor
@@ -71,6 +76,11 @@ protected:
    * Shutdown flag
    */
   bool _stayActive;
+
+  /**
+   * Reference to representation
+   */
+  obvious::TsdGrid& _grid;
 };
 
 } /* namespace ohm_tsd_slam */

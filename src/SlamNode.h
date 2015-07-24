@@ -2,7 +2,6 @@
 #define SLAMNODE_H_
 
 #include <ros/ros.h>
-#include <sensor_msgs/LaserScan.h>
 
 #include <vector>
 
@@ -10,17 +9,15 @@
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obcore/base/Logger.h"
 
-#include <boost/thread.hpp>
-
-const unsigned int INIT_PSHS = 1;      //number of initial pushes into the grid
-const double LAS_OFFS_X      = -0.19;      //offset of the laser scanner to the base footprint
+#define INIT_PSHS 1      //number of initial pushes into the grid
+#define THREAD_TERM_MS 1   //time in ms waiting for thread to terminate
 
 namespace ohm_tsd_slam
 {
-class ThreadLocalization;
 class ThreadSLAM;
 class ThreadMapping;
 class ThreadGrid;
+class ThreadLocalize;
 
 /**
  * @class SlamNode
@@ -45,16 +42,8 @@ public:
    * start
    * Method to start the SLAM
    */
-  void start(void);
-
+  void start(void){this->run();}
 private:
-
-  /**
-   * initialize
-   * Method to initialize the necessary parameters with the first received scan
-   * @param initScan Initial scan
-   */
-  void initialize(const sensor_msgs::LaserScan& initScan);
 
   /**
    * run
@@ -63,11 +52,10 @@ private:
   void run(void);
 
   /**
-   * laserScanCallBack
-   * Callback method to laser subscriber
-   * @param scan Laser scan
+   * timedGridPub
+   * Enables occupancy grid thread with certain frequency
    */
-  void laserScanCallBack(const sensor_msgs::LaserScan& scan);
+  void timedGridPub(void);
 
   /**
    * Main node handle
@@ -75,29 +63,9 @@ private:
   ros::NodeHandle _nh;
 
   /**
-   * Laser subscriber
-   */
-  ros::Subscriber _laserSubs;
-
-  /**
-   * Initilized flag
-   */
-  bool _initialized;
-
-  /**
    * Representation
    */
   obvious::TsdGrid* _grid;
-
-  /**
-   * obvious::Sensor instance containing data and pose
-   */
-  obvious::SensorPolar2D* _sensor;
-
-  /**
-   * Localization thread instance
-   */
-  ThreadLocalization* _threadLocalizer;
 
   /**
    * Mapping thread instance
@@ -110,60 +78,37 @@ private:
   ThreadGrid* _threadGrid;
 
   /**
-   * Publishing mutex
-   */
-  boost::mutex _pubMutex;
-
-  /**
    * X starting offset factor
    */
-//  double _xOffFactor;
+  double _xOffFactor;
 
   /**
    * Y starting offset factor
    */
-  //double _yOffFactor;
+  double _yOffFactor;
 
   /**
-   * Starting yaw angle
+   * Rate used for occupancy grid generation
    */
- // double _yawOffset;
-
-  /**
-   * Minimum range threshold
-   */
-  //double _minRange;
-
-  /**
-   * Maximum range threshold
-   */
-  double _maxRange;
-
-  /**
-   * Maximum range threshold
-   */
-//  double _lowReflectivityRange;
-
-
-  /**
-   * Time interval between occupancy grid
-   */
-  double _gridPublishInterval;
+  ros::Duration* _gridInterval;
 
   /**
    * Desired loop rate
    */
-  double _loopRate;
+  ros::Rate* _loopRate;
 
-//  double _footPrintWidth;
-//
-//  double _footPrintHeight;
-//
-//  double _footPrintXoffset;
-//
-//  bool   _icpSac;
+  /**
+   * Ros laser subscriber
+   */
+  std::vector<ros::Subscriber> _subsLaser;
+
+
+  /**
+   * Localizing threads
+   */
+  std::vector<ThreadLocalize*> _localizers;
 };
 
-} /* namespace ohm_tsdSlam */
+} /* namespace ohm_tsd_slam */
 
 #endif /* SLAMNODE_H_ */

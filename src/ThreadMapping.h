@@ -2,17 +2,19 @@
 #define THREADMAPPING_H_
 
 #include "ThreadSLAM.h"
-#include "SlamNode.h"
 
 #include "sensor_msgs/LaserScan.h"
 
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
+#include "obvision/reconstruct/grid/TsdGrid.h"
 
 #include <boost/thread.hpp>
 #include <queue>
 
 namespace ohm_tsd_slam
 {
+
+class SlamNode;
 
 /**
  * @class ThreadMapping
@@ -42,9 +44,16 @@ public:
   void queuePush(obvious::SensorPolar2D* sensor);
 
   /**
+   * initialized
+   * Method determining whether the tsd grid contains any data yet
+   * @return true in case of an initialized grid
+   */
+  bool initialized(void);
+
+  /**
    * initPush
-   * Method to initialize representation with sensor data
-   * @param sensor Input data
+   * method to init the grid from a certain pose. Is done by the CALLING thread
+   * @param sensor initial data
    */
   void initPush(obvious::SensorPolar2D* sensor);
 
@@ -59,11 +68,6 @@ protected:
 private:
 
   /**
-   * Representation
-   */
-  obvious::TsdGrid* _grid;
-
-  /**
    * Sensor queue
    */
   std::queue<obvious::SensorPolar2D*> _sensors;
@@ -72,6 +76,11 @@ private:
    * Push mutex for queue
    */
   boost::mutex _pushMutex;
+
+  /**
+   * Initialized flag
+   */
+  bool _initialized;
 };
 
 } /* namespace */

@@ -3,10 +3,12 @@
 namespace ohm_tsd_slam
 {
 
-ThreadSLAM::ThreadSLAM()
+ThreadSLAM::ThreadSLAM(obvious::TsdGrid& grid):
+        _thread(new boost::thread(&ThreadSLAM::eventLoop, this)),
+        _stayActive(true),
+        _grid(grid)
 {
-  _stayActive = true;
-  _thread = new boost::thread(&ThreadSLAM::eventLoop, this);
+
 }
 
 ThreadSLAM::~ThreadSLAM()

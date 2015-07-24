@@ -6,169 +6,134 @@
  */
 
 #include "SlamNode.h"
-#include "ThreadLocalization.h"
 #include "ThreadMapping.h"
 #include "ThreadGrid.h"
+#include "ThreadLocalize.h"
+
 #include "obcore/math/mathbase.h"
-#include <unistd.h>
-#include <omp.h>
+
 
 namespace ohm_tsd_slam
 {
 SlamNode::SlamNode(void)
 {
-  omp_set_num_threads(8);
   ros::NodeHandle prvNh("~");
-  std::string strVar;
-  int octaveFactor        = 0;
-  double cellsize         = 0.0;
-  double dVar             = 0;
-  int iVar                = 0;
-  double truncationRadius = 0.0;
-  prvNh.param        ("laser_topic",         strVar, std::string("simon/scan"));
-  prvNh.param<int>   ("cell_octave_factor",  octaveFactor, 10);
-  prvNh.param<double>("cellsize",            cellsize, 0.01);
-  prvNh.param<int>   ("truncation_radius",   iVar, 3);
+  int iVar                   = 0;
+  double gridPublishInterval = 0.0;
+  double loopRateVar         = 0.0;
+  double truncationRadius    = 0.0;
+  double cellSize            = 0.0;
+  unsigned int octaveFactor  = 0;
+  std::string topicLaser;
+  prvNh.param<int>("robot_nbr", iVar, 1);
+  unsigned int robotNbr = static_cast<unsigned int>(iVar);
+  prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
+  prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
+  prvNh.param<int>("cell_octave_factor", iVar, 10);
+  octaveFactor = static_cast<unsigned int>(iVar);
+  prvNh.param<double>("cellsize", cellSize, 0.025);
+  prvNh.param<int>("truncation_radius", iVar, 3);
   truncationRadius = static_cast<double>(iVar);
-  prvNh.param<double>("max_range",           _maxRange, 30.0);
-  prvNh.param<double>("occ_grid_time_interval", _gridPublishInterval, 2.0);
-  prvNh.param<double>("loop_rate",           _loopRate, 100.0);
+  prvNh.param<double>("occ_grid_time_interval", gridPublishInterval, 2.0);
+  prvNh.param<double>("loop_rate", loopRateVar, 40.0);
+  prvNh.param<std::string>("laser_topic", topicLaser, "scan");
 
-  _laserSubs = _nh.subscribe(strVar, 1, &SlamNode::laserScanCallBack, this);
+  _loopRate = new ros::Rate(loopRateVar);
+  _gridInterval = new ros::Duration(gridPublishInterval);
 
-  unsigned int uiVar = static_cast<unsigned int>(octaveFactor);
-  if((uiVar > 15) || (uiVar < 5))
+  if(octaveFactor > 15)
   {
-    std::cout << __PRETTY_FUNCTION__ << " error! Unknown / Invalid cell_octave_factor -> set to default!" << std::endl;
-    uiVar = 10;
+    ROS_ERROR_STREAM("Error! Unknown cell_octave_factor -> set to default!" << std::endl);
+    octaveFactor = 10;
   }
-  _initialized = false;
-  _grid        = new obvious::TsdGrid(cellsize, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(uiVar));
-  _grid->setMaxTruncation(truncationRadius * cellsize);
+  //instanciate representation
+  _grid = new obvious::TsdGrid(cellSize, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(octaveFactor));  //obvious::LAYOUT_8192x8192
+  _grid->setMaxTruncation(truncationRadius * cellSize);
+  unsigned int cellsPerSide = pow(2, octaveFactor);
+  double sideLength = static_cast<double>(cellsPerSide) * cellSize;
+  ROS_INFO_STREAM("Creating representation with " << cellsPerSide << "x" << cellsPerSide << "cells, representating " <<
+                  sideLength << "x" << sideLength << "m^2" << std::endl);
+  //instanciate mapping threads
+  _threadMapping = new ThreadMapping(_grid);
+  _threadGrid    = new ThreadGrid(_grid, &_nh, _xOffFactor, _yOffFactor);
 
-  unsigned int cellsPerSide = std::pow(2, uiVar);
-  std::cout << __PRETTY_FUNCTION__ << " creating representation with " << cellsPerSide << "x" << cellsPerSide;
-  double sideLength = static_cast<double>(cellsPerSide) * cellsize;
-  std::cout << " cells, representing "<< sideLength << "x" << sideLength << "m^2" << std::endl;
+  ThreadLocalize* threadLocalize = NULL;
+  ros::Subscriber subs;
+  std::string nameSpace;
 
-  _sensor          = NULL;
-  _threadLocalizer = NULL;
-  _threadMapping   = NULL;
-  _threadGrid      = NULL;
+  //instanciate localization threads
+  if(robotNbr == 1)  //single slam
+  {
+    nameSpace = "";   //empty namespace
+    threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_nh, nameSpace, _xOffFactor, _yOffFactor);
+    subs = _nh.subscribe(topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
+    _subsLaser.push_back(subs);
+    _localizers.push_back(threadLocalize);
+    ROS_INFO_STREAM("Single SLAM started" << std::endl);
+  }
+  else
+  {
+    for(unsigned int i = 0; i < robotNbr; i++)   //multi slam
+    {
+      std::stringstream sstream;
+      sstream << "robot";
+      sstream << i << "/namespace";
+      std::string dummy = sstream.str();
+      prvNh.param(dummy, nameSpace, std::string("default_ns"));
+      threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_nh, nameSpace, _xOffFactor, _yOffFactor);
+      subs = _nh.subscribe(nameSpace + "/" + topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
+      _subsLaser.push_back(subs);
+      _localizers.push_back(threadLocalize);
+      ROS_INFO_STREAM("started for thread for " << nameSpace << std::endl);
+    }
+    ROS_INFO_STREAM("Multi SLAM started!");
+  }
 }
 
 SlamNode::~SlamNode()
 {
-  if(_initialized)
+  //stop all localization threads
+  for(std::vector<ThreadLocalize*>::iterator iter = _localizers.begin(); iter < _localizers.end(); iter++)
   {
-    _threadMapping->terminateThread();
-    _threadGrid->terminateThread();
-    _threadLocalizer->terminateThread();
-    delete _threadGrid;
-    delete _threadMapping;
-    delete _threadLocalizer;
+    (*iter)->terminateThread();
+    while((*iter)->alive(THREAD_TERM_MS))
+      usleep(THREAD_TERM_MS);
+    delete *iter;
   }
-  if(_grid)
-    delete _grid;
-  if(_sensor)
-    delete _sensor;
+  delete _loopRate;
+  delete _gridInterval;
+  //stop mapping threads
+  _threadGrid->terminateThread();
+  while(_threadGrid->alive(THREAD_TERM_MS))
+    usleep(THREAD_TERM_MS);
+  delete _threadGrid;
+  _threadMapping->terminateThread();
+  while(_threadMapping->alive(THREAD_TERM_MS))
+    usleep(THREAD_TERM_MS);
+  delete _threadMapping;
+  delete _grid;
 }
 
-void SlamNode::start(void)
+void SlamNode::timedGridPub(void)
 {
-  this->run();
-}
-
-void SlamNode::initialize(const sensor_msgs::LaserScan& initScan)
-{
-  double xOffFactor           = 0.0;
-  double yOffFactor           = 0.0;
-  double yawOffset            = 0.0;
-  double minRange             = 0.0;
-  double maxRange             = 0.0;
-  double lowReflectivityRange = 0.0;
-  double footPrintWidth       = 0.0;
-  double footPrintHeight      = 0.0;
-  double footPrintXoffset     = 0.0;
-  bool   icpSac               = false;
-
-  ros::NodeHandle prvNh("~");
-  prvNh.param<double>("x_off_factor",           xOffFactor, 0.2);
-  prvNh.param<double>("y_off_factor",           yOffFactor, 0.5);
-  prvNh.param<double>("yaw_offset",             yawOffset, 0.0);
-  prvNh.param<double>("min_range",              minRange, 0.01);
-  prvNh.param<double>("low_reflectivity_range", lowReflectivityRange, 2.0);
-  prvNh.param<double>("footprint_width" ,       footPrintWidth, 0.1);
-  prvNh.param<double>("footprint_height",       footPrintHeight, 0.1);
-  prvNh.param<double>("footprint_x_offset",     footPrintXoffset, 0.28);
-  prvNh.param<bool>  ("use_icpsac",             icpSac, true);
-
-  _sensor=new obvious::SensorPolar2D(initScan.ranges.size(), initScan.angle_increment, initScan.angle_min, _maxRange, minRange, lowReflectivityRange);
-  _sensor->setRealMeasurementData(initScan.ranges, 1.0);
-  _sensor->setStandardMask();
-
-  const double phi        = yawOffset;
-  const double gridWidth  = _grid->getCellsX() * _grid->getCellSize();
-  const double gridHeight = _grid->getCellsY() * _grid->getCellSize();
-  const obfloat startX    = static_cast<obfloat>(gridWidth  * xOffFactor);
-  const obfloat startY    = static_cast<obfloat>(gridHeight * yOffFactor);
-
-  double tf[9] = {cos(phi), -sin(phi), gridWidth * xOffFactor,
-                  sin(phi),  cos(phi), gridHeight * yOffFactor,
-                  0,         0,                        1};
-  obvious::Matrix Tinit(3, 3);
-  Tinit.setData(tf);
-  _sensor->transform(&Tinit);
-
-  _threadMapping = new ThreadMapping(_grid);
-  const obfloat t[2] = {startX + footPrintXoffset, startY};
-  if(!_grid->freeFootprint(t, footPrintWidth, footPrintHeight))
-    std::cout << __PRETTY_FUNCTION__ << " warning! Footprint could not be freed!\n";
-  _threadMapping->initPush(_sensor);
-
-  _threadLocalizer   = new ThreadLocalization(_grid, _threadMapping, _nh, xOffFactor, yOffFactor, icpSac);
-  _threadGrid        = new ThreadGrid(_grid, _nh, xOffFactor, yOffFactor);
-  _initialized       = true;
+  static ros::Time lastMap = ros::Time::now();
+  ros::Time curTime = ros::Time::now();
+  if((curTime - lastMap).toSec() > _gridInterval->toSec())
+  {
+    _threadGrid->unblock();
+    lastMap = ros::Time::now();
+  }
 }
 
 void SlamNode::run(void)
 {
-  ros::Time lastMap        = ros::Time::now();
-  ros::Duration durLastMap = ros::Duration(_gridPublishInterval);
-  ros::Rate rate(_loopRate);
-  std::cout << __PRETTY_FUNCTION__ << " waiting for first laser scan to initialize node...\n";
+  ROS_INFO_STREAM("Waiting for first laser scan to initialize node...\n");
   while(ros::ok())
   {
     ros::spinOnce();
-    if(_initialized)
-    {
-      ros::Time curTime = ros::Time::now();
-      if((curTime-lastMap).toSec()>durLastMap.toSec())
-      {
-        _threadGrid->unblock();
-        lastMap = ros::Time::now();
-      }
-    }
-    rate.sleep();
+    this->timedGridPub();
+    _loopRate->sleep();
   }
 }
 
-void SlamNode::laserScanCallBack(const sensor_msgs::LaserScan& scan)
-{
-    if(!_initialized)
-    {
-      std::cout << __PRETTY_FUNCTION__ << " received first scan. Initialize node...\n";
-      this->initialize(scan);
-      std::cout << __PRETTY_FUNCTION__ << " initialized -> running...\n";
-      return;
-    }
-
-    if(_threadLocalizer->isIdle())
-    {
-    _sensor->setRealMeasurementData(scan.ranges, 1.0);
-    _sensor->setStandardMask();
-    _threadLocalizer->triggerRegistration(_sensor);
-  }
-}
-
-} /* namespace ohm_tsdSlam2 */
+} /* namespace ohm_tsd_slam */

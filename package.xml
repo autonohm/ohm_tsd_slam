@@ -2,10 +2,12 @@
 <package>
   <name>ohm_tsd_slam</name>
   <version>0.0.0</version>
-  <description>The ohm_tsd_slam package</description>
+  <description>The ohm_tsd_slam package provides a 2D SLAM approach for single and multirobot SLAM on a single machine. For mapping a truncated signed distance (TSD) function is used. Mapping is done using a laser</description>
+
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
-  <maintainer email="not@given.yet">Philipp Koch</maintainer>
+  <maintainer email="philip.koch@th-nuernberg.de">Philipp Koch</maintainer>
+  <maintainer email="markus.kuehn@th-nuernberg.de">Markus Kühn</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
@@ -16,14 +18,13 @@
 
   <!-- Url tags are optional, but mutiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
-  <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/ohm_tsd_slam</url> -->
+  <url type="website">http://wiki.ros.org/ohm_tsd_slam</url>
 
 
   <!-- Author tags are optional, mutiple are allowed, one per tag -->
   <!-- Authors do not have to be maintianers, but could be -->
   <author email="not@given.yet">Philipp Koch</author>
-  <author email="not@given.yet">Stefan May</author>
+  <author email="stefan.may@th-nuernberg.de">Stefan May</author>
 
 
   <!-- The *_depend tags are used to specify dependencies -->

@@ -9,30 +9,30 @@
 
 namespace ohm_tsd_slam
 {
+ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffFactor, const double yOffFactor):
+        ThreadSLAM(*grid),
+        _occGrid(new nav_msgs::OccupancyGrid),
+        _occGridContent(new char[grid->getCellsX() * grid->getCellsY()]),
+        _gridCoords(new double[grid->getCellsX() * grid->getCellsY()]),
+        _width(grid->getCellsX()),
+        _height(grid->getCellsY()),
+        _cellSize(grid->getCellSize())
 
-ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double xOffFactor, const double yOffFactor)
 {
-  _grid           = grid;
-  _occGridContent = new char[grid->getCellsX() * grid->getCellsY()];
-  _gridCoords     = new double[grid->getCellsX() * grid->getCellsY()];
-  _width          = grid->getCellsX();
-  _height         = grid->getCellsY();
-  _cellSize       = grid->getCellSize();
-  for(unsigned int i = 0; i < _grid->getCellsX() * _grid->getCellsY(); ++i)
+  for(unsigned int i = 0; i < _grid.getCellsX() * _grid.getCellsY(); ++i)
     _occGridContent[i] = -1;
 
-  _occGrid = new nav_msgs::OccupancyGrid;
-  _occGrid->info.resolution = static_cast<double>(_grid->getCellSize());
-  _occGrid->info.width                = _grid->getCellsX();
-  _occGrid->info.height               = _grid->getCellsY();
+  _occGrid->info.resolution           = static_cast<double>(_grid.getCellSize());
+  _occGrid->info.width                = _grid.getCellsX();
+  _occGrid->info.height               = _grid.getCellsY();
   _occGrid->info.origin.orientation.w = 0.0;
   _occGrid->info.origin.orientation.x = 0.0;
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;
-  _occGrid->info.origin.position.x    = 0.0 - _grid->getCellsX() * _grid->getCellSize() * xOffFactor;
-  _occGrid->info.origin.position.y    = 0.0 - _grid->getCellsY() * _grid->getCellSize() * yOffFactor;
+  _occGrid->info.origin.position.x    = 0.0 - _grid.getCellsX() * _grid.getCellSize() * xOffFactor;
+  _occGrid->info.origin.position.y    = 0.0 - _grid.getCellsY() * _grid.getCellSize() * yOffFactor;
   _occGrid->info.origin.position.z    = 0.0;
-  _occGrid->data.resize(_grid->getCellsX() * _grid->getCellsY());
+  _occGrid->data.resize(_grid.getCellsX() * _grid.getCellsY());
 
   ros::NodeHandle prvNh("~");
   std::string mapTopic;
@@ -44,13 +44,14 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle nh, const double 
   prvNh.param<int>("object_inflation_factor", intVar, 2);
   prvNh.param<bool>("use_object_inflation", _objectInflation, false);
 
-  _gridPub          = nh.advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
-  _getMapServ       = nh.advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
+  _gridPub          = nh->advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
+  _getMapServ       = nh->advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
   _objInflateFactor = static_cast<unsigned int>(intVar);
 }
 
 ThreadGrid::~ThreadGrid()
 {
+  _stayActive = false;
   _thread->join();
   delete _occGrid;
   delete _occGridContent;
@@ -65,26 +66,24 @@ void ThreadGrid::eventLoop(void)
     _sleepCond.wait(_sleepMutex);
     unsigned int mapSize = 0;
     obvious::RayCastAxisAligned2D raycasterMap;
-    raycasterMap.calcCoords(_grid, _gridCoords, NULL, &mapSize, _occGridContent);
-    if(mapSize == 0) {
-      std::cout << __PRETTY_FUNCTION__ << " error! Raycasting returned with no coordinates!\n";
-    }
+    raycasterMap.calcCoords(&_grid, _gridCoords, NULL, &mapSize, _occGridContent);
+    if(mapSize == 0)
+      ROS_INFO_STREAM("OccupancyGridThread: Warning! Raycasting returned with no coordinates, map contains no data yet!\n");
 
     _occGrid->header.stamp       = ros::Time::now();
     _occGrid->header.seq         = frameId++;
     _occGrid->info.map_load_time = ros::Time::now();
-    const unsigned int gridSize  = _width * _height;
+    const unsigned int gridSize        = _width * _height;
 
-    for(unsigned int i = 0; i < gridSize ; ++i) {
+    for(unsigned int i = 0; i < gridSize ; ++i)
       _occGrid->data[i] = _occGridContent[i];
-    }
 
     for(unsigned int i = 0; i < mapSize / 2; i++)
     {
-      const double x       = _gridCoords[2*i];
-      const double y       = _gridCoords[2*i+1];
-      const unsigned int u = static_cast<unsigned int>(x / _cellSize + 0.5);
-      const unsigned int v = static_cast<unsigned int>(y / _cellSize + 0.5);
+      double x       = _gridCoords[2*i];
+      double y       = _gridCoords[2*i+1];
+      unsigned int u = static_cast<unsigned int>(round(x / _cellSize));
+      unsigned int v = static_cast<unsigned int>(round(y / _cellSize));
       if(u > 0 && u < _width && v > 0 && v < _height)
       {
         _occGrid->data[v * _width + u] = 100;               //set grid cell to occupied
@@ -108,10 +107,10 @@ void ThreadGrid::eventLoop(void)
 
 bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res)
 {
-  static unsigned int frameId  = 0;
-  res.map                      = *_occGrid;
-  res.map.header.stamp         = ros::Time::now();
-  _occGrid->header.seq         = frameId++;
+  static unsigned int frameId = 0;
+  res.map = *_occGrid;
+  res.map.header.stamp = ros::Time::now();
+  _occGrid->header.seq = frameId++;
   _occGrid->info.map_load_time = ros::Time::now();
   return(true);
 }

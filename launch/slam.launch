@@ -1,33 +1,37 @@
 <launch>
-	  <node pkg="tf"  type="static_transform_publisher" name = "tf_laser" args = "-0.19 0 0.0 0 0 0 laser base_footprint 50"/>
   <node name = "slam_node" pkg = "ohm_tsd_slam" type = "slam_node" output = "screen">
       <param name = "laser_topic"             type = "string" value = "scan"  />
       <param name = "x_off_factor"            type = "double" value = "0.5"   />
       <param name = "y_off_factor"            type = "double" value = "0.5"   />
 	  <param name = "yaw_offset"              type = "double" value = "0.0"   />      
-      <param name = "cell_octave_factor"      type = "int"    value = "13"    />
-      <param name = "cellsize"                type = "double" value = "0.015" />
+      <param name = "cell_octave_factor"      type = "int"    value = "11"    />
+      <param name = "cellsize"                type = "double" value = "0.04" />
       <param name = "min_range"               type = "double" value = "0.0"   />
-      <param name = "max_range"               type = "double" value = "30.0"  />
-      <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
+      <param name = "max_range"               type = "double" value = "40.0"  />
+      <param name = "low_reflectivity_range"  type = "double" value = "1.0"   />
       <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />
-      <param name = "loop_rate"               type = "double" value = "40.0"  />
+      <param name = "loop_rate"               type = "double" value = "100.0"  />
       <param name = "pose_topic"              type = "string" value = "pose"  />
       <param name = "tf_base_frame"           type = "string" value = "/map"  />
       <param name = "tf_child_frame"          type = "string" value = "laser" />
-      <param name = "truncation_radius"       type = "double" value = "2.0"   />
+      <param name = "truncation_radius"       type = "int" value = "5"   />
       <param name = "object_inflation_factor" type = "int"    value = "0"     />
-      <param name = "use_object_inflation"    type = "bool"   value = "false" />
+      <param name = "use_object_inflation"    type = "bool"   value = "false" /> 
       <param name = "map_topic"               type = "string" value = "/map"  />
       <param name = "get_map_topic"           type = "string" value = "/map"  /> 
-      <param name = "footprint_width"         type = "double" value = "1.0"  />	
-	  <param name = "footprint_height"        type = "double" value = "1.0"  />
-	  <param name = "footprint_x_offset"      type = "double" value = "-0.5" /> 
-	  <param name = "use_icpsac"              type = "bool"   value = "true"  />
-	  <param name = "dist_filter_max"         type = "double" value = "0.2"   />
-      <param name = "dist_filter_min"         type = "double" value = "0.01"  /> 
-	  <param name = "icp_iterations"          type = "int"    value = "25"    />
-	  <param name = "reg_trs_max"             type = "double" value = "1.25"  />
-	  <param name = "reg_sin_rot_max"         type = "double" value = "0.9"   />
-	</node>
+      <param name = "footprint_width"         type = "double" value = "1.0"   />	
+	  <param name = "footprint_height"        type = "double" value = "1.0"   />
+      <param name = "footprint_x_offset"      type = "double" value = "-0.5"  /> 
+	  <param name = "registration_mode"       type = "int"    value = "1"     />
+	  <param name = "dist_filter_max"         type = "double" value = "1.0"   />
+      <param name = "dist_filter_min"         type = "double" value = "0.01"   /> 
+	  <param name = "icp_iterations"          type = "int"    value = "50"    />
+	  <param name = "reg_trs_max"             type = "double" value = "1.0"   />
+	  <param name = "reg_sin_rot_max"         type = "double" value = "0.5"   /> 	 
+	  <param name = "ransac_trials"           type = "int"    value = "20"    />	
+	  <param name = "ransac_eps_thresh"	      type = "double" value = "0.15"  />
+	  <param name = "ransac_ctrlset_size"	  type = "int"    value = "180"   />
+	  <param name = "ransac_phi_max"          type = "double" value = "45.0"  />
+  </node>
 </launch>
+

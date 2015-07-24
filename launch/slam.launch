@@ -34,7 +34,7 @@
          <param name = "footprint_height"        type = "double" value = "1.0"   />    <!-- length of robot in meters            -->
          <param name = "footprint_x_offset"      type = "double" value = "-0.5"  />    <!-- offset of laser in meters            -->
   
-         <!-- parameters for registration -->
+         <!-- ICP parameters -->
          <param name = "registration_mode"       type = "int"    value = "1"     />    <!-- 0: ICP    1: RANSAC -->
          <param name = "dist_filter_max"         type = "double" value = "1.0"   />    <!-- maximum distance for matching points -->
          <param name = "dist_filter_min"         type = "double" value = "0.01"  />    <!-- minimum distance for matching points -->

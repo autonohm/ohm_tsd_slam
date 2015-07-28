@@ -15,7 +15,7 @@
 
 namespace ohm_tsd_slam
 {
-SlamNode::SlamNode(void)
+SlamNode::SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource source)
 {
   ros::NodeHandle prvNh("~");
   int iVar                   = 0;
@@ -25,6 +25,7 @@ SlamNode::SlamNode(void)
   double cellSize            = 0.0;
   unsigned int octaveFactor  = 0;
   std::string topicLaser;
+  std::string storeMapTopic;
   prvNh.param<int>("robot_nbr", iVar, 1);
   unsigned int robotNbr = static_cast<unsigned int>(iVar);
   prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
@@ -37,23 +38,36 @@ SlamNode::SlamNode(void)
   prvNh.param<double>("occ_grid_time_interval", gridPublishInterval, 2.0);
   prvNh.param<double>("loop_rate", loopRateVar, 40.0);
   prvNh.param<std::string>("laser_topic", topicLaser, "scan");
+  prvNh.param<std::string>("store_map_topic", storeMapTopic, "store_map");
 
-  _loopRate = new ros::Rate(loopRateVar);
-  _gridInterval = new ros::Duration(gridPublishInterval);
+  _loopRate       = new ros::Rate(loopRateVar);
+  _gridInterval   = new ros::Duration(gridPublishInterval);
+  _storeMapServer = _nh.advertiseService(storeMapTopic, &SlamNode::storeMapServiceCallBack, this);
 
-  if(octaveFactor > 15)
+  if(content.size())
   {
-    ROS_ERROR_STREAM("Error! Unknown cell_octave_factor -> set to default!" << std::endl);
-    octaveFactor = 10;
+    ROS_INFO_STREAM("Node in localize only mode" << std::endl);
+    _grid = new obvious::TsdGrid(content, source);
+    _localizeOnly = true;
+    ROS_INFO_STREAM("Load map with " << _grid->getCellsX() << " x " << _grid->getCellsY() << " cells, " << _grid->getCellSize() <<
+                    " cellsize" << std::endl);
   }
-  //instanciate representation
-  _grid = new obvious::TsdGrid(cellSize, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(octaveFactor));  //obvious::LAYOUT_8192x8192
-  _grid->setMaxTruncation(truncationRadius * cellSize);
-  unsigned int cellsPerSide = pow(2, octaveFactor);
-  double sideLength = static_cast<double>(cellsPerSide) * cellSize;
-  ROS_INFO_STREAM("Creating representation with " << cellsPerSide << "x" << cellsPerSide << "cells, representating " <<
-                  sideLength << "x" << sideLength << "m^2" << std::endl);
-  //instanciate mapping threads
+  else
+  {
+    ROS_INFO_STREAM("Slam node started" << std::endl);
+    if(octaveFactor > 15)
+    {
+      ROS_ERROR_STREAM("Error! Unknown cell_octave_factor -> set to default!" << std::endl);
+      octaveFactor = 10;
+    }
+    _grid        = new obvious::TsdGrid(cellSize, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(octaveFactor));
+    _grid->setMaxTruncation(truncationRadius * cellSize);
+    _localizeOnly = false;
+    unsigned int cellsPerSide = std::pow(2, octaveFactor);
+    double sideLength = static_cast<double>(cellsPerSide) * cellSize;
+    ROS_INFO_STREAM("Creating representation with " << cellsPerSide << "x" << "cellsPerSide cells, representating " <<
+        sideLength << "x" << sideLength << "m^2" << std::endl);
+  }
   _threadMapping = new ThreadMapping(_grid);
   _threadGrid    = new ThreadGrid(_grid, &_nh, _xOffFactor, _yOffFactor);
 
@@ -127,13 +141,18 @@ void SlamNode::timedGridPub(void)
 
 void SlamNode::run(void)
 {
-  ROS_INFO_STREAM("Waiting for first laser scan to initialize node...\n");
+  //ROS_INFO_STREAM("Waiting for first laser scan to initialize node...\n");
   while(ros::ok())
   {
     ros::spinOnce();
     this->timedGridPub();
     _loopRate->sleep();
   }
+}
+
+bool SlamNode::storeMapServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+{
+  return _threadGrid->requestStoreTsdGrid();
 }
 
 } /* namespace ohm_tsd_slam */

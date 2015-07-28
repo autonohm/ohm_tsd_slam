@@ -10,13 +10,13 @@
 namespace ohm_tsd_slam
 {
 ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffFactor, const double yOffFactor):
-        ThreadSLAM(*grid),
-        _occGrid(new nav_msgs::OccupancyGrid),
-        _occGridContent(new char[grid->getCellsX() * grid->getCellsY()]),
-        _gridCoords(new double[grid->getCellsX() * grid->getCellsY()]),
-        _width(grid->getCellsX()),
-        _height(grid->getCellsY()),
-        _cellSize(grid->getCellSize())
+                ThreadSLAM(*grid),
+                _occGrid(new nav_msgs::OccupancyGrid),
+                _occGridContent(new char[grid->getCellsX() * grid->getCellsY()]),
+                _gridCoords(new double[grid->getCellsX() * grid->getCellsY()]),
+                _width(grid->getCellsX()),
+                _height(grid->getCellsY()),
+                _cellSize(grid->getCellSize())
 
 {
   for(unsigned int i = 0; i < _grid.getCellsX() * _grid.getCellsY(); ++i)
@@ -43,6 +43,7 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
   prvNh.param("get_map_topic", getMapTopic, std::string("map"));
   prvNh.param<int>("object_inflation_factor", intVar, 2);
   prvNh.param<bool>("use_object_inflation", _objectInflation, false);
+  prvNh.param<std::string>("store_grid_path", _storeGridPath, "tsd_grid.dat");
 
   _gridPub          = nh->advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
   _getMapServ       = nh->advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
@@ -57,6 +58,23 @@ ThreadGrid::~ThreadGrid()
   delete _occGridContent;
   delete _gridCoords;
 }
+
+bool ThreadGrid::requestStoreTsdGrid(void)
+{
+  _storeGridMutex.lock();
+  if(_storeTsdGridRequest)
+  {
+    _storeGridMutex.unlock();
+    return false;
+  }
+  else
+  {
+    _storeTsdGridRequest = true;
+    _storeGridMutex.unlock();
+    return true;
+  }
+}
+
 
 void ThreadGrid::eventLoop(void)
 {
@@ -102,6 +120,16 @@ void ThreadGrid::eventLoop(void)
       }
     }
     _gridPub.publish(*_occGrid);
+    _storeGridMutex.lock();
+    if(_storeTsdGridRequest)
+    {
+      if(!_grid.storeGrid(_storeGridPath))
+      {
+        ROS_ERROR_STREAM("Error! Storing of grid at " << _storeGridPath << " failed!" << std::endl);
+      }
+      _storeTsdGridRequest = false;
+    }
+    _storeGridMutex.unlock();
   }
 }
 

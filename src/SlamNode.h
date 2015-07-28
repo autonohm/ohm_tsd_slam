@@ -2,6 +2,7 @@
 #define SLAMNODE_H_
 
 #include <ros/ros.h>
+#include <std_srvs/Empty.h>
 
 #include <vector>
 
@@ -28,10 +29,12 @@ class SlamNode
 {
 public:
 
-  /**
-   * Default constructor
-   */
-  SlamNode(void);
+/**
+ * Default constructor
+ * @param content if string is valid, tsdgrid loads from this string
+ * @param source decides whether content string contains filename or data
+ */
+  SlamNode(const std::string& content = "", obvious::EnumTsdGridLoadSource source = obvious::FILE_SOURCE);
 
   /**
    * Destructor
@@ -57,10 +60,14 @@ private:
    */
   void timedGridPub(void);
 
+  bool storeMapServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
+
   /**
    * Main node handle
    */
   ros::NodeHandle _nh;
+
+  ros::ServiceServer _storeMapServer;
 
   /**
    * Representation
@@ -102,11 +109,12 @@ private:
    */
   std::vector<ros::Subscriber> _subsLaser;
 
-
   /**
    * Localizing threads
    */
   std::vector<ThreadLocalize*> _localizers;
+
+  bool _localizeOnly;
 };
 
 } /* namespace ohm_tsd_slam */

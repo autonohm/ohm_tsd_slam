@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   tf
+  std_srvs
 )
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall")
@@ -123,8 +124,15 @@ add_executable(slam_node src/slam_node.cpp
                                  src/ThreadMapping.cpp
                                  src/ThreadGrid.cpp
                                  )
-
-                                  
+                                 
+add_executable(localize_node src/localize_node.cpp
+                                 src/SlamNode.cpp
+                                 src/ThreadLocalize.cpp
+                                 src/ThreadSLAM.cpp
+                                 src/ThreadMapping.cpp
+                                 src/ThreadGrid.cpp
+                                 )                                 
+                       
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 
@@ -133,6 +141,17 @@ add_executable(slam_node src/slam_node.cpp
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(slam_node
+                                 ${catkin_LIBRARIES}
+                                 obvision
+                                 obcore
+                                 gsl
+                                 gslcblas
+                                 ann
+                                 flann
+                                 ${Boost_LIBRARIES}
+                                 )
+                                 
+target_link_libraries(localize_node
                                  ${catkin_LIBRARIES}
                                  obvision
                                  obcore
@@ -158,7 +177,7 @@ target_link_libraries(slam_node
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS slam_node
+install(TARGETS slam_node localize_node
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -175,6 +194,8 @@ install(TARGETS slam_node
  install(FILES
     launch/slam.launch
     launch/multi_slam.launch
+    launch/local.launch
+    launch/slam_omron.launch
 #   # myfile2
    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
  )

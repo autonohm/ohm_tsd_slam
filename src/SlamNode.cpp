@@ -24,11 +24,17 @@ SlamNode::SlamNode(void)
   double truncationRadius    = 0.0;
   double cellSize            = 0.0;
   unsigned int octaveFactor  = 0;
+  double xOffset = 0.0;
+  double yOffset = 0.0;
   std::string topicLaser;
   prvNh.param<int>("robot_nbr", iVar, 1);
   unsigned int robotNbr = static_cast<unsigned int>(iVar);
   prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
   prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
+  prvNh.param<double>("x_offset", xOffset, 0.0);
+  prvNh.param<double>("y_offset", yOffset, 0.0);
+
+
   prvNh.param<int>("cell_octave_factor", iVar, 10);
   octaveFactor = static_cast<unsigned int>(iVar);
   prvNh.param<double>("cellsize", cellSize, 0.025);
@@ -55,7 +61,7 @@ SlamNode::SlamNode(void)
                   sideLength << "x" << sideLength << "m^2" << std::endl);
   //instanciate mapping threads
   _threadMapping = new ThreadMapping(_grid);
-  _threadGrid    = new ThreadGrid(_grid, &_nh, _xOffFactor, _yOffFactor);
+  _threadGrid    = new ThreadGrid(_grid, &_nh, xOffset, yOffset);
 
   ThreadLocalize* threadLocalize = NULL;
   ros::Subscriber subs;
@@ -65,7 +71,7 @@ SlamNode::SlamNode(void)
   if(robotNbr == 1)  //single slam
   {
     nameSpace = "";   //empty namespace
-    threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_nh, nameSpace, _xOffFactor, _yOffFactor);
+    threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_nh, nameSpace, xOffset, yOffset);
     subs = _nh.subscribe(topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
     _subsLaser.push_back(subs);
     _localizers.push_back(threadLocalize);
@@ -80,7 +86,7 @@ SlamNode::SlamNode(void)
       sstream << i << "/namespace";
       std::string dummy = sstream.str();
       prvNh.param(dummy, nameSpace, std::string("default_ns"));
-      threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_nh, nameSpace, _xOffFactor, _yOffFactor);
+      threadLocalize = new ThreadLocalize(_grid,_threadMapping, &_nh, nameSpace, xOffset, yOffset);
       subs = _nh.subscribe(nameSpace + "/" + topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
       _subsLaser.push_back(subs);
       _localizers.push_back(threadLocalize);

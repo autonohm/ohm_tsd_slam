@@ -27,7 +27,7 @@ namespace ohm_tsd_slam
 {
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
-    const double xOffFactor, const double yOffFactor):
+    const double xOffset, const double yOffset):
                     ThreadSLAM(*grid),
                     _nh(nh),
                     _mapper(*mapper),
@@ -35,10 +35,10 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
                     _initialized(false),
                     _gridWidth(grid->getCellsX() * grid->getCellSize()),
                     _gridHeight(grid->getCellsY() * grid->getCellSize()),
-                    _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-                    _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
-                    _xOffFactor(xOffFactor),
-                    _yOffFactor(yOffFactor),
+                    _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
+                    _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
+                    _xOffset(xOffset),
+                    _yOffset(yOffset),
                     _nameSpace(nameSpace)
 {
   ros::NodeHandle prvNh("~");
@@ -267,8 +267,8 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   prvNh.param<double>(_nameSpace + "/footprint_x_offset"    , footPrintXoffset    , 0.28);
 
   const double phi    = yawOffset;
-  const double startX = _gridWidth * _xOffFactor + xOffset;
-  const double startY = _gridWidth * _yOffFactor + yOffset;
+  const double startX = _gridWidth * 0.5 + _xOffset + xOffset;
+  const double startY = _gridWidth * 0.5 + _yOffset + yOffset;
   double tf[9]  = {std::cos(phi), -std::sin(phi), startX,
       std::sin(phi),  std::cos(phi), startY,
       0,              0,      1};

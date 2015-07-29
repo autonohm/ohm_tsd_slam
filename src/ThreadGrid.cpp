@@ -9,7 +9,7 @@
 
 namespace ohm_tsd_slam
 {
-ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffFactor, const double yOffFactor):
+ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffset, const double yOffset):
         ThreadSLAM(*grid),
         _occGrid(new nav_msgs::OccupancyGrid),
         _occGridContent(new char[grid->getCellsX() * grid->getCellsY()]),
@@ -29,8 +29,8 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
   _occGrid->info.origin.orientation.x = 0.0;
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;
-  _occGrid->info.origin.position.x    = 0.0 - _grid.getCellsX() * _grid.getCellSize() * xOffFactor;
-  _occGrid->info.origin.position.y    = 0.0 - _grid.getCellsY() * _grid.getCellSize() * yOffFactor;
+  _occGrid->info.origin.position.x    = 0.0 - (_grid.getCellsX() * _grid.getCellSize() * 0.5 + xOffset);
+  _occGrid->info.origin.position.y    = 0.0 - (_grid.getCellsY() * _grid.getCellSize() * 0.5 + yOffset);
   _occGrid->info.origin.position.z    = 0.0;
   _occGrid->data.resize(_grid.getCellsX() * _grid.getCellsY());
 

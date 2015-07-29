@@ -12,6 +12,7 @@
 	
   <node name = "localize_node" pkg = "ohm_tsd_slam" type = "localize_node" output = "screen">
   	  <param name ="data_source"              type = "string" value="/home/phil/.ros/tsd_grid.dat"/>
+  	  <param name ="data_path" trype = "string" value = "/home/user/.ros/tsd_grid.dat"/>
       <param name = "laser_topic"             type = "string" value = "filtered_scan"  />
       <param name = "x_off_factor"            type = "double" value = "0.5"   />
       <param name = "y_off_factor"            type = "double" value = "0.5"   />

@@ -34,7 +34,7 @@ int main(int argc, char** argv)
   ros::NodeHandle prvNh("~");
   ros::NodeHandle nh;
   ros::Subscriber tsdgridDataSubs;
-  prvNh.param<std::string>("data_source", dataPath, "/home/phil/.ros/tsd_grid.dat");
+  prvNh.param<std::string>("data_source", dataPath, "/home/user/.ros/tsd_grid.dat");
   prvNh.param<bool>("call_hive", hiveSource, false);
   ohm_tsd_slam::SlamNode* localizeNode = NULL;
   if(hiveSource)
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
   }
   else
   {
-    prvNh.param<std::string>("data_path", dataPath, "/home/phil/.ros/tsd_grid.dat");
+    prvNh.param<std::string>("data_path", dataPath, "/home/user/.ros/tsd_grid.dat");
     localizeNode = new ohm_tsd_slam::SlamNode(dataPath, obvious::FILE_SOURCE);
     tsdgridDataSubs.shutdown();
   }

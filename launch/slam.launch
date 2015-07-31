@@ -11,7 +11,7 @@
          <param name = "y_offset"                type = "double" value = "0.0"   />    <!-- offset of robot in map in meters     -->
          <param name = "yaw_offset"              type = "double" value = "0.0"   />    <!-- offset of yaw                        -->
          
-         <param name = "cell_octave_factor"      type = "int"    value = "13"    />    <!-- map size                             -->
+         <param name = "map_size"      type = "int"    value = "13"    />    <!-- map size                             -->
          <param name = "cellsize"                type = "double" value = "0.015" />    <!-- cell size in meters                  -->
          <param name = "truncation_radius"       type = "int"    value = "5"     />    <!-- radius as factor of cell size        -->
          <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />    <!-- frequency to publish map             -->

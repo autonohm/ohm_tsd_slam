@@ -3,7 +3,7 @@
   	<param name = "robot_nbr" type = "int" value = "2"/>
     <param name = "x_off_factor"            type = "double" value = "0.7"   />
     <param name = "y_off_factor"            type = "double" value = "0.6"   />  	
-    <param name = "cell_octave_factor"      type = "int"    value = "13"    />
+    <param name = "map_size"      type = "int"    value = "13"    />
     <param name = "cellsize"                type = "double" value = "0.015" />
     <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
     <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />

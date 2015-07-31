@@ -35,7 +35,7 @@ SlamNode::SlamNode(void)
   prvNh.param<double>("y_offset", yOffset, 0.0);
 
 
-  prvNh.param<int>("cell_octave_factor", iVar, 10);
+  prvNh.param<int>("map_size", iVar, 10);
   octaveFactor = static_cast<unsigned int>(iVar);
   prvNh.param<double>("cellsize", cellSize, 0.025);
   prvNh.param<int>("truncation_radius", iVar, 3);
@@ -49,7 +49,7 @@ SlamNode::SlamNode(void)
 
   if(octaveFactor > 15)
   {
-    ROS_ERROR_STREAM("Error! Unknown cell_octave_factor -> set to default!" << std::endl);
+    ROS_ERROR_STREAM("Error! Unknown map size -> set to default!" << std::endl);
     octaveFactor = 10;
   }
   //instanciate representation

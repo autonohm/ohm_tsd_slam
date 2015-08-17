@@ -42,7 +42,7 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
   prvNh.param("map_topic", mapTopic, std::string("map"));
   prvNh.param("get_map_topic", getMapTopic, std::string("map"));
   prvNh.param<int>("object_inflation_factor", intVar, 2);
-  prvNh.param<bool>("use_object_inflation", _objectInflation, false);
+  prvNh.param<bool>("use_object_inflation", _objectInflation, false);  //toDo: exchange with if inflation > 0
 
   _gridPub          = nh->advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
   _getMapServ       = nh->advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);

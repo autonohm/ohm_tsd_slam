@@ -174,8 +174,7 @@ install(TARGETS slam_node
 ## Mark other files for installation (e.g. launch and bag files, etc.)
  install(FILES
     launch/slam.launch
-    launch/multi_slam.launch
-#   # myfile2
+#   launch/multi_slam.launch
    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
  )
 

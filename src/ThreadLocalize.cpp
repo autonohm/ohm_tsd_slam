@@ -35,8 +35,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
                     _initialized(false),
                     _gridWidth(grid->getCellsX() * grid->getCellSize()),
                     _gridHeight(grid->getCellsY() * grid->getCellSize()),
-                    _gridOffSetX(-1.0 * grid->getCellsX() * grid->getCellSize() * xOffFactor),
-                    _gridOffSetY(-1.0 * grid->getCellsY()* grid->getCellSize() * yOffFactor),
+                    _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffFactor)),
+                    _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffFactor)),
                     _xOffFactor(xOffFactor),
                     _yOffFactor(yOffFactor),
                     _nameSpace(nameSpace)
@@ -267,8 +267,8 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   prvNh.param<double>(_nameSpace + "/footprint_x_offset"    , footPrintXoffset    , 0.28);
 
   const double phi    = yawOffset;
-  const double startX = _gridWidth * _xOffFactor + xOffset;
-  const double startY = _gridWidth * _yOffFactor + yOffset;
+  const double startX = _gridWidth * 0.5 + _xOffFactor + xOffset;
+  const double startY = _gridHeight * 0.5 + _yOffFactor + yOffset;
   double tf[9]  = {std::cos(phi), -std::sin(phi), startX,
       std::sin(phi),  std::cos(phi), startY,
       0,              0,      1};

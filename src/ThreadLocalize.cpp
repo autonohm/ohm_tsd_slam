@@ -28,18 +28,18 @@ namespace ohm_tsd_slam
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffFactor, const double yOffFactor):
-                    ThreadSLAM(*grid),
-                    _nh(nh),
-                    _mapper(mapper),
-                    _sensor(NULL),
-                    _initialized(false),
-                    _gridWidth(grid->getCellsX() * grid->getCellSize()),
-                    _gridHeight(grid->getCellsY() * grid->getCellSize()),
-                    _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffFactor)),
-                    _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffFactor)),
-                    _xOffFactor(xOffFactor),
-                    _yOffFactor(yOffFactor),
-                    _nameSpace(nameSpace)
+                        ThreadSLAM(*grid),
+                        _nh(nh),
+                        _mapper(mapper),
+                        _sensor(NULL),
+                        _initialized(false),
+                        _gridWidth(grid->getCellsX() * grid->getCellSize()),
+                        _gridHeight(grid->getCellsY() * grid->getCellSize()),
+                        _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffFactor)),
+                        _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffFactor)),
+                        _xOffFactor(xOffFactor),
+                        _yOffFactor(yOffFactor),
+                        _nameSpace(nameSpace)
 {
   ros::NodeHandle prvNh("~");
 
@@ -281,13 +281,13 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
 
   _sensor->setStandardMask();
   _sensor->transform(&Tinit);
-  obfloat t[2] = {startX + footPrintXoffset, startY};
-  if(!_grid.freeFootprint(t, footPrintWidth, footPrintHeight))
-    ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") warning! Footprint could not be freed!\n");
   if(_mapper)
   {
-  if(!_mapper->initialized())
-    _mapper->initPush(_sensor);
+    obfloat t[2] = {startX + footPrintXoffset, startY};
+    if(!_grid.freeFootprint(t, footPrintWidth, footPrintHeight))
+      ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") warning! Footprint could not be freed!\n");
+    if(!_mapper->initialized())
+      _mapper->initPush(_sensor);
   }
   _initialized = true;
   this->unblock();
@@ -303,23 +303,23 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     const bool experimental
 )
 {
-//  const unsigned int measurementSize = sensor->getRealMeasurementSize();
+  //  const unsigned int measurementSize = sensor->getRealMeasurementSize();
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
 
   // RANSAC pre-registration (rough)
   if(experimental)
   {
-//    const unsigned int factor = 4;//_ransacReduceFactor;
-//    const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270  toDo: this could result in wrong calculations..round?
-//    obvious::Matrix Sreduced(reducedSize, 2);
-//    obvious::Matrix Mreduced(reducedSize, 2);
-//    bool* maskSRed = new bool[reducedSize];
-//    bool* maskMRed = new bool[reducedSize];
+    //    const unsigned int factor = 4;//_ransacReduceFactor;
+    //    const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270  toDo: this could result in wrong calculations..round?
+    //    obvious::Matrix Sreduced(reducedSize, 2);
+    //    obvious::Matrix Mreduced(reducedSize, 2);
+    //    bool* maskSRed = new bool[reducedSize];
+    //    bool* maskMRed = new bool[reducedSize];
     //if(0)// factor != 1)
 
-//    reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
-//    reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
+    //    reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
+    //    reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
 
     //std::cout << __PRETTY_FUNCTION__ << " trials " << _ranTrials << " epsthresh " << _ranEpsThresh << " sizectrlset " << _ranSizeCtrlSet << std::endl;
     obvious::RandomNormalMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);

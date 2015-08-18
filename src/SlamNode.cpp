@@ -70,6 +70,8 @@ SlamNode::SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource so
   }
   if(!_localizeOnly)
     _threadMapping = new ThreadMapping(_grid);
+  else
+    _threadMapping = NULL;
   _threadGrid    = new ThreadGrid(_grid, &_nh, _xOffFactor, _yOffFactor);
 
   ThreadLocalize* threadLocalize = NULL;

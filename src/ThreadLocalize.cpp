@@ -115,6 +115,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _poseStamped.header.frame_id = tfBaseFrameId;
   _tf.frame_id_                = tfBaseFrameId;
   _tf.child_frame_id_          = _nameSpace + tfChildFrameId;
+
+  _reverseScan = false;
 }
 
 ThreadLocalize::~ThreadLocalize()
@@ -156,7 +158,12 @@ void ThreadLocalize::eventLoop(void)
     }
 
     _dataMutex.lock();
-    _sensor->setRealMeasurementData(_laserData.front()->ranges);
+
+    vector<float> ranges = _laserData.front()->ranges;
+    if(_reverseScan)
+      std::reverse(ranges.begin(),ranges.end());
+
+    _sensor->setRealMeasurementData(ranges);
     _sensor->setStandardMask();
 
     for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
@@ -275,8 +282,19 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   obvious::Matrix Tinit(3, 3);
   Tinit.setData(tf);
 
-  _sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, maxRange, minRange, lowReflectivityRange);
-  _sensor->setRealMeasurementData(scan.ranges, 1.0);
+  double inc = scan.angle_increment;
+  double angle_min = scan.angle_min;
+  vector<float> ranges = scan.ranges;
+
+  if(scan.angle_increment<0.0 && scan.angle_min>0)
+  {
+    _reverseScan = true;
+    inc = -inc;
+    angle_min = -angle_min;
+    std::reverse(ranges.begin(),ranges.end());
+  }
+  _sensor = new obvious::SensorPolar2D(ranges.size(), inc, angle_min, maxRange, minRange, lowReflectivityRange);
+  _sensor->setRealMeasurementData(ranges, 1.0);
 
   _sensor->setStandardMask();
   _sensor->transform(&Tinit);

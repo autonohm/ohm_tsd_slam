@@ -375,6 +375,11 @@ private:
    * Ros current transform
    */
   tf::StampedTransform _tf;
+
+  /**
+   * Scan passed in clockwise rotation (mathematically negative increment)
+   */
+  bool _reverseScan;
 };
 
 

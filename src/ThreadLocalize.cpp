@@ -236,7 +236,8 @@ void ThreadLocalize::eventLoop(void)
       if(this->isPoseChangeSignificant(_lastPose, &curPose))
       {
         *_lastPose = curPose;
-        _mapper.queuePush(_sensor);
+        if(_mapper)
+          _mapper.queuePush(_sensor);
       }
     }
   }

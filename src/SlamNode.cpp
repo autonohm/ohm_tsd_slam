@@ -68,7 +68,8 @@ SlamNode::SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource so
     ROS_INFO_STREAM("Creating representation with " << cellsPerSide << "x" << "cellsPerSide cells, representating " <<
         sideLength << "x" << sideLength << "m^2" << std::endl);
   }
-  _threadMapping = new ThreadMapping(_grid);
+  if(!_localizeOnly)
+    _threadMapping = new ThreadMapping(_grid);
   _threadGrid    = new ThreadGrid(_grid, &_nh, _xOffFactor, _yOffFactor);
 
   ThreadLocalize* threadLocalize = NULL;

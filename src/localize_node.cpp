@@ -23,10 +23,6 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "localize_node");
   LOGMSG_CONF("slamlog.log", obvious::Logger::file_off|obvious::Logger::screen_on, DBG_DEBUG, DBG_ERROR);
-  if(ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
-  {
-    ros::console::notifyLoggerLevelsChanged();
-  }
 
   std::string dataPath;                     //toDo: integrate sevice call to hive
   std::string tsdDataTopic;

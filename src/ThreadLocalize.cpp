@@ -30,7 +30,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
     const double xOffFactor, const double yOffFactor):
                     ThreadSLAM(*grid),
                     _nh(nh),
-                    _mapper(*mapper),
+                    _mapper(mapper),
                     _sensor(NULL),
                     _initialized(false),
                     _gridWidth(grid->getCellsX() * grid->getCellSize()),
@@ -237,7 +237,7 @@ void ThreadLocalize::eventLoop(void)
       {
         *_lastPose = curPose;
         if(_mapper)
-          _mapper.queuePush(_sensor);
+          _mapper->queuePush(_sensor);
       }
     }
   }
@@ -284,8 +284,11 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   obfloat t[2] = {startX + footPrintXoffset, startY};
   if(!_grid.freeFootprint(t, footPrintWidth, footPrintHeight))
     ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") warning! Footprint could not be freed!\n");
-  if(!_mapper.initialized())
-    _mapper.initPush(_sensor);
+  if(_mapper)
+  {
+  if(!_mapper->initialized())
+    _mapper->initPush(_sensor);
+  }
   _initialized = true;
   this->unblock();
 }

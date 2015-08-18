@@ -191,7 +191,7 @@ private:
   /**
    * Pointer to mapping thread
    */
-  ThreadMapping& _mapper;
+  ThreadMapping* const _mapper;
 
   /**
    * Sensor container for handeling the current laser input and pose

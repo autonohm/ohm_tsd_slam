@@ -69,6 +69,9 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<double>(_nameSpace + "dist_filter_max", distFilterMax, DIST_FILT_MAX);
   prvNh.param<int>(_nameSpace + "icp_iterations", icpIterations, ICP_ITERATIONS);
 
+  ROS_INFO_STREAM("Localizer(" << nameSpace << ") setting the three most important parameters to:\n\t\ticp_iter = " << icpIterations <<
+                  "\n\t\tdust_filt_min = " << distFilterMin << "\n\t\t" << distFilterMax << std::endl);
+
   //Maximum allowed offset between to aligned scans
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
@@ -85,6 +88,11 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   int iVar = 0;
   prvNh.param<int>(_nameSpace + "registration_mode", iVar, ICP);
   _regMode = static_cast<EnumRegModes>(iVar);
+
+  if(_regMode == ICP)
+    ROS_INFO_STREAM("Localizer (" << nameSpace << ") in icp mode" << std::endl);
+  else if(_regMode == EXP)
+    ROS_INFO_STREAM("Localizer (" << nameSpace << ") in icpsac mode" << std::endl);
 
   _modelCoords  = NULL;
   _modelNormals = NULL;

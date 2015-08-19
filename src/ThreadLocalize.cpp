@@ -250,7 +250,7 @@ void ThreadLocalize::eventLoop(void)
         }
       }
     }
-    ROS_INFO_STREAM("Localizer (" << _nameSpace << "localize loop elapsed " << (ros::Time::now() - loopTimer).toSec() << " (s) " << std::endl);
+    ROS_INFO_STREAM("Localizer (" << _nameSpace << "localize loop elapsed " << (ros::Time::now() - loopTimer).toNSec() * 10e-9 << " (s) " << std::endl);
   }
 }
 

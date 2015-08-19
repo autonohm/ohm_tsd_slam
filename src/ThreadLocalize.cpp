@@ -28,18 +28,18 @@ namespace ohm_tsd_slam
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffFactor, const double yOffFactor):
-                        ThreadSLAM(*grid),
-                        _nh(nh),
-                        _mapper(mapper),
-                        _sensor(NULL),
-                        _initialized(false),
-                        _gridWidth(grid->getCellsX() * grid->getCellSize()),
-                        _gridHeight(grid->getCellsY() * grid->getCellSize()),
-                        _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffFactor)),
-                        _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffFactor)),
-                        _xOffFactor(xOffFactor),
-                        _yOffFactor(yOffFactor),
-                        _nameSpace(nameSpace)
+                            ThreadSLAM(*grid),
+                            _nh(nh),
+                            _mapper(mapper),
+                            _sensor(NULL),
+                            _initialized(false),
+                            _gridWidth(grid->getCellsX() * grid->getCellSize()),
+                            _gridHeight(grid->getCellsY() * grid->getCellSize()),
+                            _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffFactor)),
+                            _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffFactor)),
+                            _xOffFactor(xOffFactor),
+                            _yOffFactor(yOffFactor),
+                            _nameSpace(nameSpace)
 {
   ros::NodeHandle prvNh("~");
 
@@ -70,7 +70,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<int>(_nameSpace + "icp_iterations", icpIterations, ICP_ITERATIONS);
 
   ROS_INFO_STREAM("Localizer(" << nameSpace << ") setting the three most important parameters to:\n\t\ticp_iter = " << icpIterations <<
-                  "\n\t\tdust_filt_min = " << distFilterMin << "\n\t\t" << distFilterMax << std::endl);
+      "\n\t\tdist_filt_min = " << distFilterMin << "\n\t\tdist_filte_max = " << distFilterMax << std::endl);
 
   //Maximum allowed offset between to aligned scans
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
@@ -162,7 +162,7 @@ void ThreadLocalize::eventLoop(void)
     {
       _sleepCond.wait(_sleepMutex);
     }
-
+    ros::Time loopTimer = ros::Time::now();
     _dataMutex.lock();
     _sensor->setRealMeasurementData(_laserData.front()->ranges);
     _sensor->setStandardMask();
@@ -241,13 +241,16 @@ void ThreadLocalize::eventLoop(void)
       obvious::Matrix curPose = _sensor->getTransformation();
       sendTransform(&curPose);
       /** Update MAP if necessary */
-      if(this->isPoseChangeSignificant(_lastPose, &curPose))
+      if(_mapper)
       {
-        *_lastPose = curPose;
-        if(_mapper)
+        if(this->isPoseChangeSignificant(_lastPose, &curPose))
+        {
+          *_lastPose = curPose;
           _mapper->queuePush(_sensor);
+        }
       }
     }
+    ROS_INFO_STREAM("Localizer (" << _nameSpace << "localize loop elapsed " << (ros::Time::now() - loopTimer).toSec() << " (s) " << std::endl);
   }
 }
 

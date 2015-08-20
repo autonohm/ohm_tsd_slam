@@ -16,9 +16,9 @@
   	<param name = "robot0/namespace"               type = "string" value = "georg" />
   	<param name = "/georg/tf_child_frame"          type = "string" value = "laser" />
   	<param name = "/georg/pose_topic"              type = "string" value = "pose"  />
-    <param name = "/georg/x_offset"                type = "double" value = "0.0"   />
-	<param name = "/georg/y_offset"                type = "double" value = "0.0"   />
-	<param name = "/georg/yaw_offset"              type = "double" value = "0.0"   />
+    <param name = "/georg/local_offset_x"          type = "double" value = "0.0"   />
+	<param name = "/georg/local_offset_y"          type = "double" value = "0.0"   />
+	<param name = "/georg/local_offset_yaw"        type = "double" value = "0.0"   />
 	<param name = "/georg/footprint_width"         type = "double" value = "1.0"   />
 	<param name = "/georg/footprint_height"        type = "double" value = "1.0"   />
     <param name = "/georg/footprint_x_offset"      type = "double" value = "-0.5"  />
@@ -37,9 +37,9 @@
   	<param name = "robot1/namespace"               type = "string" value = "simon" />
 	<param name = "/simon/tf_child_frame"          type = "string" value = "laser" />
 	<param name = "/simon/pose_topic"              type = "string" value = "pose"  />
-	<param name = "/simon/x_offset"                type = "double" value = "-0.7"  />
-    <param name = "/simon/y_offset"                type = "double" value = "0.0"   />
-	<param name = "/simon/yaw_offset"              type = "double" value = "0.0"   />
+	<param name = "/simon/local_offset_x"          type = "double" value = "-0.7"  />
+    <param name = "/simon/local_offset_y"          type = "double" value = "0.0"   />
+	<param name = "/simon/local_offset_yaw"        type = "double" value = "0.0"   />
 	<param name = "/simon/footprint_width"         type = "double" value = "1.0"   />
 	<param name = "/simon/footprint_height"        type = "double" value = "1.0"   />
     <param name = "/simon/footprint_x_offset"      type = "double" value = "-0.5"  />

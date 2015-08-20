@@ -45,7 +45,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
   _nameSpace = nameSpace;
-  if(_nameSpace.size())   //given namespace
+  std::string::iterator it = _nameSpace.end() - 1;
+  if (*it != '/' && _nameSpace.size()>0)
     _nameSpace += "/";
 
   //pose
@@ -263,15 +264,15 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
 
   ros::NodeHandle prvNh("~");
 
-  prvNh.param<double>(_nameSpace + "/x_offset"              , xOffset             , 0.0);
-  prvNh.param<double>(_nameSpace + "/y_offset"              , yOffset             , 0.0);
-  prvNh.param<double>(_nameSpace + "/yaw_offset"            , yawOffset           , 0.0);
-  prvNh.param<double>(_nameSpace + "/max_range"             , maxRange            , 30.0);
-  prvNh.param<double>(_nameSpace + "/min_range"             , minRange            , 0.001);
-  prvNh.param<double>(_nameSpace + "/low_reflectivity_range", lowReflectivityRange, 2.0);
-  prvNh.param<double>(_nameSpace + "/footprint_width"       , footPrintWidth      , 1.0);
-  prvNh.param<double>(_nameSpace + "/footprint_height"      , footPrintHeight     , 1.0);
-  prvNh.param<double>(_nameSpace + "/footprint_x_offset"    , footPrintXoffset    , 0.28);
+  prvNh.param<double>(_nameSpace + "x_offset"              , xOffset             , 0.0);
+  prvNh.param<double>(_nameSpace + "y_offset"              , yOffset             , 0.0);
+  prvNh.param<double>(_nameSpace + "yaw_offset"            , yawOffset           , 0.0);
+  prvNh.param<double>(_nameSpace + "max_range"             , maxRange            , 30.0);
+  prvNh.param<double>(_nameSpace + "min_range"             , minRange            , 0.001);
+  prvNh.param<double>(_nameSpace + "low_reflectivity_range", lowReflectivityRange, 2.0);
+  prvNh.param<double>(_nameSpace + "footprint_width"       , footPrintWidth      , 1.0);
+  prvNh.param<double>(_nameSpace + "footprint_height"      , footPrintHeight     , 1.0);
+  prvNh.param<double>(_nameSpace + "footprint_x_offset"    , footPrintXoffset    , 0.28);
 
   const double phi    = yawOffset;
   const double startX = _gridWidth * 0.5 + _xOffset + xOffset;

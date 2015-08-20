@@ -65,12 +65,11 @@ SlamNode::SlamNode(void)
 
   ThreadLocalize* threadLocalize = NULL;
   ros::Subscriber subs;
-  std::string nameSpace;
+  std::string nameSpace = "";
 
   //instanciate localization threads
   if(robotNbr == 1)  //single slam
   {
-    nameSpace = "";   //empty namespace
     threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, nameSpace, xOffset, yOffset);
     subs = _nh.subscribe(topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
     _subsLaser.push_back(subs);

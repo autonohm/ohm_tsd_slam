@@ -27,25 +27,24 @@ namespace ohm_tsd_slam
 {
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
-    const double xOffFactor, const double yOffFactor):
-                            ThreadSLAM(*grid),
-                            _nh(nh),
-                            _mapper(mapper),
-                            _sensor(NULL),
-                            _initialized(false),
-                            _gridWidth(grid->getCellsX() * grid->getCellSize()),
-                            _gridHeight(grid->getCellsY() * grid->getCellSize()),
-                            _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffFactor)),
-                            _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffFactor)),
-                            _xOffFactor(xOffFactor),
-                            _yOffFactor(yOffFactor),
-                            _nameSpace(nameSpace)
+    const double xOffset, const double yOffset):
+  ThreadSLAM(*grid),
+  _nh(nh),
+  _mapper(mapper),
+  _sensor(NULL),
+  _initialized(false),
+  _gridWidth(grid->getCellsX() * grid->getCellSize()),
+  _gridHeight(grid->getCellsY() * grid->getCellSize()),
+  _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
+  _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
+  _xOffset(xOffset),
+  _yOffset(yOffset),
+  _nameSpace(nameSpace)
 {
   ros::NodeHandle prvNh("~");
-
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
-  _nameSpace = nameSpace;
-  if(_nameSpace.size())   //given namespace
+  std::string::iterator it = _nameSpace.end() - 1;
+  if (*it != '/' && _nameSpace.size()>0)
     _nameSpace += "/";
 
   //pose
@@ -69,9 +68,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<double>(_nameSpace + "dist_filter_max", distFilterMax, DIST_FILT_MAX);
   prvNh.param<int>(_nameSpace + "icp_iterations", icpIterations, ICP_ITERATIONS);
 
-  ROS_INFO_STREAM("Localizer(" << nameSpace << ") setting the three most important parameters to:\n\t\ticp_iter = " << icpIterations <<
-      "\n\t\tdist_filt_min = " << distFilterMin << "\n\t\tdist_filte_max = " << distFilterMax << std::endl);
-
   //Maximum allowed offset between to aligned scans
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
@@ -88,11 +84,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   int iVar = 0;
   prvNh.param<int>(_nameSpace + "registration_mode", iVar, ICP);
   _regMode = static_cast<EnumRegModes>(iVar);
-
-  if(_regMode == ICP)
-    ROS_INFO_STREAM("Localizer (" << nameSpace << ") in icp mode" << std::endl);
-  else if(_regMode == EXP)
-    ROS_INFO_STREAM("Localizer (" << nameSpace << ") in icpsac mode" << std::endl);
 
   _modelCoords  = NULL;
   _modelNormals = NULL;
@@ -162,7 +153,6 @@ void ThreadLocalize::eventLoop(void)
     {
       _sleepCond.wait(_sleepMutex);
     }
-    ros::Time loopTimer = ros::Time::now();
     _dataMutex.lock();
     _sensor->setRealMeasurementData(_laserData.front()->ranges);
     _sensor->setStandardMask();
@@ -250,15 +240,14 @@ void ThreadLocalize::eventLoop(void)
         }
       }
     }
-    ROS_INFO_STREAM("Localizer (" << _nameSpace << "localize loop elapsed " << (ros::Time::now() - loopTimer).toNSec() * 10e-9 << " (s) " << std::endl);
   }
 }
 
 void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
 {
-  double xOffset    = 0.0;
-  double yOffset    = 0.0;
-  double yawOffset  = 0.0;
+  double localXoffset    = 0.0;
+  double localYoffset    = 0.0;
+  double localYawOffset  = 0.0;
   double maxRange = 0.0;
   double minRange = 0.0;
   double lowReflectivityRange = 0.0;
@@ -268,19 +257,21 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
 
   ros::NodeHandle prvNh("~");
 
-  prvNh.param<double>(_nameSpace + "/x_offset"              , xOffset             , 0.0);
-  prvNh.param<double>(_nameSpace + "/y_offset"              , yOffset             , 0.0);
-  prvNh.param<double>(_nameSpace + "/yaw_offset"            , yawOffset           , 0.0);
-  prvNh.param<double>(_nameSpace + "/max_range"             , maxRange            , 30.0);
-  prvNh.param<double>(_nameSpace + "/min_range"             , minRange            , 0.001);
-  prvNh.param<double>(_nameSpace + "/low_reflectivity_range", lowReflectivityRange, 2.0);
-  prvNh.param<double>(_nameSpace + "/footprint_width"       , footPrintWidth      , 1.0);
-  prvNh.param<double>(_nameSpace + "/footprint_height"      , footPrintHeight     , 1.0);
-  prvNh.param<double>(_nameSpace + "/footprint_x_offset"    , footPrintXoffset    , 0.28);
+  prvNh.param<double>(_nameSpace + "local_offset_x"        ,localXoffset         ,0.0);
+  prvNh.param<double>(_nameSpace + "local_offset_x"        ,localYoffset         ,0.0);
+  prvNh.param<double>(_nameSpace + "local_offset_yaw"      ,localYawOffset       ,0.0);
+  prvNh.param<double>(_nameSpace + "max_range"             ,maxRange             ,30.0);
+  prvNh.param<double>(_nameSpace + "min_range"             ,minRange             ,0.001);
+  prvNh.param<double>(_nameSpace + "low_reflectivity_range",lowReflectivityRange ,2.0);
+  prvNh.param<double>(_nameSpace + "footprint_width"       ,footPrintWidth       ,1.0);
+  prvNh.param<double>(_nameSpace + "footprint_height"      ,footPrintHeight      ,1.0);
+  prvNh.param<double>(_nameSpace + "footprint_x_offset"    ,footPrintXoffset     ,0.28);
 
-  const double phi    = yawOffset;
-  const double startX = _gridWidth * 0.5 + _xOffFactor + xOffset;
-  const double startY = _gridHeight * 0.5 + _yOffFactor + yOffset;
+  const double phi    = localYawOffset;
+  const double startX = _gridWidth * 0.5 + _xOffset + localXoffset;
+  const double startY = _gridWidth * 0.5 + _yOffset + localYoffset;
+  //  const double startX = _gridWidth * 0.5 + _xOffset + xOffset;
+  //  const double startY = _gridHeight * 0.5 +  _yOffset + yOffset;
   double tf[9]  = {std::cos(phi), -std::sin(phi), startX,
       std::sin(phi),  std::cos(phi), startY,
       0,              0,      1};

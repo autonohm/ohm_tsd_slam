@@ -84,15 +84,15 @@ private:
    */
   ThreadGrid* _threadGrid;
 
-  /**
-   * X starting offset factor
-   */
-  double _xOffFactor;
-
-  /**
-   * Y starting offset factor
-   */
-  double _yOffFactor;
+//  /**
+//   * X starting offset factor
+//   */
+//  double _xOffFactor;
+//
+//  /**
+//   * Y starting offset factor
+//   */
+//  double _yOffFactor;
 
   /**
    * Rate used for occupancy grid generation

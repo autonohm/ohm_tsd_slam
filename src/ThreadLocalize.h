@@ -64,7 +64,7 @@ public:
    * @param yOffFactor Origin y position
    */
   ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
-      const double xOffFactor, const double yOffFactor);
+      const double xOffset, const double yOffset);
 
   /**
    * Destructor
@@ -241,12 +241,12 @@ private:
   /**
    * Starting x offset
    */
-  const double _xOffFactor;
+  const double _xOffset;
 
   /**
    * Starting y offset
    */
-  const double _yOffFactor;
+  const double _yOffset;
 
   /**
    * Registration mode

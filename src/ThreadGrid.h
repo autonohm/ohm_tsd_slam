@@ -27,7 +27,7 @@ public:
    * @param nh Ros nodehandle
    * @param parentNode Pointer to main mapping instance
    */
-  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffFactor, const double yOffFactor);
+  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffset, const double yOffset);
 
   /**
    * Destructor

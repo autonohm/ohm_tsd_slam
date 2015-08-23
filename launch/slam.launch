@@ -11,9 +11,9 @@
          <param name = "y_offset"                type = "double" value = "0.0"   />    <!-- offset of robot in map in meters     -->
          <param name = "yaw_offset"              type = "double" value = "0.0"   />    <!-- offset of yaw                        -->
          
-         <param name = "map_size"      type = "int"    value = "13"    />    <!-- map size                             -->
+         <param name = "map_size"                type = "int"    value = "13"    />    <!-- map size                             -->
          <param name = "cellsize"                type = "double" value = "0.015" />    <!-- cell size in meters                  -->
-         <param name = "truncation_radius"       type = "int"    value = "5"     />    <!-- radius as factor of cell size        -->
+         <param name = "truncation_radius"       type = "int"    value = "3"     />    <!-- radius as factor of cell size        -->
          <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />    <!-- frequency to publish map             -->
          <param name = "object_inflation_factor" type = "int"    value = "0"     />    <!-- factor to inflate obstacles          -->
 
@@ -40,7 +40,7 @@
          <!-- ICP parameters -->
          <param name = "dist_filter_max"         type = "double" value = "0.2"   />    <!-- maximum distance for matching points -->
          <param name = "dist_filter_min"         type = "double" value = "0.002" />    <!-- minimum distance for matching points -->
-         <param name = "icp_iterations"          type = "int"    value = "50"    />    <!-- number of icp iterations             -->
+         <param name = "icp_iterations"          type = "int"    value = "25"    />    <!-- number of icp iterations             -->
          <param name = "reg_trs_max"             type = "double" value = "1.0"   />    <!-- maximum translation between two scans-->
          <param name = "reg_sin_rot_max"         type = "double" value = "0.5"   />    <!-- maximum rotation between two scans   -->
          

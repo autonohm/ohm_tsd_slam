@@ -244,31 +244,31 @@ void ThreadLocalize::eventLoop(void)
 
 void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
 {
-  double xOffset    = 0.0;
-  double yOffset    = 0.0;
-  double yawOffset  = 0.0;
-  double maxRange = 0.0;
-  double minRange = 0.0;
+  double localXoffset         = 0.0;
+  double localYoffset         = 0.0;
+  double localYawOffset       = 0.0;
+  double maxRange             = 0.0;
+  double minRange             = 0.0;
   double lowReflectivityRange = 0.0;
-  double footPrintWidth= 0.0;
-  double footPrintHeight= 0.0;
-  double footPrintXoffset= 0.0;
+  double footPrintWidth       = 0.0;
+  double footPrintHeight      = 0.0;
+  double footPrintXoffset     = 0.0;
 
   ros::NodeHandle prvNh("~");
 
-  prvNh.param<double>(_nameSpace + "x_offset"              , xOffset             , 0.0);
-  prvNh.param<double>(_nameSpace + "y_offset"              , yOffset             , 0.0);
-  prvNh.param<double>(_nameSpace + "yaw_offset"            , yawOffset           , 0.0);
-  prvNh.param<double>(_nameSpace + "max_range"             , maxRange            , 30.0);
-  prvNh.param<double>(_nameSpace + "min_range"             , minRange            , 0.001);
-  prvNh.param<double>(_nameSpace + "low_reflectivity_range", lowReflectivityRange, 2.0);
-  prvNh.param<double>(_nameSpace + "footprint_width"       , footPrintWidth      , 1.0);
-  prvNh.param<double>(_nameSpace + "footprint_height"      , footPrintHeight     , 1.0);
-  prvNh.param<double>(_nameSpace + "footprint_x_offset"    , footPrintXoffset    , 0.28);
+  prvNh.param<double>(_nameSpace + "local_offset_x"        ,localXoffset        ,0.0);
+  prvNh.param<double>(_nameSpace + "local_offset_y"        ,localYoffset        ,0.0);
+  prvNh.param<double>(_nameSpace + "local_offset_yaw"      ,localYawOffset      ,0.0);
+  prvNh.param<double>(_nameSpace + "max_range"             ,maxRange            ,30.0);
+  prvNh.param<double>(_nameSpace + "min_range"             ,minRange            ,0.001);
+  prvNh.param<double>(_nameSpace + "low_reflectivity_range",lowReflectivityRange,2.0);
+  prvNh.param<double>(_nameSpace + "footprint_width"       ,footPrintWidth      ,1.0);
+  prvNh.param<double>(_nameSpace + "footprint_height"      ,footPrintHeight     ,1.0);
+  prvNh.param<double>(_nameSpace + "footprint_x_offset"    ,footPrintXoffset    ,0.28);
 
-  const double phi    = yawOffset;
-  const double startX = _gridWidth * 0.5 + _xOffset + xOffset;
-  const double startY = _gridWidth * 0.5 + _yOffset + yOffset;
+  const double phi    = localYawOffset;
+    const double startX = _gridWidth * 0.5 + _xOffset + localXoffset;
+    const double startY = _gridWidth * 0.5 + _yOffset + localYoffset;
   double tf[9]  = {std::cos(phi), -std::sin(phi), startX,
       std::sin(phi),  std::cos(phi), startY,
       0,              0,      1};

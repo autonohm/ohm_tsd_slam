@@ -50,8 +50,12 @@ void ThreadMapping::eventLoop(void)
       obvious::SensorPolar2D* sensor = _sensors.front();
       _grid.push(sensor);
       _pushMutex.lock();
-      delete _sensors.front();
-      _sensors.pop();
+      //cout << "Queue size: " << _sensors.size() << endl;
+      //while(!_sensors.empty())
+      {
+        delete _sensors.front();
+        _sensors.pop();
+      }
       _initialized = true;
       _pushMutex.unlock();
     }

@@ -9,7 +9,7 @@
 #include "obvision/reconstruct/grid/TsdGrid.h"
 
 #include <boost/thread.hpp>
-#include <queue>
+#include <deque>
 
 namespace ohm_tsd_slam
 {
@@ -70,7 +70,7 @@ private:
   /**
    * Sensor queue
    */
-  std::queue<obvious::SensorPolar2D*> _sensors;
+  std::deque<obvious::SensorPolar2D*> _sensors;
 
   /**
    * Push mutex for queue

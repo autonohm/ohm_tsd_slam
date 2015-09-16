@@ -47,15 +47,15 @@ void ThreadMapping::eventLoop(void)
     _sleepCond.wait(_sleepMutex);
     while(_stayActive && !_sensors.empty())
     {
-      obvious::SensorPolar2D* sensor = _sensors.front();
+      _pushMutex.lock();
+      obvious::SensorPolar2D* sensor = _sensors.back();
+      _sensors.pop_back();
+      _pushMutex.unlock();
+
       _grid.push(sensor);
       _pushMutex.lock();
       //cout << "Queue size: " << _sensors.size() << endl;
-      //while(!_sensors.empty())
-      {
-        delete _sensors.front();
-        _sensors.pop();
-      }
+      delete sensor;
       _initialized = true;
       _pushMutex.unlock();
     }
@@ -70,7 +70,7 @@ void ThreadMapping::queuePush(obvious::SensorPolar2D* sensor)
   sensorLocal->setTransformation(sensor->getTransformation());
   sensorLocal->setRealMeasurementData(sensor->getRealMeasurementData());
   sensorLocal->setStandardMask();
-  _sensors.push(sensorLocal);
+  _sensors.push_back(sensorLocal);
   _pushMutex.unlock();
   this->unblock();
 }

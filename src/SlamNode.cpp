@@ -18,6 +18,7 @@ namespace ohm_tsd_slam
 SlamNode::SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource source)
 {
   ros::NodeHandle prvNh("~");
+  _localizeRunning = true;
   int iVar                   = 0;
   double gridPublishInterval = 0.0;
   double loopRateVar         = 0.0;
@@ -28,10 +29,10 @@ SlamNode::SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource so
   unsigned int octaveFactor  = 0;
   std::string topicLaser;
   std::string storeMapTopic;
+  std::string topicStopLocalization;
   prvNh.param<int>("robot_nbr", iVar, 1);
   unsigned int robotNbr = static_cast<unsigned int>(iVar);
-//  prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
-//  prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
+
   prvNh.param<double>("x_offset", xOffset, 0.0);
   prvNh.param<double>("y_offset", yOffset, 0.0);
 
@@ -44,10 +45,12 @@ SlamNode::SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource so
   prvNh.param<double>("loop_rate", loopRateVar, 40.0);
   prvNh.param<std::string>("laser_topic", topicLaser, "scan");
   prvNh.param<std::string>("store_map_topic", storeMapTopic, "store_map");
+  prvNh.param<std::string>("topic_stop_locazation", topicStopLocalization, "stop_localization");
 
   _loopRate       = new ros::Rate(loopRateVar);
   _gridInterval   = new ros::Duration(gridPublishInterval);
   _storeMapServer = _nh.advertiseService(storeMapTopic, &SlamNode::storeMapServiceCallBack, this);
+  _serverStopLocalization = _nh.advertiseService(topicStopLocalization, &SlamNode::callBackStopLocalization, this);
 
   if(content.size())
   {
@@ -91,6 +94,7 @@ SlamNode::SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource so
     subs = _nh.subscribe(topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
     _subsLaser.push_back(subs);
     _localizers.push_back(threadLocalize);
+    _topicsLaser.push_back(topicLaser);
     ROS_INFO_STREAM("Single SLAM started" << std::endl);
   }
   else
@@ -106,6 +110,7 @@ SlamNode::SlamNode(const std::string& content, obvious::EnumTsdGridLoadSource so
       subs = _nh.subscribe(nameSpace + "/" + topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
       _subsLaser.push_back(subs);
       _localizers.push_back(threadLocalize);
+      _topicsLaser.push_back(nameSpace + "/" + topicLaser);
       ROS_INFO_STREAM("started for thread for " << nameSpace << std::endl);
     }
     ROS_INFO_STREAM("Multi SLAM started!");
@@ -161,6 +166,32 @@ void SlamNode::run(void)
 bool SlamNode::storeMapServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
 {
   return _threadGrid->requestStoreTsdGrid();
+}
+
+bool SlamNode::callBackStopLocalization(ohm_tsd_slam::switch_local_on_off::Request& req, ohm_tsd_slam::switch_local_on_off::Response& res)
+{
+  if(req.command == req.ON && _localizeRunning)
+    return false;
+  else if((req.command == req.OFF && !_localizeRunning))
+    return false;
+
+  if(req.command == req.OFF)
+  {
+    for(std::vector<ros::Subscriber>::iterator iter = _subsLaser.begin(); iter < _subsLaser.end(); iter++)
+      iter->shutdown();
+    _localizeRunning = false;
+  }
+  else if(req.command == req.ON)
+  {
+    std::vector<std::string>::iterator topicIter = _topicsLaser.begin();
+    std::vector<ThreadLocalize*>::iterator iterLocalizer = _localizers.begin();
+    for(std::vector<ros::Subscriber>::iterator iter = _subsLaser.begin(); iter < _subsLaser.end(); iter++, topicIter++, iterLocalizer++)
+    {
+      *iter = _nh.subscribe(*topicIter, 1, &ThreadLocalize::laserCallBack, *iterLocalizer);
+    }
+    _localizeRunning = true;
+  }
+  return true;
 }
 
 } /* namespace ohm_tsd_slam */

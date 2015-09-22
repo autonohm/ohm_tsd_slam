@@ -68,6 +68,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<double>(_nameSpace + "dist_filter_max", distFilterMax, DIST_FILT_MAX);
   prvNh.param<int>(_nameSpace + "icp_iterations", icpIterations, ICP_ITERATIONS);
 
+  std::cout << __PRETTY_FUNCTION__ << " param: " << distFilterMin << " " << distFilterMax << " " << icpIterations << std::endl;
+
   //Maximum allowed offset between to aligned scans
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
@@ -109,6 +111,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _icp->setMaxRMS(0.0);
   _icp->setMaxIterations(icpIterations);
   _icp->setConvergenceCounter(icpIterations);
+//  _icp->activateTrace();
 
   _posePub = _nh->advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;
@@ -224,6 +227,7 @@ void ThreadLocalize::eventLoop(void)
     {
       ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") registration error! \n");
       sendNanTransform();
+      //_icp->serializeTrace("trace");
     }
     else //transformation valid -> transform sensor and publish new sensor pose
     {
@@ -277,6 +281,8 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
       0,              0,      1};
   obvious::Matrix Tinit(3, 3);
   Tinit.setData(tf);
+
+  std::cout << __PRETTY_FUNCTION__ << " params " << maxRange << " " << minRange << " " << lowReflectivityRange << std::endl;
 
   _sensor = new obvious::SensorPolar2D(scan.ranges.size(), scan.angle_increment, scan.angle_min, maxRange, minRange, lowReflectivityRange);
   _sensor->setRealMeasurementData(scan.ranges, 1.0);

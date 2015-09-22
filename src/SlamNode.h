@@ -10,6 +10,8 @@
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obcore/base/Logger.h"
 
+#include "ohm_tsd_slam/switch_local_on_off.h"
+
 #define INIT_PSHS 1      //number of initial pushes into the grid
 #define THREAD_TERM_MS 1   //time in ms waiting for thread to terminate
 
@@ -62,12 +64,20 @@ private:
 
   bool storeMapServiceCallBack(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
 
+  bool callBackStopLocalization(ohm_tsd_slam::switch_local_on_off::Request& req, ohm_tsd_slam::switch_local_on_off::Response& res);
+
   /**
    * Main node handle
    */
   ros::NodeHandle _nh;
 
   ros::ServiceServer _storeMapServer;
+
+  ros::ServiceServer _serverStopLocalization;
+
+  bool _localizeRunning;
+
+  std::vector<std::string> _topicsLaser;
 
   /**
    * Representation

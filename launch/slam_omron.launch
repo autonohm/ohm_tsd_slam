@@ -19,19 +19,19 @@
          <param name = "laser_topic"             type = "string" value = "filtered_scan"  />    <!-- topic to receive laser scan          -->
 
          <!-- map parameters -->
-         <param name = "x_off_factor"            type = "double" value = "0.5"   />    <!-- offset of robot in map in meters     -->
-         <param name = "y_off_factor"            type = "double" value = "0.5"   />    <!-- offset of robot in map in meters     -->
+         <param name = "x_offset"            type = "double" value = "0.0"   />    <!-- offset of robot in map in meters     -->
+         <param name = "y_offset"            type = "double" value = "0.0"   />    <!-- offset of robot in map in meters     -->
          <param name = "yaw_offset"              type = "double" value = "0.0"   />    <!-- offset of yaw                        -->
          
-         <param name = "cell_octave_factor"      type = "int"    value = "13"    />    <!-- map size                             -->
-         <param name = "cellsize"                type = "double" value = "0.015"  />    <!-- cell size in meters                  -->
+         <param name = "map_size"      type = "int"    value = "13"    />    <!-- map size                             -->
+         <param name = "cellsize"                type = "double" value = "0.02"  />    <!-- cell size in meters                  -->
          <param name = "truncation_radius"       type = "int"    value = "5"     />    <!-- radius as factor of cell size        -->
          <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />    <!-- frequency to publish map             -->
          <param name = "object_inflation_factor" type = "int"    value = "0"     />    <!-- factor to inflate obstacles          -->
 
          <!-- raycasting parameters -->
          <param name = "min_range"               type = "double" value = "0.0"   />    <!-- minimum range of raycaster in meters -->
-         <param name = "max_range"               type = "double" value = "30.0"  />    <!-- maximum range of raycaster in meters -->
+         <param name = "max_range"               type = "double" value = "60.0"  />    <!-- maximum range of raycaster in meters -->
          <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
          
             
@@ -47,12 +47,12 @@
          <param name = "footprint_x_offset"      type = "double" value = "-0.5"  />    <!-- offset of laser in meters            -->
   
          <!-- registration parameters -->	
-         <param name = "registration_mode"       type = "int"    value = "1"     />    <!-- 0: ICP    1: EXPERIMENTAL -->	
+         <param name = "registration_mode"       type = "int"    value = "0"     />    <!-- 0: ICP    1: EXPERIMENTAL -->	
          	
          <!-- ICP parameters -->
-         <param name = "dist_filter_max"         type = "double" value = "0.2"   />    <!-- maximum distance for matching points -->
-         <param name = "dist_filter_min"         type = "double" value = "0.002" />    <!-- minimum distance for matching points -->
-         <param name = "icp_iterations"          type = "int"    value = "50"    />    <!-- number of icp iterations             -->
+         <param name = "dist_filter_max"         type = "double" value = "1.0"   />    <!-- maximum distance for matching points -->
+         <param name = "dist_filter_min"         type = "double" value = "0.01" />    <!-- minimum distance for matching points -->
+         <param name = "icp_iterations"          type = "int"    value = "100"    />    <!-- number of icp iterations             -->
          <param name = "reg_trs_max"             type = "double" value = "1.0"   />    <!-- maximum translation between two scans-->
          <param name = "reg_sin_rot_max"         type = "double" value = "0.5"   />    <!-- maximum rotation between two scans   -->
          

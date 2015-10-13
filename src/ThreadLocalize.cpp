@@ -138,6 +138,7 @@ ThreadLocalize::~ThreadLocalize()
   _stayActive = false;
   _thread->join();
   _laserData.clear();
+  delete _tfListener;
 }
 
 void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
@@ -197,7 +198,7 @@ void ThreadLocalize::eventLoop(void)
       catch(tf::TransformException& ex)
       {
         ROS_ERROR_STREAM("Localizer(" << _nameSpace << "): Error looking up fused transform: " << ex.what() << std::endl);
-        return;
+        //return;   //in case the tf is not available use old pose...has to be tested though
       }
       tf::Matrix3x3 mat(tfFused.getRotation());
       double roll = 0.0;

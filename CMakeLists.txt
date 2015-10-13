@@ -197,6 +197,7 @@ install(TARGETS slam_node localize_node
     launch/multi_slam.launch
     launch/local.launch
     launch/slam_omron.launch
+    launch/slam_fused.launch
 #   # myfile2
    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
  )

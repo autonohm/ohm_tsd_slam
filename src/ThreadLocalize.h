@@ -14,6 +14,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obvision/reconstruct/grid/TsdGrid.h"
@@ -375,6 +376,12 @@ private:
    * Ros current transform
    */
   tf::StampedTransform _tf;
+
+  tf::TransformListener* _tfListener;
+
+  bool _useFusedPose;
+
+  std::string _tfFrameFusedPose;
 };
 
 

@@ -39,7 +39,9 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
   _xOffset(xOffset),
   _yOffset(yOffset),
-  _nameSpace(nameSpace)
+  _nameSpace(nameSpace),
+  _tfListener(NULL),
+  _useFusedPose(false)
 {
   ros::NodeHandle prvNh("~");
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
@@ -117,6 +119,15 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _poseStamped.header.frame_id = tfBaseFrameId;
   _tf.frame_id_                = tfBaseFrameId;
   _tf.child_frame_id_          = _nameSpace + tfChildFrameId;
+
+
+  //setup fused tflistener if required
+  prvNh.param<bool>(_nameSpace + "fused_pose_used", _useFusedPose, false);
+  if(_useFusedPose)
+  {
+    prvNh.param<std::string>(_nameSpace + "tf_frame_fused_pose", _tfFrameFusedPose, "fused");
+    _tfListener = new tf::TransformListener;
+  }
 }
 
 ThreadLocalize::~ThreadLocalize()
@@ -175,6 +186,27 @@ void ThreadLocalize::eventLoop(void)
       _modelNormals = new double[measurementSize * 2];
       _maskM        = new bool[measurementSize];
       *_lastPose    = _sensor->getTransformation();
+    }
+    if(_useFusedPose)
+    {
+      tf::StampedTransform tfFused;
+      try
+      {
+      _tfListener->lookupTransform(_tf.frame_id_, _tfFrameFusedPose, ros::Time(0), tfFused);
+      }
+      catch(tf::TransformException& ex)
+      {
+        ROS_ERROR_STREAM("Localizer(" << _nameSpace << "): Error looking up fused transform: " << ex.what() << std::endl);
+        return;
+      }
+      tf::Matrix3x3 mat(tfFused.getRotation());
+      double roll = 0.0;
+      double pitch = 0.0;
+      double yaw = 0.0;
+      mat.getRPY(roll, pitch, yaw);
+      obvious::MatrixFactory fac;
+      obvious::Matrix fusedPose = fac.TransformationMatrix33(yaw, tfFused.getOrigin().x(), tfFused.getOrigin().y());
+      _sensor->setTransformation(fusedPose);
     }
 
     // reconstruction

@@ -295,7 +295,7 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   ros::NodeHandle prvNh("~");
 
   prvNh.param<double>(_nameSpace + "local_offset_x"        ,localXoffset         ,0.0);
-  prvNh.param<double>(_nameSpace + "local_offset_x"        ,localYoffset         ,0.0);
+  prvNh.param<double>(_nameSpace + "local_offset_y"        ,localYoffset         ,0.0);
   prvNh.param<double>(_nameSpace + "local_offset_yaw"      ,localYawOffset       ,0.0);
   prvNh.param<double>(_nameSpace + "max_range"             ,maxRange             ,30.0);
   prvNh.param<double>(_nameSpace + "min_range"             ,minRange             ,0.001);
@@ -305,8 +305,8 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   prvNh.param<double>(_nameSpace + "footprint_x_offset"    ,footPrintXoffset     ,0.28);
 
   const double phi    = localYawOffset;
-  const double startX = _gridWidth * 0.5 + _xOffset + localXoffset;
-  const double startY = _gridWidth * 0.5 + _yOffset + localYoffset;
+  const double startX = _gridWidth  * 0.5 + _xOffset + localXoffset;
+  const double startY = _gridHeight * 0.5 + _yOffset + localYoffset;
   //  const double startX = _gridWidth * 0.5 + _xOffset + xOffset;
   //  const double startY = _gridHeight * 0.5 +  _yOffset + yOffset;
   double tf[9]  = {std::cos(phi), -std::sin(phi), startX,

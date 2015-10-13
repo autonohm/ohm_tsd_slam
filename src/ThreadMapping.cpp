@@ -10,8 +10,8 @@ namespace ohm_tsd_slam
 {
 
 ThreadMapping::ThreadMapping(obvious::TsdGrid* grid):
-    ThreadSLAM(*grid),
-    _initialized(false)
+        ThreadSLAM(*grid),
+        _initialized(false)
 {
 }
 
@@ -47,11 +47,13 @@ void ThreadMapping::eventLoop(void)
     _sleepCond.wait(_sleepMutex);
     while(_stayActive && !_sensors.empty())
     {
-      obvious::SensorPolar2D* sensor = _sensors.front();
-      _grid.push(sensor);
       _pushMutex.lock();
+      obvious::SensorPolar2D* sensor = _sensors.back();
+      _sensors.pop_back();
+      //obvious::SensorPolar2D* sensor = _sensors.front();
+      _grid.push(sensor);
       delete _sensors.front();
-      _sensors.pop();
+      //_sensors.pop();
       _initialized = true;
       _pushMutex.unlock();
     }
@@ -62,11 +64,11 @@ void ThreadMapping::queuePush(obvious::SensorPolar2D* sensor)
 {
   _pushMutex.lock();
   obvious::SensorPolar2D* sensorLocal = new obvious::SensorPolar2D(sensor->getRealMeasurementSize(), sensor->getAngularResolution(), sensor->getPhiMin(),
-                                                                   sensor->getMaximumRange(), sensor->getMinimumRange(), sensor->getLowReflectivityRange());
+      sensor->getMaximumRange(), sensor->getMinimumRange(), sensor->getLowReflectivityRange());
   sensorLocal->setTransformation(sensor->getTransformation());
   sensorLocal->setRealMeasurementData(sensor->getRealMeasurementData());
   sensorLocal->setStandardMask();
-  _sensors.push(sensorLocal);
+  _sensors.push_back(sensorLocal);
   _pushMutex.unlock();
   this->unblock();
 }

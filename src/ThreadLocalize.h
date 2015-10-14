@@ -183,6 +183,7 @@ private:
   void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
       unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
+  void publishPoseWithCovariance(obvious::Matrix* const T, const bool valid);
 
   /**
    * Pointer to main NodeHandle
@@ -382,6 +383,13 @@ private:
   bool _useFusedPose;
 
   std::string _tfFrameFusedPose;
+
+  ros::Publisher _pubPoseCovariance;
+
+  double _coVarMin;
+
+  double _coVarMax;
+
 };
 
 

@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include <geometry_msgs/PoseStamped.h>
+#include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
 
 namespace ohm_tsd_slam
@@ -28,20 +29,20 @@ namespace ohm_tsd_slam
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffset, const double yOffset):
-  ThreadSLAM(*grid),
-  _nh(nh),
-  _mapper(mapper),
-  _sensor(NULL),
-  _initialized(false),
-  _gridWidth(grid->getCellsX() * grid->getCellSize()),
-  _gridHeight(grid->getCellsY() * grid->getCellSize()),
-  _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
-  _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
-  _xOffset(xOffset),
-  _yOffset(yOffset),
-  _nameSpace(nameSpace),
-  _tfListener(NULL),
-  _useFusedPose(false)
+          ThreadSLAM(*grid),
+          _nh(nh),
+          _mapper(mapper),
+          _sensor(NULL),
+          _initialized(false),
+          _gridWidth(grid->getCellsX() * grid->getCellSize()),
+          _gridHeight(grid->getCellsY() * grid->getCellSize()),
+          _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
+          _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
+          _xOffset(xOffset),
+          _yOffset(yOffset),
+          _nameSpace(nameSpace),
+          _tfListener(NULL),
+          _useFusedPose(false)
 {
   ros::NodeHandle prvNh("~");
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
@@ -113,7 +114,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _icp->setMaxRMS(0.0);
   _icp->setMaxIterations(icpIterations);
   _icp->setConvergenceCounter(icpIterations);
-//  _icp->activateTrace();
+  //  _icp->activateTrace();
 
   _posePub = _nh->advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
   _poseStamped.header.frame_id = tfBaseFrameId;
@@ -128,6 +129,13 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
     prvNh.param<std::string>(_nameSpace + "tf_frame_fused_pose", _tfFrameFusedPose, "fused");
     _tfListener = new tf::TransformListener;
   }
+
+  //set up publisher for pose with covariance
+  std::string topicPoseCovariance;
+  prvNh.param<std::string>(_nameSpace + "topic_pose_covariance", topicPoseCovariance, "gps");
+  prvNh.param<double>(_nameSpace + "covariance_pose_min", _coVarMin, 1e-10);
+  prvNh.param<double>(_nameSpace + "covariance_pose_max", _coVarMax, 1e10);
+  _pubPoseCovariance = _nh->advertise<nav_msgs::Odometry>(topicPoseCovariance, 1);
 }
 
 ThreadLocalize::~ThreadLocalize()
@@ -193,7 +201,7 @@ void ThreadLocalize::eventLoop(void)
       tf::StampedTransform tfFused;
       try
       {
-      _tfListener->lookupTransform(_tf.frame_id_, _tfFrameFusedPose, ros::Time(0), tfFused);
+        _tfListener->lookupTransform(_tf.frame_id_, _tfFrameFusedPose, ros::Time(0), tfFused);
       }
       catch(tf::TransformException& ex)
       {
@@ -256,6 +264,7 @@ void ThreadLocalize::eventLoop(void)
     /** analyze registration result */
     _tf.stamp_ = ros::Time::now();
     const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
+    this->publishPoseWithCovariance(&T, regErrorT);   //todo: New stuff test extensively
     if(regErrorT)
     {
       ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") registration error! \n");
@@ -423,6 +432,36 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
 
   _posePub.publish(_poseStamped);
   _tfBroadcaster.sendTransform(_tf);
+}
+
+void ThreadLocalize::publishPoseWithCovariance(obvious::Matrix* const T, const bool valid)
+{
+  const double curTheta = this->calcAngle(T);
+  const double posX = (*T)(0, 2) + _gridOffSetX;
+  const double posY = (*T)(1, 2) + _gridOffSetY;
+
+  tf::Quaternion quat;
+  quat.setEuler(0.0, 0.0, curTheta);
+
+  nav_msgs::Odometry msgsOdom;
+  msgsOdom.header.stamp = ros::Time::now();
+  msgsOdom.pose.pose.position.x = posX;
+  msgsOdom.pose.pose.position.y = posY;
+  msgsOdom.pose.pose.position.z = 0.0;
+  msgsOdom.pose.pose.orientation.w = quat.w();
+  msgsOdom.pose.pose.orientation.x = quat.x();
+  msgsOdom.pose.pose.orientation.y = quat.y();
+  msgsOdom.pose.pose.orientation.z = quat.z();
+
+  double covariance = 0.0;
+  if(valid)
+    covariance = _coVarMin;
+  else
+    covariance = _coVarMax;
+  msgsOdom.pose.covariance.elems[0]  = covariance;
+  msgsOdom.pose.covariance.elems[7]  = covariance;
+  msgsOdom.pose.covariance.elems[35] = covariance;
+  _pubPoseCovariance.publish(msgsOdom);
 }
 
 void ThreadLocalize::sendNanTransform()

@@ -264,7 +264,7 @@ void ThreadLocalize::eventLoop(void)
     /** analyze registration result */
     _tf.stamp_ = ros::Time::now();
     const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
-    this->publishPoseWithCovariance(&T, regErrorT);   //todo: New stuff test extensively
+    this->publishPoseWithCovariance(&T, !regErrorT);   //todo: New stuff test extensively
     if(regErrorT)
     {
       ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") registration error! \n");

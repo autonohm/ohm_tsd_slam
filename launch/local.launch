@@ -1,9 +1,11 @@
 <launch>
 	
 	<node pkg="ohm_bob_laser_filter" type="bob_laser_filter" name="bob_laser_filter">
+		<param name = "laser_output_topic" type = "string" value = "filtered_scan"/>
 	<param name="min_angle" type="double" value="-2.0"/>
 	<param name="max_angle" type="double" value="2.0"/>
 	<param name="max_range" type ="double" value ="60.0"/>	
+		<param name="mirror" type = "bool" value = "true"/>
   </node>
   
   <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server" output="screen">

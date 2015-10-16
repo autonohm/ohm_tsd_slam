@@ -2,23 +2,23 @@
    <launch>
    	
    <node pkg="ohm_bob_laser_filter" type="bob_laser_filter" name="bob_laser_filter">
-   	<param name = "laser_output_topic" type = "string" value = "filtered_scan"/>
+   	<param name = "laser_output_topic" type = "string" value = "super_filter"/>
 	<param name="min_angle" type="double" value="-2.0"/>
 	<param name="max_angle" type="double" value="2.0"/>
-	<param name="max_range" type ="double" value ="60.0"/>	
+	<param name="max_range" type ="double" value ="30.0"/>	
 	<param name="mirror" type = "bool" value = "true"/>	
   </node>
   
   <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server" output="screen">
     <param name="source_frame_name" type="string" value="laser"/>
   </node>
-   	
+   	<node pkg="tf"  type="static_transform_publisher" name = "tf_abc" args = "-0.62 0.0 0.0 0.0 0.0 0.0  laser base_footprint  50"/>
    	
       <node name = "slam_node" pkg = "ohm_tsd_slam" type = "slam_node" output = "screen">
          <!-- topic parameters -->
          <param name = "map_topic"               type = "string" value = "/map"  />             <!-- topic of occupancy grid              -->
          <param name = "pose_topic"              type = "string" value = "pose"  />             <!-- topic for robot's pose               -->   
-         <param name = "laser_topic"             type = "string" value = "filtered_scan"  />    <!-- topic to receive laser scan          -->
+         <param name = "laser_topic"             type = "string" value = "super_filter"  />    <!-- topic to receive laser scan          -->
 
          <!-- map parameters -->
          <param name = "x_offset"                type = "double" value = "0.0"   />     <!-- offset of robot in map in meters     -->
@@ -33,7 +33,7 @@
 
          <!-- raycasting parameters -->
          <param name = "min_range"               type = "double" value = "0.0"   />    <!-- minimum range of raycaster in meters -->
-         <param name = "max_range"               type = "double" value = "60.0"  />    <!-- maximum range of raycaster in meters -->
+         <param name = "max_range"               type = "double" value = "30.0"  />    <!-- maximum range of raycaster in meters -->
          <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
          
             
@@ -54,7 +54,7 @@
          <!-- ICP parameters -->
          <param name = "dist_filter_max"         type = "double" value = "1.0"   />    <!-- maximum distance for matching points -->
          <param name = "dist_filter_min"         type = "double" value = "0.01" />    <!-- minimum distance for matching points -->
-         <param name = "icp_iterations"          type = "int"    value = "100"    />    <!-- number of icp iterations             -->
+         <param name = "icp_iterations"          type = "int"    value = "50"    />    <!-- number of icp iterations             -->
          <param name = "reg_trs_max"             type = "double" value = "1.0"   />    <!-- maximum translation between two scans-->
          <param name = "reg_sin_rot_max"         type = "double" value = "0.5"   />    <!-- maximum rotation between two scans   -->
          

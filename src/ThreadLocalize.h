@@ -378,18 +378,6 @@ private:
    */
   tf::StampedTransform _tf;
 
-  tf::TransformListener* _tfListener;
-
-  bool _useFusedPose;
-
-  std::string _tfFrameFusedPose;
-
-  ros::Publisher _pubPoseCovariance;
-
-  double _coVarMin;
-
-  double _coVarMax;
-
 };
 
 

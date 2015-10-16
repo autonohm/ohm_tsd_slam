@@ -40,9 +40,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
           _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
           _xOffset(xOffset),
           _yOffset(yOffset),
-          _nameSpace(nameSpace),
-          _tfListener(NULL),
-          _useFusedPose(false)
+          _nameSpace(nameSpace)
 {
   ros::NodeHandle prvNh("~");
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
@@ -120,22 +118,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _poseStamped.header.frame_id = tfBaseFrameId;
   _tf.frame_id_                = tfBaseFrameId;
   _tf.child_frame_id_          = _nameSpace + tfChildFrameId;
-
-
-  //setup fused tflistener if required
-  prvNh.param<bool>(_nameSpace + "fused_pose_used", _useFusedPose, false);
-  if(_useFusedPose)
-  {
-    prvNh.param<std::string>(_nameSpace + "tf_frame_fused_pose", _tfFrameFusedPose, "fused");
-    _tfListener = new tf::TransformListener;
-  }
-
-  //set up publisher for pose with covariance
-  std::string topicPoseCovariance;
-  prvNh.param<std::string>(_nameSpace + "topic_pose_covariance", topicPoseCovariance, "gps");
-  prvNh.param<double>(_nameSpace + "covariance_pose_min", _coVarMin, 1e-10);
-  prvNh.param<double>(_nameSpace + "covariance_pose_max", _coVarMax, 1e10);
-  _pubPoseCovariance = _nh->advertise<nav_msgs::Odometry>(topicPoseCovariance, 1);
 }
 
 ThreadLocalize::~ThreadLocalize()
@@ -146,7 +128,6 @@ ThreadLocalize::~ThreadLocalize()
   _stayActive = false;
   _thread->join();
   _laserData.clear();
-  delete _tfListener;
 }
 
 void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
@@ -196,27 +177,6 @@ void ThreadLocalize::eventLoop(void)
       _maskM        = new bool[measurementSize];
       *_lastPose    = _sensor->getTransformation();
     }
-    if(_useFusedPose)
-    {
-      tf::StampedTransform tfFused;
-      try
-      {
-        _tfListener->lookupTransform(_tf.frame_id_, _tfFrameFusedPose, ros::Time(0), tfFused);
-      }
-      catch(tf::TransformException& ex)
-      {
-        ROS_ERROR_STREAM("Localizer(" << _nameSpace << "): Error looking up fused transform: " << ex.what() << std::endl);
-        //return;   //in case the tf is not available use old pose...has to be tested though
-      }
-      tf::Matrix3x3 mat(tfFused.getRotation());
-      double roll = 0.0;
-      double pitch = 0.0;
-      double yaw = 0.0;
-      mat.getRPY(roll, pitch, yaw);
-      obvious::MatrixFactory fac;
-      obvious::Matrix fusedPose = fac.TransformationMatrix33(yaw, tfFused.getOrigin().x(), tfFused.getOrigin().y());
-      _sensor->setTransformation(fusedPose);
-    }
 
     // reconstruction
     unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(&_grid, _sensor, _modelCoords, _modelNormals, _maskM);
@@ -264,7 +224,6 @@ void ThreadLocalize::eventLoop(void)
     /** analyze registration result */
     _tf.stamp_ = ros::Time::now();
     const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
-    this->publishPoseWithCovariance(&T, !regErrorT);   //todo: New stuff test extensively
     if(regErrorT)
     {
       ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") registration error! \n");
@@ -432,36 +391,6 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
 
   _posePub.publish(_poseStamped);
   _tfBroadcaster.sendTransform(_tf);
-}
-
-void ThreadLocalize::publishPoseWithCovariance(obvious::Matrix* const T, const bool valid)
-{
-  const double curTheta = this->calcAngle(T);
-  const double posX = (*T)(0, 2) + _gridOffSetX;
-  const double posY = (*T)(1, 2) + _gridOffSetY;
-
-  tf::Quaternion quat;
-  quat.setEuler(0.0, 0.0, curTheta);
-
-  nav_msgs::Odometry msgsOdom;
-  msgsOdom.header.stamp = ros::Time::now();
-  msgsOdom.pose.pose.position.x = posX;
-  msgsOdom.pose.pose.position.y = posY;
-  msgsOdom.pose.pose.position.z = 0.0;
-  msgsOdom.pose.pose.orientation.w = quat.w();
-  msgsOdom.pose.pose.orientation.x = quat.x();
-  msgsOdom.pose.pose.orientation.y = quat.y();
-  msgsOdom.pose.pose.orientation.z = quat.z();
-
-  double covariance = 0.0;
-  if(valid)
-    covariance = _coVarMin;
-  else
-    covariance = _coVarMax;
-  msgsOdom.pose.covariance.elems[0]  = covariance;
-  msgsOdom.pose.covariance.elems[7]  = covariance;
-  msgsOdom.pose.covariance.elems[35] = covariance;
-  _pubPoseCovariance.publish(msgsOdom);
 }
 
 void ThreadLocalize::sendNanTransform()

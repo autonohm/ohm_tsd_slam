@@ -29,20 +29,20 @@ namespace ohm_tsd_slam
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffset, const double yOffset):
-              ThreadSLAM(*grid),
-              _nh(nh),
-              _mapper(mapper),
-              _sensor(NULL),
-              _initialized(false),
-              _gridWidth(grid->getCellsX() * grid->getCellSize()),
-              _gridHeight(grid->getCellsY() * grid->getCellSize()),
-              _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
-              _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
-              _xOffset(xOffset),
-              _yOffset(yOffset),
-              _nameSpace(nameSpace),
-              _tfListener(NULL),
-              _useFusedPose(false)
+                      ThreadSLAM(*grid),
+                      _nh(nh),
+                      _mapper(mapper),
+                      _sensor(NULL),
+                      _initialized(false),
+                      _gridWidth(grid->getCellsX() * grid->getCellSize()),
+                      _gridHeight(grid->getCellsY() * grid->getCellSize()),
+                      _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
+                      _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
+                      _xOffset(xOffset),
+                      _yOffset(yOffset),
+                      _nameSpace(nameSpace),
+                      _tfListener(NULL),
+                      _useFusedPose(false)
 {
   ros::NodeHandle prvNh("~");
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
@@ -123,10 +123,11 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
   //setup fused tflistener if required
   prvNh.param<bool>(_nameSpace + "fused_pose_used", _useFusedPose, false);
+  _tfListener = new tf::TransformListener;
   if(_useFusedPose)
   {
     prvNh.param<std::string>(_nameSpace + "tf_frame_fused_pose", _tfFrameFusedPose, "fused");
-    _tfListener = new tf::TransformListener;
+    //_tfListener = new tf::TransformListener;
   }
 
   //set up publisher for pose with covariance
@@ -197,6 +198,7 @@ void ThreadLocalize::eventLoop(void)
     }
     if(_useFusedPose)
     {
+      bool noError = true;
       tf::StampedTransform tfFused;
       try
       {
@@ -206,15 +208,19 @@ void ThreadLocalize::eventLoop(void)
       {
         ROS_ERROR_STREAM("Localizer(" << _nameSpace << "): Error looking up fused transform: " << ex.what() << std::endl);
         //return;   //in case the tf is not available use old pose...has to be tested though
+        noError = false;
       }
-      tf::Matrix3x3 mat(tfFused.getRotation());
-      double roll = 0.0;
-      double pitch = 0.0;
-      double yaw = 0.0;
-      mat.getRPY(roll, pitch, yaw);
-      obvious::MatrixFactory fac;
-      obvious::Matrix fusedPose = fac.TransformationMatrix33(yaw, tfFused.getOrigin().x(), tfFused.getOrigin().y());
-      _sensor->setTransformation(fusedPose);
+      if(noError)
+      {
+        tf::Matrix3x3 mat(tfFused.getRotation());
+        double roll = 0.0;
+        double pitch = 0.0;
+        double yaw = 0.0;
+        mat.getRPY(roll, pitch, yaw);
+        obvious::MatrixFactory fac;
+        obvious::Matrix fusedPose = fac.TransformationMatrix33(yaw, tfFused.getOrigin().x(), tfFused.getOrigin().y());
+        _sensor->setTransformation(fusedPose);
+      }
     }
 
     // reconstruction
@@ -437,32 +443,83 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
 
 void ThreadLocalize::publishPoseWithCovariance(obvious::Matrix* const T, const bool valid)
 {
-  const double curTheta = this->calcAngle(T);
-  const double posX = (*T)(0, 2) + _gridOffSetX;
-  const double posY = (*T)(1, 2) + _gridOffSetY;
+  static ros::Time lastTime = ros::Time::now();
+  tf::StampedTransform tfBasF;
+  if(1)//first)
+  {
 
-  tf::Quaternion quat;
-  quat.setEuler(0.0, 0.0, curTheta);
+    try
+    {
+      _tfListener->lookupTransform("map", "base_footprint", ros::Time(0), tfBasF); // dan: hat er da schon die aktuelle?
+    }
+    catch(tf::TransformException& ex)
+    {
+      ROS_ERROR_STREAM("FUCK" << ex.what() << std::endl);
+      return;   //in case the tf is not available use old pose...has to be tested though
+    }
+    //          first = false;
+  }
 
-  nav_msgs::Odometry msgsOdom;
-  msgsOdom.header.stamp = ros::Time::now();
-  msgsOdom.pose.pose.position.x = posX;
-  msgsOdom.pose.pose.position.y = posY;
-  msgsOdom.pose.pose.position.z = 0.0;
-  msgsOdom.pose.pose.orientation.w = quat.w();
-  msgsOdom.pose.pose.orientation.x = quat.x();
-  msgsOdom.pose.pose.orientation.y = quat.y();
-  msgsOdom.pose.pose.orientation.z = quat.z();
+  ros::Time curTime = ros::Time::now();
+  if((curTime - lastTime).toSec() > 1.0)   //toDo: launch parameter for time
+  {
+    ROS_INFO_STREAM("doing loop for publisher");
+    lastTime = ros::Time::now();
 
-  double covariance = 0.0;
-  if(valid)
-    covariance = _coVarMin;
-  else
-    covariance = _coVarMax;
-  msgsOdom.pose.covariance.elems[0]  = covariance;
-  msgsOdom.pose.covariance.elems[7]  = covariance;
-  msgsOdom.pose.covariance.elems[35] = covariance;
-  _pubPoseCovariance.publish(msgsOdom);
+
+    const double curTheta = this->calcAngle(T);
+    const double posX = (*T)(0, 2) + _gridOffSetX;
+    const double posY = (*T)(1, 2) + _gridOffSetY;
+    tf::Quaternion quat;
+    quat.setEuler(0.0, 0.0, curTheta);
+    tf::StampedTransform tfOdom;
+
+    tfOdom.setOrigin(tf::Vector3(posX, posY, 0.0));
+    //  tfOdom.pose.position.y = posY
+    //  tfOdom.pose.position.z = 0.0;
+    tfOdom.setRotation(quat);
+    //  tfOdom.pose.orientation.w = quat.w();
+    //  tfOdom.pose.orientation.x = quat.x();
+    //  tfOdom.pose.orientation.y = quat.y();
+    //  tfOdom.pose.orientation.z = quat.z();
+
+    //tfOdom.mult(tfOdom, tfBasF);
+    /*  const double curTheta = this->calcAngle(T);
+    const double posX = (*T)(0, 2) + _gridOffSetX;
+    const double posY = (*T)(1, 2) + _gridOffSetY;*/
+
+    /*  tf::Quaternion quat;
+    quat.setEuler(0.0, 0.0, curTheta);*/
+
+    /*nav_msgs::Odometry msgsOdom;
+    msgsOdom.header.stamp = ros::Time::now();
+    msgsOdom.pose.pose.position.x = posX;
+    msgsOdom.pose.pose.position.y = posY;
+    msgsOdom.pose.pose.position.z = 0.0;
+    msgsOdom.pose.pose.orientation.w = quat.w();
+    msgsOdom.pose.pose.orientation.x = quat.x();
+    msgsOdom.pose.pose.orientation.y = quat.y();
+    msgsOdom.pose.pose.orientation.z = quat.z();*/
+    nav_msgs::Odometry msgsOdom;
+    msgsOdom.header.stamp = ros::Time::now();
+    msgsOdom.pose.pose.position.x    = tfBasF.getOrigin().x();
+    msgsOdom.pose.pose.position.y    = tfBasF.getOrigin().y();
+    msgsOdom.pose.pose.position.z    = tfBasF.getOrigin().z();
+    msgsOdom.pose.pose.orientation.w = tfBasF.getRotation().w();
+    msgsOdom.pose.pose.orientation.x = tfBasF.getRotation().x();
+    msgsOdom.pose.pose.orientation.y = tfBasF.getRotation().y();
+    msgsOdom.pose.pose.orientation.z = tfBasF.getRotation().z();
+
+    double covariance = 0.0;
+    if(valid)
+      covariance = _coVarMin;
+    else
+      covariance = _coVarMax;
+    msgsOdom.pose.covariance.elems[0]  = covariance;
+    msgsOdom.pose.covariance.elems[7]  = covariance;
+    msgsOdom.pose.covariance.elems[35] = covariance;
+    _pubPoseCovariance.publish(msgsOdom);
+  }
 }
 
 void ThreadLocalize::sendNanTransform()

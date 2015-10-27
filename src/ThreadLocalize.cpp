@@ -23,26 +23,28 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <tf/tf.h>
+#include <std_msgs/Int64.h>
+#include <std_msgs/Float64.h>
 
 namespace ohm_tsd_slam
 {
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffset, const double yOffset):
-                      ThreadSLAM(*grid),
-                      _nh(nh),
-                      _mapper(mapper),
-                      _sensor(NULL),
-                      _initialized(false),
-                      _gridWidth(grid->getCellsX() * grid->getCellSize()),
-                      _gridHeight(grid->getCellsY() * grid->getCellSize()),
-                      _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
-                      _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
-                      _xOffset(xOffset),
-                      _yOffset(yOffset),
-                      _nameSpace(nameSpace),
-                      _tfListener(NULL),
-                      _useFusedPose(false)
+                              ThreadSLAM(*grid),
+                              _nh(nh),
+                              _mapper(mapper),
+                              _sensor(NULL),
+                              _initialized(false),
+                              _gridWidth(grid->getCellsX() * grid->getCellSize()),
+                              _gridHeight(grid->getCellsY() * grid->getCellSize()),
+                              _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
+                              _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
+                              _xOffset(xOffset),
+                              _yOffset(yOffset),
+                              _nameSpace(nameSpace),
+                              _tfListener(NULL),
+                              _useFusedPose(false)
 {
   ros::NodeHandle prvNh("~");
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
@@ -168,6 +170,8 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 
 void ThreadLocalize::eventLoop(void)
 {
+  ros::Publisher pairPub = _nh->advertise<std_msgs::Int64>("pairs", 1);
+  ros::Publisher weightPub = _nh->advertise<std_msgs::Float64>("weight", 1);
   _sleepCond.wait(_sleepMutex);
   while(_stayActive)
   {
@@ -263,18 +267,38 @@ void ThreadLocalize::eventLoop(void)
       experimental = false;
       break;
     }
-
-    T = doRegistration(_sensor, &M, &Mvalid, &N, &Nvalid, &S, &Svalid, experimental);  //3x3 Transformation Matrix
+    unsigned int pairs = 0;
+    T = doRegistration(_sensor, &M, &Mvalid, &N, &Nvalid, &S, &Svalid, experimental, &pairs);  //3x3 Transformation Matrix
+    std_msgs::Int64 pairMsg;
+    static unsigned int leastPairs = 99999;
 
     /** analyze registration result */
     _tf.stamp_ = ros::Time::now();
-    const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
+    double weight = 0.0;
+    //const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax, &weight);
+    const bool regErrorT = isRegistrationError(40, pairs, &weight);
+    //const bool regErrorT = pairs < 40;
+
+    std_msgs::Float64 weightMsg;
+             weightMsg.data = weight;
+             weightPub.publish(weightMsg);
+
+    if(regErrorT)// pairs < leastPairs)
+    {
+
+         pairMsg.data = static_cast<int>(pairs);
+         pairPub.publish(pairMsg);
+
+      leastPairs = pairs;
+    }
+
+    // std::cout << __PRETTY_FUNCTION__ << " registration weight = " << weight << std::endl;
     if(regErrorT)
     {
       ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") registration error! \n");
       sendNanTransform();
       obvious::Matrix curPose = _sensor->getTransformation();
-      this->publishPoseWithCovariance(&curPose, !regErrorT);   //todo: New stuff test extensively
+      this->publishPoseWithCovariance(&curPose, !regErrorT, 0.0);   //todo: New stuff test extensively
       //_icp->serializeTrace("trace");
     }
     else //transformation valid -> transform sensor and publish new sensor pose
@@ -282,7 +306,7 @@ void ThreadLocalize::eventLoop(void)
       _sensor->transform(&T);
       obvious::Matrix curPose = _sensor->getTransformation();
       sendTransform(&curPose);
-      this->publishPoseWithCovariance(&curPose, !regErrorT);   //todo: New stuff test extensively
+      this->publishPoseWithCovariance(&curPose, !regErrorT, weight);   //todo: New stuff test extensively
       /** Update MAP if necessary */
       if(_mapper)
       {
@@ -357,7 +381,8 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     obvious::Matrix* Nvalid,
     obvious::Matrix* S,
     obvious::Matrix* Svalid,
-    const bool experimental
+    const bool experimental,
+    unsigned int* const pairs
 )
 {
   //  const unsigned int measurementSize = sensor->getRealMeasurementSize();
@@ -401,20 +426,33 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   _icp->setModel(Mvalid, Nvalid);
   _icp->setScene(Svalid);
   double rms = 0.0;
-  unsigned int pairs = 0;
+  //unsigned int pairs = 0;
   unsigned int it = 0;
-  _icp->iterate(&rms, &pairs, &it, &T44);
+  _icp->iterate(&rms, pairs, &it, &T44);
   obvious::Matrix T = _icp->getFinalTransformation();
   return T;
 }
 
-bool ThreadLocalize::isRegistrationError(obvious::Matrix* T, const double trnsMax, const double rotMax)
+bool ThreadLocalize::isRegistrationError(obvious::Matrix* T, const double trnsMax, const double rotMax, double* const weightResult)
 {
   const double deltaX = (*T)(0, 2);
   const double deltaY = (*T)(1, 2);
   const double trnsAbs = std::sqrt(deltaX * deltaX + deltaY * deltaY);
   const double deltaPhi = this->calcAngle(T);
+  double weightAngle = 1 - (std::abs(deltaPhi) / std::abs(std::asin(rotMax)));
+  if(weightAngle < 0.0)
+    weightAngle = 0.0;
+  double weightTranslation = 1 - (trnsAbs / trnsMax);
+  if(weightTranslation < 0.0)
+    weightTranslation = 0.0;
+  *weightResult = std::min(weightTranslation, weightAngle);
   return (trnsAbs > trnsMax) || (std::abs(std::sin(deltaPhi)) > rotMax);
+}
+
+bool ThreadLocalize::isRegistrationError(const unsigned int threshPairMin, const unsigned int nPairs, double* const weightResult)
+{
+  *weightResult = std::min(static_cast<double>(static_cast<int>(nPairs) / static_cast<int>(threshPairMin)), 1.0);
+  return nPairs < threshPairMin;
 }
 
 void ThreadLocalize::sendTransform(obvious::Matrix* T)
@@ -441,7 +479,7 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
   _tfBroadcaster.sendTransform(_tf);
 }
 
-void ThreadLocalize::publishPoseWithCovariance(obvious::Matrix* const T, const bool valid)
+void ThreadLocalize::publishPoseWithCovariance(obvious::Matrix* const T, const bool valid, const double weight)
 {
   static ros::Time lastTime = ros::Time::now();
   tf::StampedTransform tfBasF;
@@ -463,7 +501,7 @@ void ThreadLocalize::publishPoseWithCovariance(obvious::Matrix* const T, const b
   ros::Time curTime = ros::Time::now();
   if((curTime - lastTime).toSec() > 1.0)   //toDo: launch parameter for time
   {
-    ROS_INFO_STREAM("doing loop for publisher");
+    //ROS_INFO_STREAM("doing loop for publisher");
     lastTime = ros::Time::now();
 
 
@@ -511,10 +549,10 @@ void ThreadLocalize::publishPoseWithCovariance(obvious::Matrix* const T, const b
     msgsOdom.pose.pose.orientation.z = tfBasF.getRotation().z();
 
     double covariance = 0.0;
-    if(valid)
-      covariance = _coVarMin;
-    else
-      covariance = _coVarMax;
+    //    if(valid)
+    //      covariance = _coVarMin;
+    //    else
+    covariance = weight * _coVarMax;
     msgsOdom.pose.covariance.elems[0]  = covariance;
     msgsOdom.pose.covariance.elems[7]  = covariance;
     msgsOdom.pose.covariance.elems[35] = covariance;

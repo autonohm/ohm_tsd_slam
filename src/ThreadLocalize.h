@@ -132,7 +132,8 @@ private:
       obvious::Matrix* Nvalid,
       obvious::Matrix* S,
       obvious::Matrix* Svalid,
-      const bool experimental
+      const bool experimental,
+      unsigned int* const pairs
   );
 
   /**
@@ -143,7 +144,9 @@ private:
    * @param rotMax Rotation thresh
    * @return True in case of an error
    */
-  bool isRegistrationError(obvious::Matrix* T, const double trnsMax, const  double rotMax);
+  bool isRegistrationError(obvious::Matrix* T, const double trnsMax, const  double rotMax, double* const weightResult);
+
+  bool isRegistrationError(const unsigned int threshPairMin, const unsigned int nPairs, double* const weightResult);
 
   /**
    * sendTransform
@@ -183,7 +186,7 @@ private:
   void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
       unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
-  void publishPoseWithCovariance(obvious::Matrix* const T, const bool valid);
+  void publishPoseWithCovariance(obvious::Matrix* const T, const bool valid, const double weight);
 
   /**
    * Pointer to main NodeHandle

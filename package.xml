@@ -41,6 +41,21 @@
   <!-- Use test_depend for packages you need only for testing: -->
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
+
+   <!-- apt get system dependencies according to https://github.com/ros/rosdistro/blob/master/rosdep/base.yaml -->
+  <build_depend>libgsl</build_depend>
+  <build_depend>libudev-dev</build_depend>
+  <build_depend>libxml++-2.6</build_depend>
+  <build_depend>lua-dev</build_depend>
+  <build_depend>eigen</build_depend>
+  <build_depend>libopenni2-dev</build_depend>
+  <build_depend>libv4l-dev</build_depend>
+  <build_depend>glut</build_depend>
+  <build_depend>libann-dev</build_depend>
+  <build_depend>libflann-dev</build_depend>
+
+  <!--build_depend>geometry_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend-->
   <build_depend>geometry_msgs</build_depend>
   <build_depend>nav_msgs</build_depend>
   <build_depend>roscpp</build_depend>

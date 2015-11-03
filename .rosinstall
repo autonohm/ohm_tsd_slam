@@ -1,0 +1,4 @@
+- git:
+    local-name: obviously
+    uri: https://github.com/autonohm/obviously.git
+    version: master

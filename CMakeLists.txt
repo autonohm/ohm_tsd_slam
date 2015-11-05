@@ -144,6 +144,7 @@ target_link_libraries(slam_node
                                  ${Boost_LIBRARIES}
                                  )
 
+## Build obviously libraries
 ADD_SUBDIRECTORY(obviously/obcore obcore)
 ADD_SUBDIRECTORY(obviously/obvision obvision)
 ADD_SUBDIRECTORY(obviously/obgraphic obgraphic)

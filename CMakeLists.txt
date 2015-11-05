@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   tf
+  cmake_modules
 )
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall")
@@ -101,13 +102,13 @@ catkin_package(
 include_directories(
   ${catkin_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}/src
-  $ENV{OBVIOUSLY_ROOT}
+  ${PROJECT_SOURCE_DIR}/obviously
 )
 
 link_directories(
-  $ENV{OBVIOUSLY_ROOT}/build/release/obcore
-  $ENV{OBVIOUSLY_ROOT}/build/release/obgraphic
-  $ENV{OBVIOUSLY_ROOT}/build/release/obvision
+  ${LIBRARY_OUTPUT_PATH}/obcore
+  ${LIBRARY_OUTPUT_PATH}/obgraphic
+  ${LIBRARY_OUTPUT_PATH}/obvision
 )
 
 ## Declare a cpp library
@@ -142,6 +143,14 @@ target_link_libraries(slam_node
                                  flann
                                  ${Boost_LIBRARIES}
                                  )
+
+## Build obviously libraries
+ADD_SUBDIRECTORY(obviously/obcore obcore)
+ADD_SUBDIRECTORY(obviously/obvision obvision)
+ADD_SUBDIRECTORY(obviously/obgraphic obgraphic)
+
+
+
 
 #############
 ## Install ##

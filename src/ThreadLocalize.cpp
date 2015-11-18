@@ -12,8 +12,9 @@
 
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
-#include "obvision/registration/ransacMatching/RansacMatching.h"
+#include "obvision/registration/ransacMatching/TwinPointMatching.h"
 #include "obvision/registration/ransacMatching/RandomNormalMatching.h"
+#include "obvision/registration/ransacMatching/PDFMatching.h"
 
 #include <boost/bind.hpp>
 
@@ -338,6 +339,7 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
 
     //std::cout << __PRETTY_FUNCTION__ << " trials " << _ranTrials << " epsthresh " << _ranEpsThresh << " sizectrlset " << _ranSizeCtrlSet << std::endl;
     obvious::RandomNormalMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
+    //obvious::PDFMatching ransac;
     //if(factor == 1)
     obvious::Matrix T = ransac.match(M, _maskM, N, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
     //    else

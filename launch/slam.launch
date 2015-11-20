@@ -15,18 +15,18 @@
          <param name = "cellsize"                type = "double" value = "0.015" />    <!-- cell size in meters                  -->
          <param name = "truncation_radius"       type = "int"    value = "5"     />    <!-- radius as factor of cell size        -->
          <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />    <!-- frequency to publish map             -->
-         <param name = "object_inflation_factor" type = "int"    value = "0"     />    <!-- factor to inflate obstacles          -->
+         <param name = "object_inflation_factor" type = "int"    value = "2"     />    <!-- factor to inflate obstacles          -->
 
          <!-- raycasting parameters -->
          <param name = "min_range"               type = "double" value = "0.0"   />    <!-- minimum range of raycaster in meters -->
          <param name = "max_range"               type = "double" value = "30.0"  />    <!-- maximum range of raycaster in meters -->
-         <param name = "low_reflectivity_range"  type = "double" value = "3.0"   />
+         <param name = "low_reflectivity_range"  type = "double" value = "0.0"   />
          
             
          <param name = "loop_rate"               type = "double" value = "100.0" />
          <param name = "tf_base_frame"           type = "string" value = "/map"  />
          <param name = "tf_child_frame"          type = "string" value = "laser" />
-         <param name = "use_object_inflation"    type = "bool"   value = "false" />
+         <param name = "use_object_inflation"    type = "bool"   value = "true" />
          <param name = "get_map_topic"           type = "string" value = "/map"  />
          
          <!-- robot parameters -->
@@ -35,7 +35,7 @@
          <param name = "footprint_x_offset"      type = "double" value = "-0.5"  />    <!-- offset of laser in meters            -->
   
          <!-- registration parameters -->	
-         <param name = "registration_mode"       type = "int"    value = "1"     />    <!-- 0: ICP    1: EXPERIMENTAL -->	
+         <param name = "registration_mode"       type = "int"    value = "1"     />    <!-- 0: ICP    1: EXPERIMENTAL  2: PDF -->
          	
          <!-- ICP parameters -->
          <param name = "dist_filter_max"         type = "double" value = "0.2"   />    <!-- maximum distance for matching points -->
@@ -49,6 +49,26 @@
          <param name = "ransac_eps_thresh"       type = "double" value = "0.15"  />    <!-- threshold for outlier rejection in meters -->
          <param name = "ransac_ctrlset_size"     type = "int"    value = "180"   />    <!-- number of points taking for ransac   -->
          <param name = "ransac_phi_max"          type = "double" value = "45.0"  />    <!-- maximum angle for ransac matching    -->
+
+         <!-- parameter set for PDF and EXPERIMENTAL registration  -->
+                 <param type = "int"    name = "trials"                	value = "100"/>
+                 <param type = "double" name = "epsThresh"              value = "0.15"/>
+                 <param type = "int"    name = "sizeControlSet"         value = "90"/>
+
+                 <!-- parameter only for PDF registration  -->
+                 <param type = "double" name = "zhit"                   value = "0.2"/>
+                 <param type = "double" name = "zphi"                   value = "0.2"/>
+                 <param type = "double" name = "zshort"                 value = "0.2"/>
+                 <param type = "double" name = "zmax"                   value = "0.2"/>
+                 <param type = "double" name = "zrand"                  value = "0.2"/>
+                 <param type = "double" name = "percentagePointsInC"    value = "0.6"/>
+                 <param type = "double" name = "rangemax"               value = "65"/>
+                 <param type = "double" name = "sigphi"                 value = "0.052"/> <!-- 3 degree -->
+                 <param type = "double" name = "sighit"                 value = "0.15"/>
+                 <param type = "double" name = "lamshort"               value = "0.08"/>
+                 <param type = "double" name = "maxAngleDiff"           value = "1.5"/>
+                 <param type = "double" name = "maxAnglePenalty"        value = "0.5"/>
+
       </node>
    </launch>
 

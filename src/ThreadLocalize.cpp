@@ -366,7 +366,8 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     // no pre-registration
     break;
   case EXP:
-    T = _RandomNormalMatcher->match(M, _maskM, N, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+    T = _RandomNormalMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
     T44(0, 3) = T(0, 2);
@@ -375,7 +376,8 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     T44(1, 3) = T(1, 2);
     break;
   case PDF:
-    T = _PDFMatcher->match(M, _maskM, N, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+    T = _PDFMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
     T44(0, 3) = T(0, 2);

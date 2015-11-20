@@ -174,6 +174,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 ThreadLocalize::~ThreadLocalize()
 {
   delete _sensor;
+  delete _RandomNormalMatcher;
+  delete _PDFMatcher;
   for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
     delete *iter;
   _stayActive = false;
@@ -358,7 +360,6 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   obvious::Matrix T(3,3);
 
   // RANSAC pre-registration (rough)
-
   switch(_regMode)
   {
   case ICP:

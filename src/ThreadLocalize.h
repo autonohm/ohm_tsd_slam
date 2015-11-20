@@ -19,6 +19,9 @@
 #include "obvision/reconstruct/grid/TsdGrid.h"
 #include "obvision/reconstruct/grid/RayCastPolar2D.h"
 #include "obvision/registration/icp/icp_def.h"
+#include "obvision/registration/ransacMatching/TwinPointMatching.h"
+#include "obvision/registration/ransacMatching/RandomNormalMatching.h"
+#include "obvision/registration/ransacMatching/PDFMatching.h"
 
 #include <string>
 
@@ -50,7 +53,8 @@ class ThreadLocalize: public ThreadSLAM
   enum EnumRegModes
   {
     ICP = 0,    ///< Registration with Icp only
-    EXP         ///< Experimental Registration scheme, use with caution
+    EXP = 1,
+    PDF = 2
   };
 
 public:
@@ -130,8 +134,7 @@ private:
       obvious::Matrix* N,
       obvious::Matrix* Nvalid,
       obvious::Matrix* S,
-      obvious::Matrix* Svalid,
-      const bool experimental
+      obvious::Matrix* Svalid
   );
 
   /**
@@ -350,6 +353,12 @@ private:
    * ICP main icp instance
    */
   obvious::Icp* _icp;
+
+  /**
+   * Matcher instance
+   */
+  obvious::RandomNormalMatching* _RandomNormalMatcher;
+  obvious::PDFMatching* _PDFMatcher;
 
   /**
    * Last pose

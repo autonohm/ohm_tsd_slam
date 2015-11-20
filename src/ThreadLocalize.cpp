@@ -12,9 +12,7 @@
 
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
-#include "obvision/registration/ransacMatching/TwinPointMatching.h"
-#include "obvision/registration/ransacMatching/RandomNormalMatching.h"
-#include "obvision/registration/ransacMatching/PDFMatching.h"
+
 
 #include <boost/bind.hpp>
 
@@ -75,6 +73,40 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
 
+  //RandomMatcher options
+  int trials;
+  double epsThresh;
+  int sizeControlSet;
+  double zhit;
+  double zphi;
+  double zshort;
+  double zmax;
+  double zrand;
+  double percentagePointsInC;
+  double rangemax;
+  double sigphi;
+  double sighit;
+  double lamshort;
+  double maxAngleDiff;
+  double maxAnglePenalty;
+
+  prvNh.param<int>("trials", trials, 100);
+  prvNh.param<double>("epsThresh", epsThresh, 0.15);
+  prvNh.param<int>("sizeControlSet", sizeControlSet, 140);
+  prvNh.param<double>("zhit", zhit, 0.45);
+  prvNh.param<double>("zphi", zphi, 0);
+  prvNh.param<double>("zshort", zshort, 0.25);
+  prvNh.param<double>("zmax", zmax, 0.05);
+  prvNh.param<double>("zrand", zrand, 0.25);
+  prvNh.param<double>("percentagePointsInC", percentagePointsInC, 0.9);
+  prvNh.param<double>("rangemax", rangemax, 20);
+  prvNh.param<double>("sigphi", sigphi, M_PI / 180.0 * 3);
+  prvNh.param<double>("sighit", sighit, 0.2);
+  prvNh.param<double>("lamshort", lamshort, 0.08);
+  prvNh.param<double>("maxAngleDiff", maxAngleDiff, 3.0);
+  prvNh.param<double>("maxAnglePenalty", maxAnglePenalty, 0.5);
+
+
   //ransac options
   int paramInt = 0;
   prvNh.param<int>(nameSpace + "ransac_trials", paramInt, RANSAC_TRIALS);
@@ -88,12 +120,30 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<int>(_nameSpace + "registration_mode", iVar, ICP);
   _regMode = static_cast<EnumRegModes>(iVar);
 
+  /** Align Laser scans */
+  switch(_regMode)
+  {
+  case ICP:
+    // dont need any instance
+    break;
+  case EXP:
+    _RandomNormalMatcher = new obvious::RandomNormalMatching(trials, epsThresh, sizeControlSet);
+    break;
+  case PDF:
+    _PDFMatcher = new obvious::PDFMatching(trials, epsThresh, sizeControlSet, zhit, zphi, zshort, zmax, zrand, percentagePointsInC, rangemax, sigphi, sighit, lamshort, maxAngleDiff, maxAnglePenalty);
+    break;
+  default:
+    ROS_ERROR_STREAM("Unknown registration mode " << _regMode << " use default = ICP" << std::endl);
+    break;
+  }
+
   _modelCoords  = NULL;
   _modelNormals = NULL;
   _maskM        = NULL;
   _rayCaster    = NULL;
   _scene        = NULL;
   _maskS        = NULL;
+
 
   /** Initialize member modules **/
   _lastPose         = new obvious::Matrix(3, 3);
@@ -210,23 +260,7 @@ void ThreadLocalize::eventLoop(void)
     obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
     obvious::Matrix T(3, 3);
 
-    /** Align Laser scans */
-    bool experimental = false;
-    switch(_regMode)
-    {
-    case ICP:
-      experimental = false;
-      break;
-    case EXP:
-      experimental = true;
-      break;
-    default:
-      ROS_ERROR_STREAM("Unknown registration mode " << _regMode << " use default" << std::endl);
-      experimental = false;
-      break;
-    }
-
-    T = doRegistration(_sensor, &M, &Mvalid, &N, &Nvalid, &S, &Svalid, experimental);  //3x3 Transformation Matrix
+    T = doRegistration(_sensor, &M, &Mvalid, &N, &Nvalid, &S, &Svalid);  //3x3 Transformation Matrix
 
     /** analyze registration result */
     _tf.stamp_ = ros::Time::now();
@@ -315,45 +349,44 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     obvious::Matrix* N,
     obvious::Matrix* Nvalid,
     obvious::Matrix* S,
-    obvious::Matrix* Svalid,
-    const bool experimental
+    obvious::Matrix* Svalid
 )
 {
 //  const unsigned int measurementSize = sensor->getRealMeasurementSize();
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
+  obvious::Matrix T(3,3);
 
   // RANSAC pre-registration (rough)
-  if(experimental)
+
+  switch(_regMode)
   {
-//    const unsigned int factor = 4;//_ransacReduceFactor;
-//    const unsigned int reducedSize = measurementSize / factor; // e.g.: 1080 -> 270  toDo: this could result in wrong calculations..round?
-//    obvious::Matrix Sreduced(reducedSize, 2);
-//    obvious::Matrix Mreduced(reducedSize, 2);
-//    bool* maskSRed = new bool[reducedSize];
-//    bool* maskMRed = new bool[reducedSize];
-    //if(0)// factor != 1)
-
-//    reduceResolution(_maskS, S, maskSRed, &Sreduced, measurementSize, reducedSize, factor);
-//    reduceResolution(_maskM, M, maskMRed, &Mreduced, measurementSize, reducedSize, factor);
-
-    //std::cout << __PRETTY_FUNCTION__ << " trials " << _ranTrials << " epsthresh " << _ranEpsThresh << " sizectrlset " << _ranSizeCtrlSet << std::endl;
-    obvious::RandomNormalMatching ransac(_ranTrials, _ranEpsThresh, _ranSizeCtrlSet);
-    //obvious::PDFMatching ransac;
-    //if(factor == 1)
-    obvious::Matrix T = ransac.match(M, _maskM, N, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-    //    else
-    //    std::cout << __PRETTY_FUNCTION__ << " here?" << std::endl;
-    //    obvious::Matrix T = ransac.match(&Mreduced, maskMRed, N, &Sreduced, maskSRed, obvious::deg2rad(45.0),
-    //          _trnsMax, sensor->getAngularResolution() * (double) factor);
-    //    std::cout << __PRETTY_FUNCTION__ << " not.." << std::endl;
+  case ICP:
+    // no pre-registration
+    break;
+  case EXP:
+    T = _RandomNormalMatcher->match(M, _maskM, N, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
     T44(0, 3) = T(0, 2);
     T44(1, 0) = T(1, 0);
     T44(1, 1) = T(1, 1);
     T44(1, 3) = T(1, 2);
+    break;
+  case PDF:
+    T = _PDFMatcher->match(M, _maskM, N, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+    T44(0, 0) = T(0, 0);
+    T44(0, 1) = T(0, 1);
+    T44(0, 3) = T(0, 2);
+    T44(1, 0) = T(1, 0);
+    T44(1, 1) = T(1, 1);
+    T44(1, 3) = T(1, 2);
+    break;
+  default:
+    // no pre-registration
+    break;
   }
+
   _icp->reset();
   obvious::Matrix P = sensor->getTransformation();
   _filterBounds->setPose(&P);
@@ -364,7 +397,7 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   unsigned int pairs = 0;
   unsigned int it = 0;
   _icp->iterate(&rms, &pairs, &it, &T44);
-  obvious::Matrix T = _icp->getFinalTransformation();
+  T = _icp->getFinalTransformation();
   return T;
 }
 

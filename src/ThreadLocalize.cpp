@@ -42,6 +42,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 {
   ros::NodeHandle prvNh("~");
 
+
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
   _nameSpace = nameSpace;
   std::string::iterator it = _nameSpace.end() - 1;
@@ -132,6 +133,9 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   case PDF:
     _PDFMatcher = new obvious::PDFMatching(trials, epsThresh, sizeControlSet, zhit, zphi, zshort, zmax, zrand, percentagePointsInC, rangemax, sigphi, sighit, lamshort, maxAngleDiff, maxAnglePenalty);
     break;
+  case TSD:
+    _TSD_PDFMatcher = new obvious::TSD_PDFMatching(_grid, trials, epsThresh, sizeControlSet, zhit, zphi, zshort, zmax, zrand, percentagePointsInC, rangemax, sigphi, sighit, lamshort, maxAngleDiff, maxAnglePenalty);
+    break;
   default:
     ROS_ERROR_STREAM("Unknown registration mode " << _regMode << " use default = ICP" << std::endl);
     break;
@@ -173,9 +177,19 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
 ThreadLocalize::~ThreadLocalize()
 {
+  // print grid
+  double ratio = double(_grid.getCellsX())/double(_grid.getCellsY());
+  unsigned w = 600;
+  unsigned h = (unsigned int)(((double)w)/ratio);
+  unsigned char* image = new unsigned char[3 * w * h];
+  _grid.grid2ColorImage(image, w, h);
+  obvious::serializePPM("/tmp/image_tsd.ppm", image, w, h, true);
+
+
   delete _sensor;
   delete _RandomNormalMatcher;
   delete _PDFMatcher;
+  delete _TSD_PDFMatcher;
   for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
     delete *iter;
   _stayActive = false;
@@ -378,6 +392,16 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   case PDF:
     // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
     T = _PDFMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+    T44(0, 0) = T(0, 0);
+    T44(0, 1) = T(0, 1);
+    T44(0, 3) = T(0, 2);
+    T44(1, 0) = T(1, 0);
+    T44(1, 1) = T(1, 1);
+    T44(1, 3) = T(1, 2);
+    break;
+  case TSD:
+    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+    T = _TSD_PDFMatcher->match(sensor->getTransformation(), M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
     T44(0, 0) = T(0, 0);
     T44(0, 1) = T(0, 1);
     T44(0, 3) = T(0, 2);

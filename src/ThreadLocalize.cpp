@@ -22,6 +22,8 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/tf.h>
 
+//#define TRACE
+
 namespace ohm_tsd_slam
 {
 
@@ -41,6 +43,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
                     _nameSpace(nameSpace)
 {
   ros::NodeHandle prvNh("~");
+  loopCounter = 0;
 
 
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
@@ -140,6 +143,11 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
     ROS_ERROR_STREAM("Unknown registration mode " << _regMode << " use default = ICP" << std::endl);
     break;
   }
+
+  // debug
+#ifdef TRACE
+  _TSD_PDFMatcher->activateTrace();
+#endif
 
   _modelCoords  = NULL;
   _modelNormals = NULL;
@@ -372,6 +380,7 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
   obvious::Matrix T(3,3);
+  obvious::Matrix T_old(3,3);
 
   // RANSAC pre-registration (rough)
   switch(_regMode)
@@ -413,6 +422,43 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     // no pre-registration
     break;
   }
+
+#ifdef TRACE
+  T_old = _icp->getFinalTransformation();
+  loopCounter++;
+  double diff = std::sqrt(std::pow(T(0, 2) - T_old(0, 2), 2) + std::pow(T(1, 2) - T_old(1, 2), 2));
+
+  if(diff > 0.5)
+  {
+    ROS_INFO_STREAM("Diff: "<<diff);
+    long int a = ros::Time::now().toSec();
+    std::stringstream ss, ss2;
+    ss << "/tmp/trace/" << loopCounter << "_" << a << "_" << diff << "_match" << "/";
+    std::string filename = ss.str();
+
+    _TSD_PDFMatcher->serializeTrace(filename.c_str());
+
+//    ss2 << "/tmp/trace/" << loopCounter << "_" << a << "_" << diff << "_match2" << "/";
+//    filename = ss2.str();
+//
+//    _TSD_PDFMatcher->serializeTrace(filename.c_str());
+
+    // write on file
+
+    filename = filename + "rawData.dat";
+    ofstream file(filename.c_str());
+
+    // mx my mm sx sy sm
+    for(unsigned int i = 0; i < M->getRows(); i++)
+    {
+        file << (*M)(i, 0) << ";" << (*M)(i, 1) << ";" << _maskM[i] << ";" << (*S)(i, 0) << ";" << (*S)(i, 1) << ";" << _maskS[i] << "\n";
+    }
+
+    file.close();
+
+    //~ write on file
+  }
+#endif
 
   _icp->reset();
   obvious::Matrix P = sensor->getTransformation();

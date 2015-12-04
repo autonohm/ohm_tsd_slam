@@ -30,6 +30,7 @@
 #include <fstream> //debugging tsd_pdf
 
 #include <string>
+#include <cmath>
 
 namespace ohm_tsd_slam
 {
@@ -397,6 +398,8 @@ private:
    * Scan passed in clockwise rotation (mathematically negative increment)
    */
   bool _reverseScan;
+
+  int loopCounter;
 };
 
 

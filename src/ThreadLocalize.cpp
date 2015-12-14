@@ -380,7 +380,10 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
   obvious::Matrix T(3,3);
+
+#ifdef TRACE
   obvious::Matrix T_old(3,3);
+#endif
 
   // RANSAC pre-registration (rough)
   switch(_regMode)

@@ -4,7 +4,7 @@
          <!-- topic parameters -->
          <param name = "map_topic"               type = "string" value = "/map"  />    <!-- topic of occupancy grid              -->
          <param name = "pose_topic"              type = "string" value = "pose"  />    <!-- topic for robot's pose               -->   
-         <param name = "laser_topic"             type = "string" value = "scan"  />    <!-- topic to receive laser scan          -->
+         <param name = "laser_topic"             type = "string" value = "filtered_scan"  />    <!-- topic to receive laser scan          -->
 
          <!-- map parameters -->
          <param name = "x_offset"                type = "double" value = "0.0"   />    <!-- offset of robot in map in meters     -->
@@ -13,13 +13,13 @@
          
          <param name = "map_size"      type = "int"    value = "13"    />    <!-- map size                             -->
          <param name = "cellsize"                type = "double" value = "0.015" />    <!-- cell size in meters                  -->
-         <param name = "truncation_radius"       type = "int"    value = "5"     />    <!-- radius as factor of cell size        -->
+         <param name = "truncation_radius"       type = "int"    value = "10"     />    <!-- radius as factor of cell size        -->
          <param name = "occ_grid_time_interval"  type = "double" value = "2.0"   />    <!-- frequency to publish map             -->
-         <param name = "object_inflation_factor" type = "int"    value = "2"     />    <!-- factor to inflate obstacles          -->
+         <param name = "object_inflation_factor" type = "int"    value = "1"     />    <!-- factor to inflate obstacles          -->
 
          <!-- raycasting parameters -->
          <param name = "min_range"               type = "double" value = "0.0"   />    <!-- minimum range of raycaster in meters -->
-         <param name = "max_range"               type = "double" value = "30.0"  />    <!-- maximum range of raycaster in meters -->
+         <param name = "max_range"               type = "double" value = "20.0"  />    <!-- maximum range of raycaster in meters -->
          <param name = "low_reflectivity_range"  type = "double" value = "0.0"   />
          
             
@@ -35,12 +35,12 @@
          <param name = "footprint_x_offset"      type = "double" value = "-0.5"  />    <!-- offset of laser in meters            -->
   
          <!-- registration parameters -->	
-         <param name = "registration_mode"       type = "int"    value = "1"     />    <!-- 0: ICP    1: EXPERIMENTAL  2: PDF -->
+         <param name = "registration_mode"       type = "int"    value = "3"     />    <!-- 0:ICP  1:EXPERIMENTAL  2:PDF  3:TSD_PDF -->
          	
          <!-- ICP parameters -->
          <param name = "dist_filter_max"         type = "double" value = "0.4"   />    <!-- maximum distance for matching points -->
          <param name = "dist_filter_min"         type = "double" value = "0.02" />    <!-- minimum distance for matching points -->
-         <param name = "icp_iterations"          type = "int"    value = "25"    />    <!-- number of icp iterations             -->
+         <param name = "icp_iterations"          type = "int"    value = "30"    />    <!-- number of icp iterations             -->
          <param name = "reg_trs_max"             type = "double" value = "1.0"   />    <!-- maximum translation between two scans-->
          <param name = "reg_sin_rot_max"         type = "double" value = "0.5"   />    <!-- maximum rotation between two scans   -->
          
@@ -51,12 +51,12 @@
          <param name = "ransac_phi_max"          type = "double" value = "45.0"  />    <!-- maximum angle for ransac matching    -->
 
          <!-- parameter set for PDF and EXPERIMENTAL registration  -->
-         <param type = "int"    name = "trials"                	value = "15"/>
+         <param type = "int"    name = "trials"                	value = "30"/>
          <param type = "double" name = "epsThresh"              value = "0.15"/>
-         <param type = "int"    name = "sizeControlSet"         value = "90"/>
+         <param type = "int"    name = "sizeControlSet"         value = "360"/>
 
          <!-- parameter only for PDF registration  -->
-         <param type = "double" name = "zhit"                   value = "0.2"/>
+         <param type = "double" name = "zhit"                   value = "0.2"/> 
          <param type = "double" name = "zphi"                   value = "0.2"/>
          <param type = "double" name = "zshort"                 value = "0.2"/>
          <param type = "double" name = "zmax"                   value = "0.2"/>
@@ -64,7 +64,7 @@
          <param type = "double" name = "percentagePointsInC"    value = "0.6"/>
          <param type = "double" name = "rangemax"               value = "65"/>
          <param type = "double" name = "sigphi"                 value = "0.052"/> <!-- 3 degree -->
-         <param type = "double" name = "sighit"                 value = "0.15"/>
+         <param type = "double" name = "sighit"                 value = "0.1"/>
          <param type = "double" name = "lamshort"               value = "0.08"/>
          <param type = "double" name = "maxAngleDiff"           value = "1.5"/>
          <param type = "double" name = "maxAnglePenalty"        value = "0.5"/>

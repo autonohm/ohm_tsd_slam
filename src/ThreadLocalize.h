@@ -22,8 +22,15 @@
 #include "obvision/registration/ransacMatching/TwinPointMatching.h"
 #include "obvision/registration/ransacMatching/RandomNormalMatching.h"
 #include "obvision/registration/ransacMatching/PDFMatching.h"
+#include "obvision/registration/ransacMatching/TSD_PDFMatching.h"
+
+#include "obgraphic/Obvious2D.h" //debugging tsd_pdf
+#include "obcore/base/tools.h" //debugging tsd_pdf
+#include <iostream> //debugging tsd_pdf
+#include <fstream> //debugging tsd_pdf
 
 #include <string>
+#include <cmath>
 
 namespace ohm_tsd_slam
 {
@@ -54,7 +61,8 @@ class ThreadLocalize: public ThreadSLAM
   {
     ICP = 0,    ///< Registration with Icp only
     EXP = 1,
-    PDF = 2
+    PDF = 2,
+    TSD = 3
   };
 
 public:
@@ -359,6 +367,7 @@ private:
    */
   obvious::RandomNormalMatching* _RandomNormalMatcher;
   obvious::PDFMatching* _PDFMatcher;
+  obvious::TSD_PDFMatching* _TSD_PDFMatcher;
 
   /**
    * Last pose

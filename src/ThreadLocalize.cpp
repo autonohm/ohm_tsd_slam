@@ -43,7 +43,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
                     _nameSpace(nameSpace)
 {
   ros::NodeHandle prvNh("~");
-  loopCounter = 0;
 
 
   /*** Read parameters from ros parameter server. Use namespace if provided ***/
@@ -144,11 +143,6 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
     break;
   }
 
-  // debug
-#ifdef TRACE
-  _TSD_PDFMatcher->activateTrace();
-#endif
-
   _modelCoords  = NULL;
   _modelNormals = NULL;
   _maskM        = NULL;
@@ -185,13 +179,14 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
 ThreadLocalize::~ThreadLocalize()
 {
-  // print grid
-  double ratio = double(_grid.getCellsX())/double(_grid.getCellsY());
-  unsigned w = 600;
-  unsigned h = (unsigned int)(((double)w)/ratio);
-  unsigned char* image = new unsigned char[3 * w * h];
-  _grid.grid2ColorImage(image, w, h);
-  obvious::serializePPM("/tmp/image_tsd.ppm", image, w, h, true);
+//  // (debug)print grid
+//  // todo: remove printing grid
+//  double ratio = double(_grid.getCellsX())/double(_grid.getCellsY());
+//  unsigned w = 600;
+//  unsigned h = (unsigned int)(((double)w)/ratio);
+//  unsigned char* image = new unsigned char[3 * w * h];
+//  _grid.grid2ColorImage(image, w, h);
+//  obvious::serializePPM("/tmp/image_tsd.ppm", image, w, h, true);
 
 
   delete _sensor;
@@ -425,43 +420,6 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     // no pre-registration
     break;
   }
-
-#ifdef TRACE
-  T_old = _icp->getFinalTransformation();
-  loopCounter++;
-  double diff = std::sqrt(std::pow(T(0, 2) - T_old(0, 2), 2) + std::pow(T(1, 2) - T_old(1, 2), 2));
-
-  if(diff > 0.5)
-  {
-    ROS_INFO_STREAM("Diff: "<<diff);
-    long int a = ros::Time::now().toSec();
-    std::stringstream ss, ss2;
-    ss << "/tmp/trace/" << loopCounter << "_" << a << "_" << diff << "_match" << "/";
-    std::string filename = ss.str();
-
-    _TSD_PDFMatcher->serializeTrace(filename.c_str());
-
-//    ss2 << "/tmp/trace/" << loopCounter << "_" << a << "_" << diff << "_match2" << "/";
-//    filename = ss2.str();
-//
-//    _TSD_PDFMatcher->serializeTrace(filename.c_str());
-
-    // write on file
-
-    filename = filename + "rawData.dat";
-    ofstream file(filename.c_str());
-
-    // mx my mm sx sy sm
-    for(unsigned int i = 0; i < M->getRows(); i++)
-    {
-        file << (*M)(i, 0) << ";" << (*M)(i, 1) << ";" << _maskM[i] << ";" << (*S)(i, 0) << ";" << (*S)(i, 1) << ";" << _maskS[i] << "\n";
-    }
-
-    file.close();
-
-    //~ write on file
-  }
-#endif
 
   _icp->reset();
   obvious::Matrix P = sensor->getTransformation();

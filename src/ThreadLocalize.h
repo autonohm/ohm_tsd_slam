@@ -398,8 +398,6 @@ private:
    * Scan passed in clockwise rotation (mathematically negative increment)
    */
   bool _reverseScan;
-
-  int loopCounter;
 };
 
 

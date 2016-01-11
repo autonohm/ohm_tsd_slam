@@ -7,20 +7,40 @@
 
 #include "ThreadLocalize.h"
 
-#include "SlamNode.h"
-#include "ThreadMapping.h"
-
-#include "obcore/math/linalg/linalg.h"
-#include "obcore/base/Logger.h"
-
-
-#include <boost/bind.hpp>
-
-#include <cstring>
-#include <unistd.h>
-
+#include <boost/thread/detail/thread.hpp>
+#include <boost/thread/pthread/condition_variable.hpp>
+#include <boost/thread/pthread/mutex.hpp>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <tf/tf.h>
+#include <geometry_msgs/Quaternion.h>
+#include <obcore/base/types.h>
+#include <obcore/math/linalg/gsl/Matrix.h>
+#include <obcore/math/mathbase.h>
+#include <obvision/registration/icp/assign/filter/DistanceFilter.h>
+#include <obvision/registration/icp/assign/filter/OutOfBoundsFilter2D.h>
+#include <obvision/registration/icp/assign/filter/ReciprocalFilter.h>
+#include <obvision/registration/icp/assign/FlannPairAssignment.h>
+#include <obvision/registration/icp/ClosedFormEstimator2D.h>
+#include <obvision/registration/icp/Icp.h>
+#include <ros/duration.h>
+#include <ros/node_handle.h>
+#include <ros/publisher.h>
+#include <ros/time.h>
+#include <rosconsole/macros_generated.h>
+#include <std_msgs/Header.h>
+#include <tf/exceptions.h>
+#include <tf/LinearMath/QuadWord.h>
+#include <tf/LinearMath/Quaternion.h>
+#include <tf/LinearMath/Transform.h>
+#include <tf/LinearMath/Vector3.h>
+#include <algorithm>
+#include <cassert>
+#include <deque>
+#include <iterator>
+#include <vector>
+
+#include "ThreadMapping.h"
 
 //#define TRACE
 
@@ -200,15 +220,64 @@ ThreadLocalize::~ThreadLocalize()
   _laserData.clear();
 }
 
-void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
-{
-  if(!_initialized)
+  void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
   {
-    ROS_INFO_STREAM("Localizer(" << _nameSpace << ") received first scan. Initialize node...\n");
-    this->init(scan);
-    ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
-    return;
-  }
+    if(!_initialized)
+    {
+
+      try
+      {
+        _tfListener.waitForTransform("base_footprint", "laser", ros::Time(0), ros::Duration(10.0));
+        _tfListener.lookupTransform("base_footprint", "laser", ros::Time(0), _tfReader);
+      }
+      catch(tf::TransformException ex)
+      {
+        ROS_ERROR("%s", ex.what());
+        ros::Duration(1.0).sleep();
+      }
+
+      _tfLaser = _tfReader;
+
+      try
+      {
+        _tfListener.waitForTransform("map", "wheelodom", ros::Time(0), ros::Duration(10.0));
+        _tfListener.lookupTransform("map", "wheelodom", ros::Time(0), _tfReader);
+      }
+      catch(tf::TransformException ex)
+      {
+        ROS_ERROR("%s", ex.what());
+        ros::Duration(1.0).sleep();
+      }
+
+      _tfOdomOld = _tfReader;
+      _tfOdomOld = _tfOdomOld * _tfLaser;
+
+      ROS_INFO_STREAM("Localizer(" << _nameSpace << ") received first scan. Initialize node...\n");
+      this->init(scan);
+      ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
+      return;
+    }
+    else
+    {
+      try
+      {
+        _tfListener.waitForTransform("map", "wheelodom", ros::Time(0), ros::Duration(5.0));
+        _tfListener.lookupTransform("map", "wheelodom", ros::Time(0), _tfReader);
+      }
+      catch(tf::TransformException ex)
+      {
+        ROS_ERROR("%s", ex.what());
+        ros::Duration(1.0).sleep();
+      }
+
+      _tfOdom = _tfReader;
+      _tfOdom = _tfOdom * _tfLaser;
+
+      // calc diff odom
+      _tfRelativeOdom = _tfOdomOld.inverse() * _tfOdom;
+      _tfOdomOld = _tfOdom;
+    }
+
   sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
   *scanCopy = scan;
   _dataMutex.lock();
@@ -421,6 +490,22 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     break;
   }
 
+
+
+
+  //std::cout << "tsd: " << x2 << "; " << y2 << "; " << theta2 << std::endl;
+  //std::cout << "odm: " << x << "; " << y << "; " << theta << std::endl;
+  
+
+//  T.setIdentity();
+
+//  T(0, 0) = cos(theta);
+//  T(0, 1) = sin(theta);
+//  T(0, 2) = x;
+//  T(1, 0) = -sin(theta);
+//  T(1, 1) = cos(theta);
+//  T(1, 2) = y;
+
   _icp->reset();
   obvious::Matrix P = sensor->getTransformation();
   _filterBounds->setPose(&P);
@@ -432,6 +517,33 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   unsigned int it = 0;
   _icp->iterate(&rms, &pairs, &it, &T44);
   T = _icp->getFinalTransformation();
+  
+  
+  // odom check
+  double x2;
+  double y2;
+  double theta2;
+  double x;
+  double y;
+  double theta;
+
+  x2 = T(0,2);
+  y2 = T(1,2);
+  theta2 = acos((T(0,0)));
+  
+  x = _tfRelativeOdom.getOrigin().getX();
+  y = _tfRelativeOdom.getOrigin().getY();
+  theta = -tf::getYaw(_tfRelativeOdom.getRotation()); // todo: why -(theta)?
+
+  double odomDiff = 0.0;
+  odomDiff = std::max(std::abs(x - x2), std::max(std::abs(y - y2),std::abs(y - y2)));
+  
+  //std::cout << odomDiff << std::endl;
+  
+  if(odomDiff > 0.05)
+    ROS_WARN_STREAM("odom diff = " << odomDiff);
+  //std::cout << "dff: " << x - x2 << "; " << y - y2 << "; " << theta - theta2 << std::endl;
+
   return T;
 }
 

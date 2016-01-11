@@ -14,6 +14,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obvision/reconstruct/grid/TsdGrid.h"
@@ -393,6 +394,16 @@ private:
    * Ros current transform
    */
   tf::StampedTransform _tf;
+
+  /**
+   * Odom Transform
+   */
+  tf::Transform _tfOdomOld;
+  tf::Transform _tfOdom;
+  tf::Transform _tfLaser;
+  tf::StampedTransform _tfReader;
+  tf::Transform _tfRelativeOdom;
+  tf::TransformListener _tfListener;
 
   /**
    * Scan passed in clockwise rotation (mathematically negative increment)

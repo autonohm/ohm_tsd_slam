@@ -240,8 +240,6 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
     if(_useOdomRescue) odomRescueInit();
 
     _laserStampOld = scan.header.stamp;
-
-    return;
   }
   else
   {
@@ -252,10 +250,8 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
     _laserData.push_front(scanCopy);
     _dataMutex.unlock();
 
-    return;
+    this->unblock();
   }
-
-  this->unblock();
 }
 
 void ThreadLocalize::odomRescueInit()
@@ -337,10 +333,11 @@ void ThreadLocalize::odomRescueCheck(obvious::Matrix& T)
   theta = -tf::getYaw(_tfRelativeOdom.getRotation()); // todo: why -(theta)?
 
   double odomDiff = 0.0;
-  odomDiff = std::max(std::abs(x - x2), std::max(std::abs(y - y2),std::abs(y - y2)));
+  odomDiff = std::max(std::abs(x - x2), std::abs(y - y2));
 
   //std::cout << odomDiff << std::endl;
 
+  // use odom instead of slam if odom is to far from slam
   if(odomDiff > 0.5)
   {
     ROS_WARN_STREAM("odom diff = " << odomDiff);

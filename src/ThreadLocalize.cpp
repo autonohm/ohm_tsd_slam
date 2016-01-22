@@ -287,7 +287,7 @@ void ThreadLocalize::odomRescueInit()
 
   ROS_INFO_STREAM("Received first odom tf for initialization of odom rescue");
   // transform odom to laser frame
-  _tfOdomOld = _tfReader * _tfLaser;
+  _tfOdomOld = _tfReader;
 }
 
 void ThreadLocalize::odomRescueUpdate()
@@ -303,54 +303,87 @@ void ThreadLocalize::odomRescueUpdate()
     ROS_ERROR("%s", ex.what());
     ros::Duration(1.0).sleep();
   }
+  
+  _tfOdom = _tfReader;
 
-  // tranform to laser
-  _tfOdom = _tfReader * _tfLaser;
-
-  // calc diff odom
+  // calc diff odom -> odom(t-1) -> odom(t)
   _tfRelativeOdom = _tfOdomOld.inverse() * _tfOdom;
 
   // push state ahead
   _tfOdomOld = _tfOdom;
 }
 
-void ThreadLocalize::odomRescueCheck(obvious::Matrix& T)
+void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
 {
-  // odom check
-  double x2;
-  double y2;
-  double theta2;
-  double x;
-  double y;
-  double theta;
+  // transform transformation from slam to odom e.g. form laser to base footprint system
 
-  x2 = T(0,2);
-  y2 = T(1,2);
-  theta2 = acos((T(0,0)));
 
-  x = _tfRelativeOdom.getOrigin().getX();
-  y = _tfRelativeOdom.getOrigin().getY();
-  theta = -tf::getYaw(_tfRelativeOdom.getRotation()); // todo: why -(theta)?
+  obvious::Matrix T_odom = tfToObviouslyMatrix3x3(_tfLaser * obviouslyMatrix3x3ToTf(T_slam) * _tfLaser.inverse());
 
-  double odomDiff = 0.0;
-  odomDiff = std::max(std::abs(x - x2), std::abs(y - y2));
+  // get dt
+  ros::Duration dtRos = _laserStamp - _laserStampOld;
+  double dt = dtRos.sec + dtRos.nsec * 1e-9;
 
-  //std::cout << odomDiff << std::endl;
+  // get velocities
+  double dx = T_odom(0,2);
+  double dy = T_odom(1,2);
+  double dtrans = sqrt(pow(dx,2) + pow(dy,2));
 
-  // use odom instead of slam if odom is to far from slam
-  if(odomDiff > 0.5)
+  double drot = acos((T_odom(0,0)));
+
+  double vrot = drot / dt;
+  double vtrans = dtrans / dt;
+
+
+  // use odom instead of slam if slam translation is impossible for robot
+  if(vrot > _rotVelocityMax || vtrans > _trnsVelocityMax)
   {
-    ROS_WARN_STREAM("odom diff = " << odomDiff);
+    std::cout << "odom recover - vrot: " << vrot << "; vtrans= " << vtrans << std::endl;
+  
+    tf::Transform tfSlamFromOdom =  _tfLaser.inverse() * _tfRelativeOdom * _tfLaser;
 
-    T.setIdentity();
+    double x = tfSlamFromOdom.getOrigin().getX(); // debug: x is wrong here
+    double y = tfSlamFromOdom.getOrigin().getY();
+    double theta = -tf::getYaw(tfSlamFromOdom.getRotation());  // todo: why -(theta)?
+    
 
-    T(0, 0) = cos(theta);
-    T(0, 1) = sin(theta);
-    T(0, 2) = x;
-    T(1, 0) = -sin(theta);
-    T(1, 1) = cos(theta);
-    T(1, 2) = y;
+    
+    T_slam.setIdentity();
+
+    T_slam(0, 0) = cos(theta);
+    T_slam(0, 1) = sin(theta);
+    T_slam(0, 2) = x;
+    T_slam(1, 0) = -sin(theta);
+    T_slam(1, 1) = cos(theta);
+    T_slam(1, 2) = y;
   }
+}
+
+tf::Transform ThreadLocalize::obviouslyMatrix3x3ToTf(const obvious::Matrix& ob)
+{
+  tf::Transform tf;
+  tf.setOrigin( tf::Vector3(ob(0,2), ob(1,2), 0.0) );
+  tf.setRotation( tf::createQuaternionFromYaw( acos( ob(0,0) ) ) );
+  return tf;
+}
+
+obvious::Matrix ThreadLocalize::tfToObviouslyMatrix3x3(const tf::Transform& tf)
+{
+  obvious::Matrix ob(3,3);
+  ob.setIdentity();
+
+  double theta = tf::getYaw(tf.getRotation());
+  double x = tf.getOrigin().getX();
+  double y = tf.getOrigin().getY();
+
+  ob(0, 0) = cos(theta);
+  ob(0, 1) = sin(theta);
+  ob(0, 2) = x;
+  ob(1, 0) = -sin(theta);
+  ob(1, 1) = cos(theta);
+  ob(1, 2) = y;
+
+  return ob;
 }
 
 void ThreadLocalize::eventLoop(void)

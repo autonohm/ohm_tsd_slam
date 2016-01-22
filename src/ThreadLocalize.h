@@ -45,7 +45,9 @@ namespace
 {   //default values in case no launch parameters are set
 const unsigned int ICP_ITERATIONS = 25;
 const double TRNS_THRESH = 0.25;            //Thresholds for registration. If the gained transformation is out of these bounds,
-const double ROT_THRESH = 0.17;             //the Transformation is not taken over
+const double ROT_THRESH = 0.17;
+const double TRNS_VEL_MAX = 0.5;
+const double ROT_VEL_MAX = 2 * M_PI;//the Transformation is not taken over
 const double TRNS_MIN = 0.05;              //Minimal values for the pose change. Push is only needed when pose change
 const double ROT_MIN = 0.03;               //greater than than one of these values
 const double DIST_FILT_MIN = 0.1;
@@ -194,6 +196,13 @@ private:
   void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
       unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
+  /**
+   * odomRescue
+   * Method for recover from a registration error
+   */
+  void odomRescueInit();
+  void odomRescueUpdate();
+  void odomRescueCheck(obvious::Matrix& T);
 
   /**
    * Pointer to main NodeHandle
@@ -244,11 +253,13 @@ private:
    * ICP translation threshold
    */
   double _trnsMax;
+  double _trnsVelocityMax;
 
   /**
    * ICP rotation threshold
    */
   double _rotMax;
+  double _rotVelocityMax;
 
   /**
    * Starting x offset
@@ -389,6 +400,12 @@ private:
    * Ros tf interface
    */
   tf::TransformBroadcaster _tfBroadcaster;
+  tf::TransformListener _tfListener;
+
+  /**
+   * Container for reading tfs
+   */
+  tf::StampedTransform _tfReader;
 
   /**
    * Ros current transform
@@ -396,14 +413,35 @@ private:
   tf::StampedTransform _tf;
 
   /**
-   * Odom Transform
+   * Odom Transforms
    */
   tf::Transform _tfOdomOld;
   tf::Transform _tfOdom;
-  tf::Transform _tfLaser;
-  tf::StampedTransform _tfReader;
   tf::Transform _tfRelativeOdom;
-  tf::TransformListener _tfListener;
+
+  /**
+   * Transform from base footprint to laser
+   */
+  tf::Transform _tfLaser;
+
+  /**
+   * ros tf frame ids
+   */
+  std::string _tfFootprintFrameId;
+  std::string _tfOdomFrameId;
+  std::string _tfBaseFrameId;
+  std::string _tfChildFrameId;
+
+  /**
+   * use odom rescue flag
+   */
+  bool _useOdomRescue;
+
+  /**
+   * Laser time stamps
+   */
+  ros::Time _laserStamp;
+  ros::Time _laserStampOld;
 
   /**
    * Scan passed in clockwise rotation (mathematically negative increment)

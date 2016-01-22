@@ -77,11 +77,13 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   poseTopic = _nameSpace + poseTopic;
 
   //frames
-  std::string tfBaseFrameId;
-  prvNh.param("tf_base_frame", tfBaseFrameId, std::string("/map"));
+  prvNh.param("tf_base_frame", _tfBaseFrameId, std::string("/map"));
 
-  std::string tfChildFrameId;
-  prvNh.param(_nameSpace + "tf_child_frame", tfChildFrameId, std::string("default_ns/laser"));
+  prvNh.param(_nameSpace + "tf_child_frame", _tfChildFrameId, std::string("default_ns/laser"));
+
+  prvNh.param("tf_odom_frame", _tfOdomFrameId, std::string("wheelodom"));
+
+  prvNh.param("tf_footprint_frame", _tfFootprintFrameId, std::string("base_footprint"));
 
   double distFilterMax = 0.0;
   double distFilterMin = 0.0;
@@ -95,6 +97,13 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   //Maximum allowed offset between to aligned scans
   prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
   prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
+
+  //Maximum robot speed at footprint frame
+  prvNh.param<double>("max_velocity_rot", _rotVelocityMax, ROT_VEL_MAX);
+  prvNh.param<double>("max_velocity_lin", _trnsVelocityMax, TRNS_VEL_MAX);
+
+  // use odeom rescue?
+  prvNh.param<bool>("use_odom_rescue", _useOdomRescue, false);
 
   //RandomMatcher options
   int trials;
@@ -190,9 +199,9 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   _icp->setConvergenceCounter(icpIterations);
 
   _posePub = _nh->advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
-  _poseStamped.header.frame_id = tfBaseFrameId;
-  _tf.frame_id_                = tfBaseFrameId;
-  _tf.child_frame_id_          = _nameSpace + tfChildFrameId;
+  _poseStamped.header.frame_id = _tfBaseFrameId;
+  _tf.frame_id_                = _tfBaseFrameId;
+  _tf.child_frame_id_          = _nameSpace + _tfChildFrameId;
 
   _reverseScan = false;
 }
@@ -220,70 +229,131 @@ ThreadLocalize::~ThreadLocalize()
   _laserData.clear();
 }
 
-  void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
+void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
+{
+  if(!_initialized)
   {
-    if(!_initialized)
-    {
+    ROS_INFO_STREAM("Localizer(" << _nameSpace << ") received first scan. Initialize node...\n");
+    this->init(scan);
+    ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
 
-      try
-      {
-        _tfListener.waitForTransform("base_footprint", "laser", ros::Time(0), ros::Duration(10.0));
-        _tfListener.lookupTransform("base_footprint", "laser", ros::Time(0), _tfReader);
-      }
-      catch(tf::TransformException ex)
-      {
-        ROS_ERROR("%s", ex.what());
-        ros::Duration(1.0).sleep();
-      }
+    if(_useOdomRescue) odomRescueInit();
 
-      _tfLaser = _tfReader;
+    _laserStampOld = scan.header.stamp;
 
-      try
-      {
-        _tfListener.waitForTransform("map", "wheelodom", ros::Time(0), ros::Duration(10.0));
-        _tfListener.lookupTransform("map", "wheelodom", ros::Time(0), _tfReader);
-      }
-      catch(tf::TransformException ex)
-      {
-        ROS_ERROR("%s", ex.what());
-        ros::Duration(1.0).sleep();
-      }
+    return;
+  }
+  else
+  {
+    sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
+    *scanCopy = scan;
 
-      _tfOdomOld = _tfReader;
-      _tfOdomOld = _tfOdomOld * _tfLaser;
+    _dataMutex.lock();
+    _laserData.push_front(scanCopy);
+    _dataMutex.unlock();
 
-      ROS_INFO_STREAM("Localizer(" << _nameSpace << ") received first scan. Initialize node...\n");
-      this->init(scan);
-      ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
-      return;
-    }
-    else
-    {
-      try
-      {
-        _tfListener.waitForTransform("map", "wheelodom", ros::Time(0), ros::Duration(5.0));
-        _tfListener.lookupTransform("map", "wheelodom", ros::Time(0), _tfReader);
-      }
-      catch(tf::TransformException ex)
-      {
-        ROS_ERROR("%s", ex.what());
-        ros::Duration(1.0).sleep();
-      }
+    return;
+  }
 
-      _tfOdom = _tfReader;
-      _tfOdom = _tfOdom * _tfLaser;
-
-      // calc diff odom
-      _tfRelativeOdom = _tfOdomOld.inverse() * _tfOdom;
-      _tfOdomOld = _tfOdom;
-    }
-
-  sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
-  *scanCopy = scan;
-  _dataMutex.lock();
-  _laserData.push_front(scanCopy);
-  _dataMutex.unlock();
   this->unblock();
+}
+
+void ThreadLocalize::odomRescueInit()
+{
+  // get bf -> laser transform at init, aussuming its a static transform
+  try
+  {
+    _tfListener.waitForTransform(_tfFootprintFrameId, _tfChildFrameId, ros::Time(0), ros::Duration(10.0));
+    _tfListener.lookupTransform(_tfFootprintFrameId, _tfChildFrameId, ros::Time(0), _tfReader);
+  }
+  catch(tf::TransformException ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    ros::Duration(1.0).sleep();
+    exit(EXIT_FAILURE);
+  }
+
+  ROS_INFO_STREAM("Received static base_footprint to laser tf for odom rescue");
+  _tfLaser = _tfReader;
+
+  // get first map -> odom transform for initialization
+  try
+  {
+    _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, ros::Time(0), ros::Duration(10.0));
+    _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, ros::Time(0), _tfReader);
+  }
+  catch(tf::TransformException ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    ros::Duration(1.0).sleep();
+    exit(EXIT_FAILURE);
+  }
+
+  ROS_INFO_STREAM("Received first odom tf for initialization of odom rescue");
+  // transform odom to laser frame
+  _tfOdomOld = _tfReader * _tfLaser;
+}
+
+void ThreadLocalize::odomRescueUpdate()
+{
+  // get new odom tf
+  try
+  {
+    _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, _laserStamp, ros::Duration(1.0));
+    _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, _laserStamp, _tfReader);
+  }
+  catch(tf::TransformException ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    ros::Duration(1.0).sleep();
+  }
+
+  // tranform to laser
+  _tfOdom = _tfReader * _tfLaser;
+
+  // calc diff odom
+  _tfRelativeOdom = _tfOdomOld.inverse() * _tfOdom;
+
+  // push state ahead
+  _tfOdomOld = _tfOdom;
+}
+
+void ThreadLocalize::odomRescueCheck(obvious::Matrix& T)
+{
+  // odom check
+  double x2;
+  double y2;
+  double theta2;
+  double x;
+  double y;
+  double theta;
+
+  x2 = T(0,2);
+  y2 = T(1,2);
+  theta2 = acos((T(0,0)));
+
+  x = _tfRelativeOdom.getOrigin().getX();
+  y = _tfRelativeOdom.getOrigin().getY();
+  theta = -tf::getYaw(_tfRelativeOdom.getRotation()); // todo: why -(theta)?
+
+  double odomDiff = 0.0;
+  odomDiff = std::max(std::abs(x - x2), std::max(std::abs(y - y2),std::abs(y - y2)));
+
+  //std::cout << odomDiff << std::endl;
+
+  if(odomDiff > 0.5)
+  {
+    ROS_WARN_STREAM("odom diff = " << odomDiff);
+
+    T.setIdentity();
+
+    T(0, 0) = cos(theta);
+    T(0, 1) = sin(theta);
+    T(0, 2) = x;
+    T(1, 0) = -sin(theta);
+    T(1, 1) = cos(theta);
+    T(1, 2) = y;
+  }
 }
 
 void ThreadLocalize::eventLoop(void)
@@ -303,13 +373,20 @@ void ThreadLocalize::eventLoop(void)
     if(_reverseScan)
       std::reverse(ranges.begin(),ranges.end());
 
+    _laserStampOld = _laserStamp;
+    _laserStamp = _laserData.front()->header.stamp;
+
     _sensor->setRealMeasurementData(ranges);
     _sensor->setStandardMask();
 
     for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
       delete *iter;
     _laserData.clear();
+
     _dataMutex.unlock();
+
+    //odom rescue
+    if(_useOdomRescue) odomRescueUpdate();
 
     const unsigned int measurementSize = _sensor->getRealMeasurementSize();
 
@@ -490,22 +567,6 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     break;
   }
 
-
-
-
-  //std::cout << "tsd: " << x2 << "; " << y2 << "; " << theta2 << std::endl;
-  //std::cout << "odm: " << x << "; " << y << "; " << theta << std::endl;
-  
-
-//  T.setIdentity();
-
-//  T(0, 0) = cos(theta);
-//  T(0, 1) = sin(theta);
-//  T(0, 2) = x;
-//  T(1, 0) = -sin(theta);
-//  T(1, 1) = cos(theta);
-//  T(1, 2) = y;
-
   _icp->reset();
   obvious::Matrix P = sensor->getTransformation();
   _filterBounds->setPose(&P);
@@ -518,32 +579,8 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   _icp->iterate(&rms, &pairs, &it, &T44);
   T = _icp->getFinalTransformation();
   
+  if(_useOdomRescue) odomRescueCheck(T);
   
-  // odom check
-  double x2;
-  double y2;
-  double theta2;
-  double x;
-  double y;
-  double theta;
-
-  x2 = T(0,2);
-  y2 = T(1,2);
-  theta2 = acos((T(0,0)));
-  
-  x = _tfRelativeOdom.getOrigin().getX();
-  y = _tfRelativeOdom.getOrigin().getY();
-  theta = -tf::getYaw(_tfRelativeOdom.getRotation()); // todo: why -(theta)?
-
-  double odomDiff = 0.0;
-  odomDiff = std::max(std::abs(x - x2), std::max(std::abs(y - y2),std::abs(y - y2)));
-  
-  //std::cout << odomDiff << std::endl;
-  
-  if(odomDiff > 0.05)
-    ROS_WARN_STREAM("odom diff = " << odomDiff);
-  //std::cout << "dff: " << x - x2 << "; " << y - y2 << "; " << theta - theta2 << std::endl;
-
   return T;
 }
 

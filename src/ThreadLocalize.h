@@ -47,7 +47,7 @@ const unsigned int ICP_ITERATIONS = 25;
 const double TRNS_THRESH = 0.25;            //Thresholds for registration. If the gained transformation is out of these bounds,
 const double ROT_THRESH = 0.17;
 const double TRNS_VEL_MAX = 1.5;
-const double ROT_VEL_MAX = 2 * M_PI;//the Transformation is not taken over
+const double ROT_VEL_MAX = 2 * M_PI;       //the Transformation is not taken over
 const double TRNS_MIN = 0.05;              //Minimal values for the pose change. Push is only needed when pose change
 const double ROT_MIN = 0.03;               //greater than than one of these values
 const double DIST_FILT_MIN = 0.1;
@@ -197,13 +197,38 @@ private:
       unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
   /**
-   * odomRescue
-   * Method for recover from a registration error
+   * odomRescueInit
+   * Method to initialize odom recover system
    */
   void odomRescueInit();
+
+  /**
+   * odomRescueUpdate
+   * updates odometry data if a new scan comes in
+   */
   void odomRescueUpdate();
+
+  /**
+   * odomRescueCheck
+   * check if slam transformation is plausible and overwrites T with odometry as transformation if not
+   * @param T Transformation matrix to check and correct
+   */
   void odomRescueCheck(obvious::Matrix& T);
+
+  /**
+   * obviouslyMatrix3x3ToTf
+   * converts an 3x3 obvious matrix to a tf matrix
+   * @param ob Obvious matrix to convert
+   * @return transformed tf matrix
+   */
   tf::Transform obviouslyMatrix3x3ToTf(const obvious::Matrix& ob);
+
+  /**
+   * tfToObviouslyMatrix3x3
+   * converts an tf matrix to a 3x3 obvious matrix
+   * @param tf tf matrix to transform
+   * @return transformed obvious matrix
+   */
   obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf);
 
   /**

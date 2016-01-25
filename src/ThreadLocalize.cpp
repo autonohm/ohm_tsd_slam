@@ -316,22 +316,9 @@ void ThreadLocalize::odomRescueUpdate()
 void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
 {
   // transform transformation from slam to odom e.g. form laser to base footprint system
-
-  //obvious::Matrix T_odom = tfToObviouslyMatrix3x3(_tfLaser * obviouslyMatrix3x3ToTf(T_slam) * _tfLaser.inverse());
-
+  // todo: why returns tf a wrong solution of this calculation
+  // obvious::Matrix T_odom = tfToObviouslyMatrix3x3(_tfLaser * obviouslyMatrix3x3ToTf(T_slam) * _tfLaser.inverse());
   obvious::Matrix T_odom = tfToObviouslyMatrix3x3(_tfLaser) * T_slam * tfToObviouslyMatrix3x3(_tfLaser).getInverse();
-
-  obvious::Matrix debug1 = tfToObviouslyMatrix3x3(_tfLaser);
-  obvious::Matrix debug2 = tfToObviouslyMatrix3x3(_tfLaser.inverse());
-//
-//  std::cout << "---------" << std::endl;
-//
-//  std::cout << "_tflaser: \n" << debug1 << std::endl;
-//  std::cout << "_tflaser.invers: \n" << debug2 << std::endl;
-//
-//
-//  std::cout << "---------" << std::endl;
-
 
   // get dt
   ros::Duration dtRos = _laserStamp - _laserStampOld;
@@ -346,88 +333,40 @@ void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
 
   double vrot = abs(drot) / dt;
   double vtrans = abs(dtrans) / dt;
-//
-//  std::cout << "---------" << std::endl;
-  std::cout << "dx: " << dx << ", dy: " << dy << ", vrot: " << vrot << ", vtrans:" << vtrans << std::endl;
-//  std::cout << "T_odom: \n" << T_odom << std::endl;
-//  std::cout << "T_slam: \n" << T_slam << std::endl;
-//  std::cout << "---------" << std::endl;
-
 
   // use odom instead of slam if slam translation is impossible for robot
   if(vrot > _rotVelocityMax || vtrans > _trnsVelocityMax)
   {
-//    tf::Transform tfSlamFromOdom =  obviouslyMatrix3x3ToTf(
-//        tfToObviouslyMatrix3x3(_tfLaser).getInverse() *
-//        tfToObviouslyMatrix3x3(_tfRelativeOdom) *
-//        tfToObviouslyMatrix3x3(_tfLaser));
+    ROS_INFO("-----ODOM-RECOVER-----");
+//    obvious::Matrix relative_odom = tfToObviouslyMatrix3x3(_tfRelativeOdom);
+//    std::cout << "-----ODOM-RECOVER-----" << std::endl;
+//    std::cout << "dx: " << dx << ", dy: " << dy << ", vrot: " << vrot << ", vtrans:" << vtrans << " \n" << std::endl;
+//    std::cout << "T_laser_odom: \n" << T_odom << std::endl;
+//    std::cout << "T_odom: \n" << relative_odom << std::endl;
+//    std::cout << "T_slam: \n" << T_slam << std::endl;
+//    std::cout << "---------" << std::endl;
 
-    //_tfLaser.inverse() * _tfRelativeOdom * _tfLaser;
-
-//    double x = tfSlamFromOdom.getOrigin().getX(); // debug: x is wrong here
-//    double y = tfSlamFromOdom.getOrigin().getY();
-//    double theta = -tf::getYaw(tfSlamFromOdom.getRotation());  // todo: why -(theta)?
-
-	obvious::Matrix relative_odom = tfToObviouslyMatrix3x3(_tfRelativeOdom);
-    std::cout << "-----RESCUE----" << std::endl;
-    std::cout << "dx: " << dx << ", dy: " << dy << ", vrot: " << vrot << ", vtrans:" << vtrans << " \n" << std::endl;
-    std::cout << "T_laser_odom: \n" << T_odom << std::endl;
-    std::cout << "T_odom: \n" << relative_odom << std::endl;
-    std::cout << "T_slam: \n" << T_slam << std::endl;
-    std::cout << "---------" << std::endl;
-
-	_tfRelativeOdom.setRotation(tf::createQuaternionFromYaw(-tf::getYaw(_tfRelativeOdom.getRotation())));
+    // slam uses inverted rotation
+    _tfRelativeOdom.setRotation(tf::createQuaternionFromYaw(-tf::getYaw(_tfRelativeOdom.getRotation())));
 
     T_slam =
       tfToObviouslyMatrix3x3(_tfLaser).getInverse() *
       tfToObviouslyMatrix3x3(_tfRelativeOdom) *
       tfToObviouslyMatrix3x3(_tfLaser);
-
-//    T_slam.setIdentity();
-//
-//    T_slam(0, 0) = cos(theta);
-//    T_slam(0, 1) = sin(theta);
-//    T_slam(0, 2) = x;
-//    T_slam(1, 0) = -sin(theta);
-//    T_slam(1, 1) = cos(theta);
-//    T_slam(1, 2) = y;
   }
 }
 
 tf::Transform ThreadLocalize::obviouslyMatrix3x3ToTf(const obvious::Matrix& ob)
 {
-  obvious::Matrix debug = ob;
-
-  /*
-  std::cout << "---------" << std::endl;
-  std::cout << "ob2tf\n" << std::endl;
-  std::cout << "ob: \n" << debug << std::endl;
-  std::cout << "asin: " << asin( ob(0,1)) << std::endl;
-*/
-
   tf::Transform tf;
-  tf.setIdentity(); //todo: debug
   tf.setOrigin( tf::Vector3(ob(0,2), ob(1,2), 0.0) );
   tf.setRotation( tf::createQuaternionFromYaw( asin( ob(0,1) ) ) );
-/*
 
-  std::cout << "tfGetRot: " << tf::getYaw(tf.getRotation()) << std::endl;
-  std::cout << "tfGetRrig: " << tf.getOrigin().getX() << " ; " << tf.getOrigin().getY() << std::endl;
-
-  std::cout << "---------" << std::endl;
-*/
   return tf;
 }
 
 obvious::Matrix ThreadLocalize::tfToObviouslyMatrix3x3(const tf::Transform& tf)
 {
-  /*
-  std::cout << "---------" << std::endl;
-  std::cout << "tf2ob\n" << std::endl;
-  std::cout << "tfGetRot: " << tf::getYaw(tf.getRotation()) << std::endl;
-  std::cout << "tfGetRrig: " << tf.getOrigin().getX() << " ; " << tf.getOrigin().getY() << std::endl;
-*/
-
   obvious::Matrix ob(3,3);
   ob.setIdentity();
 
@@ -435,18 +374,14 @@ obvious::Matrix ThreadLocalize::tfToObviouslyMatrix3x3(const tf::Transform& tf)
   double x = tf.getOrigin().getX();
   double y = tf.getOrigin().getY();
 
+  // problem with sin() returns -0.0 (avoid with +0.0)
   ob(0, 0) = cos(theta) + 0.0;
   ob(0, 1) = sin(theta) + 0.0;
   ob(0, 2) = x + 0.0;
   ob(1, 0) = -sin(theta) + 0.0;
   ob(1, 1) = cos(theta) + 0.0;
   ob(1, 2) = y + 0.0;
-/*
-  obvious::Matrix debug = ob;
-  std::cout << "ob: \n" << debug << std::endl;
 
-  std::cout << "---------" << std::endl;
-*/
   return ob;
 }
 

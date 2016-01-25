@@ -46,8 +46,8 @@ namespace
 const unsigned int ICP_ITERATIONS = 25;
 const double TRNS_THRESH = 0.25;            //Thresholds for registration. If the gained transformation is out of these bounds,
 const double ROT_THRESH = 0.17;
-const double TRNS_VEL_MAX = 2 * 1.0;
-const double ROT_VEL_MAX = 2 * 6 * M_PI;//the Transformation is not taken over
+const double TRNS_VEL_MAX = 1.5;
+const double ROT_VEL_MAX = 2 * M_PI;//the Transformation is not taken over
 const double TRNS_MIN = 0.05;              //Minimal values for the pose change. Push is only needed when pose change
 const double ROT_MIN = 0.03;               //greater than than one of these values
 const double DIST_FILT_MIN = 0.1;

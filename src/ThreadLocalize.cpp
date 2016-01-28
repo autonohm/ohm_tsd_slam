@@ -316,20 +316,18 @@ void ThreadLocalize::odomRescueUpdate()
 void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
 {
   // transform transformation from slam to odom e.g. form laser to base footprint system
-  // todo: why returns tf a wrong solution of this calculation
-  // obvious::Matrix T_odom = tfToObviouslyMatrix3x3(_tfLaser * obviouslyMatrix3x3ToTf(T_slam) * _tfLaser.inverse());
-  obvious::Matrix T_odom = tfToObviouslyMatrix3x3(_tfLaser) * T_slam * tfToObviouslyMatrix3x3(_tfLaser).getInverse();
+  obvious::Matrix T_laserOnBaseFootprint = tfToObviouslyMatrix3x3(_tfLaser) * T_slam * tfToObviouslyMatrix3x3(_tfLaser).getInverse();
 
   // get dt
   ros::Duration dtRos = _laserStamp - _laserStampOld;
   double dt = dtRos.sec + dtRos.nsec * 1e-9;
 
   // get velocities
-  double dx = T_odom(0,2);
-  double dy = T_odom(1,2);
+  double dx = T_laserOnBaseFootprint(0,2);
+  double dy = T_laserOnBaseFootprint(1,2);
   double dtrans = sqrt(pow(dx,2) + pow(dy,2));
 
-  double drot = asin(T_odom(0,1));
+  double drot = asin(T_laserOnBaseFootprint(0,1));
 
   double vrot = abs(drot) / dt;
   double vtrans = abs(dtrans) / dt;
@@ -339,15 +337,18 @@ void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
   {
     ROS_INFO("-----ODOM-RECOVER-----");
 //    obvious::Matrix relative_odom = tfToObviouslyMatrix3x3(_tfRelativeOdom);
+//    obvious::Matrix tfLaser = tfToObviouslyMatrix3x3(_tfLaser);
 //    std::cout << "-----ODOM-RECOVER-----" << std::endl;
-//    std::cout << "dx: " << dx << ", dy: " << dy << ", vrot: " << vrot << ", vtrans:" << vtrans << " \n" << std::endl;
-//    std::cout << "T_laser_odom: \n" << T_odom << std::endl;
-//    std::cout << "T_odom: \n" << relative_odom << std::endl;
+//    std::cout << "dx: " << dx << ", dy: " << dy << ", vrot: " << vrot << ", vtrans:" <<
+//        vtrans << ", dt: " << dt << ", _trnsVelocityMax: " << _trnsVelocityMax << ", _rotVelocityMax: " << _rotVelocityMax << std::endl;
+//    std::cout << "dx: " << dx << std::endl;
+//    std::cout << "T_laser_on_base: \n" << T_laserOnBaseFootprint << std::endl;
+//    std::cout << "relative_odom: \n" << relative_odom << std::endl;
 //    std::cout << "T_slam: \n" << T_slam << std::endl;
+//    std::cout << "StaticLaser: \n" << tfLaser << std::endl;
 //    std::cout << "---------" << std::endl;
 
-    // slam uses inverted rotation
-    _tfRelativeOdom.setRotation(tf::createQuaternionFromYaw(-tf::getYaw(_tfRelativeOdom.getRotation())));
+    //_tfRelativeOdom.setRotation(tf::createQuaternionFromYaw(-tf::getYaw(_tfRelativeOdom.getRotation())));
 
     T_slam =
       tfToObviouslyMatrix3x3(_tfLaser).getInverse() *
@@ -376,9 +377,9 @@ obvious::Matrix ThreadLocalize::tfToObviouslyMatrix3x3(const tf::Transform& tf)
 
   // problem with sin() returns -0.0 (avoid with +0.0)
   ob(0, 0) = cos(theta) + 0.0;
-  ob(0, 1) = sin(theta) + 0.0;
+  ob(0, 1) = -sin(theta) + 0.0;
   ob(0, 2) = x + 0.0;
-  ob(1, 0) = -sin(theta) + 0.0;
+  ob(1, 0) = sin(theta) + 0.0;
   ob(1, 1) = cos(theta) + 0.0;
   ob(1, 2) = y + 0.0;
 

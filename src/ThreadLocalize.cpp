@@ -12,7 +12,6 @@
 
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
-#include "obvision/registration/ransacMatching/RansacMatching.h"
 #include "obvision/registration/ransacMatching/RandomNormalMatching.h"
 
 #include <boost/bind.hpp>

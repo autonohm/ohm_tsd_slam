@@ -40,7 +40,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
                     _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
                     _xOffset(xOffset),
                     _yOffset(yOffset),
-                    _nameSpace(nameSpace)
+                    _nameSpace(nameSpace),
+                    _stampLaser(ros::Time::now())
 {
   ros::NodeHandle prvNh("~");
 
@@ -213,6 +214,7 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
   *scanCopy = scan;
   _dataMutex.lock();
   _laserData.push_front(scanCopy);
+  _stampLaser = scan.header.stamp;
   _dataMutex.unlock();
   this->unblock();
 }
@@ -449,7 +451,8 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
   const double curTheta = this->calcAngle(T);
   const double posX = (*T)(0, 2) + _gridOffSetX;
   const double posY = (*T)(1, 2) + _gridOffSetY;
-  _poseStamped.header.stamp = ros::Time::now();
+  //_poseStamped.header.stamp = ros::Time::now();
+  _poseStamped.header.stamp = _stampLaser;
   _poseStamped.pose.position.x = posX;
   _poseStamped.pose.position.y = posY;
   _poseStamped.pose.position.z = 0.0;
@@ -460,7 +463,8 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
   _poseStamped.pose.orientation.y = quat.y();
   _poseStamped.pose.orientation.z = quat.z();
 
-  _tf.stamp_ = ros::Time::now();
+//  _tf.stamp_ = ros::Time::now();
+  _tf.stamp_ = _stampLaser;
   _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
   _tf.setRotation(quat);
 

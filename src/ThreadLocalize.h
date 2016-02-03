@@ -14,6 +14,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obvision/reconstruct/grid/TsdGrid.h"
@@ -44,7 +45,9 @@ namespace
 {   //default values in case no launch parameters are set
 const unsigned int ICP_ITERATIONS = 25;
 const double TRNS_THRESH = 0.25;            //Thresholds for registration. If the gained transformation is out of these bounds,
-const double ROT_THRESH = 0.17;             //the Transformation is not taken over
+const double ROT_THRESH = 0.17;
+const double TRNS_VEL_MAX = 1.5;
+const double ROT_VEL_MAX = 2 * M_PI;       //the Transformation is not taken over
 const double TRNS_MIN = 0.05;              //Minimal values for the pose change. Push is only needed when pose change
 const double ROT_MIN = 0.03;               //greater than than one of these values
 const double DIST_FILT_MIN = 0.1;
@@ -193,6 +196,40 @@ private:
   void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
       unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
+  /**
+   * odomRescueInit
+   * Method to initialize odom recover system
+   */
+  void odomRescueInit();
+
+  /**
+   * odomRescueUpdate
+   * updates odometry data if a new scan comes in
+   */
+  void odomRescueUpdate();
+
+  /**
+   * odomRescueCheck
+   * check if slam transformation is plausible and overwrites T with odometry as transformation if not
+   * @param T Transformation matrix to check and correct
+   */
+  void odomRescueCheck(obvious::Matrix& T);
+
+  /**
+   * obviouslyMatrix3x3ToTf
+   * converts an 3x3 obvious matrix to a tf matrix
+   * @param ob Obvious matrix to convert
+   * @return transformed tf matrix
+   */
+  tf::Transform obviouslyMatrix3x3ToTf(const obvious::Matrix& ob);
+
+  /**
+   * tfToObviouslyMatrix3x3
+   * converts an tf matrix to a 3x3 obvious matrix
+   * @param tf tf matrix to transform
+   * @return transformed obvious matrix
+   */
+  obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf);
 
   /**
    * Pointer to main NodeHandle
@@ -243,11 +280,13 @@ private:
    * ICP translation threshold
    */
   double _trnsMax;
+  double _trnsVelocityMax;
 
   /**
    * ICP rotation threshold
    */
   double _rotMax;
+  double _rotVelocityMax;
 
   /**
    * Starting x offset
@@ -388,6 +427,12 @@ private:
    * Ros tf interface
    */
   tf::TransformBroadcaster _tfBroadcaster;
+  tf::TransformListener _tfListener;
+
+  /**
+   * Container for reading tfs
+   */
+  tf::StampedTransform _tfReader;
 
   /**
    * Ros current transform
@@ -395,11 +440,52 @@ private:
   tf::StampedTransform _tf;
 
   /**
+   * Odom Transforms
+   */
+  tf::Transform _tfOdomOld;
+  tf::Transform _tfOdom;
+  tf::Transform _tfRelativeOdom;
+
+  /**
+   * Transform from base footprint to laser
+   */
+  tf::Transform _tfLaser;
+
+  /**
+   * ros tf frame ids
+   */
+  std::string _tfFootprintFrameId;
+  std::string _tfOdomFrameId;
+  std::string _tfBaseFrameId;
+  std::string _tfChildFrameId;
+
+  /**
+   * use odom rescue flag
+   */
+  bool _useOdomRescue;
+
+  /**
+   * state of the actual odom tf
+   */
+  bool _odomTfIsValid;
+
+  /**
+   * time to wait for synced odom tf
+   */
+  ros::Duration _waitForOdomTf;
+
+  /**
+   * Laser time stamps
+   */
+  ros::Time _stampLaser;
+  ros::Time _stampLaserOld;
+
+  /**
    * Scan passed in clockwise rotation (mathematically negative increment)
    */
   bool _reverseScan;
 
-  ros::Time _stampLaser;
+
 };
 
 

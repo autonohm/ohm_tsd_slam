@@ -78,11 +78,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
   //frames
   prvNh.param("tf_base_frame", _tfBaseFrameId, std::string("/map"));
-
   prvNh.param(_nameSpace + "tf_child_frame", _tfChildFrameId, std::string("default_ns/laser"));
-
   prvNh.param("tf_odom_frame", _tfOdomFrameId, std::string("wheelodom"));
-
   prvNh.param("tf_footprint_frame", _tfFootprintFrameId, std::string("base_footprint"));
 
   double distFilterMax = 0.0;
@@ -104,6 +101,12 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
   // use odeom rescue?
   prvNh.param<bool>("use_odom_rescue", _useOdomRescue, false);
+
+  // odom rescue
+  double duration;
+  prvNh.param<double>("wait_for_odom_tf", duration, 1.0);
+  _waitForOdomTf = ros::Duration(duration);
+  _odomTfIsValid = false;
 
   //RandomMatcher options
   int trials;
@@ -295,13 +298,13 @@ void ThreadLocalize::odomRescueUpdate()
   // get new odom tf
   try
   {
-    _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, _laserStamp, ros::Duration(1.0));
+    _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, _laserStamp, _waitForOdomTf);
     _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, _laserStamp, _tfReader);
   }
   catch(tf::TransformException ex)
   {
     ROS_ERROR("%s", ex.what());
-    ros::Duration(1.0).sleep();
+    _odomTfIsValid = false;
   }
   
   _tfOdom = _tfReader;
@@ -311,6 +314,8 @@ void ThreadLocalize::odomRescueUpdate()
 
   // push state ahead
   _tfOdomOld = _tfOdom;
+
+  _odomTfIsValid = true;
 }
 
 void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
@@ -327,33 +332,49 @@ void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
   double dy = T_laserOnBaseFootprint(1,2);
   double dtrans = sqrt(pow(dx,2) + pow(dy,2));
 
-  double drot = asin(T_laserOnBaseFootprint(0,1));
+  double drot = abs(asin(T_laserOnBaseFootprint(0,1)));
 
-  double vrot = abs(drot) / dt;
-  double vtrans = abs(dtrans) / dt;
+  double vrot = drot / dt;
+  double vtrans = dtrans / dt;
+
+  // diff
+
+//  obvious::Matrix T_diff = tfToObviouslyMatrix3x3(_tfRelativeOdom).getInverse() * T_laserOnBaseFootprint;
+//  double diffx = T_diff(0,2);
+//  double diffy = T_diff(1,2);
+//
+//  double difftrans = sqrt(pow(diffx,2) + pow(diffy,2));
+//  double diffrot = abs(asin(T_diff(0,1)));
+
+  // -----
 
   // use odom instead of slam if slam translation is impossible for robot
-  if(vrot > _rotVelocityMax || vtrans > _trnsVelocityMax)
+  if(dtrans > _grid.getCellSize() * 2.0)
   {
-    ROS_INFO("-----ODOM-RECOVER-----");
-//    obvious::Matrix relative_odom = tfToObviouslyMatrix3x3(_tfRelativeOdom);
-//    obvious::Matrix tfLaser = tfToObviouslyMatrix3x3(_tfLaser);
-//    std::cout << "-----ODOM-RECOVER-----" << std::endl;
-//    std::cout << "dx: " << dx << ", dy: " << dy << ", vrot: " << vrot << ", vtrans:" <<
-//        vtrans << ", dt: " << dt << ", _trnsVelocityMax: " << _trnsVelocityMax << ", _rotVelocityMax: " << _rotVelocityMax << std::endl;
-//    std::cout << "dx: " << dx << std::endl;
-//    std::cout << "T_laser_on_base: \n" << T_laserOnBaseFootprint << std::endl;
-//    std::cout << "relative_odom: \n" << relative_odom << std::endl;
-//    std::cout << "T_slam: \n" << T_slam << std::endl;
-//    std::cout << "StaticLaser: \n" << tfLaser << std::endl;
-//    std::cout << "---------" << std::endl;
+    if(vrot > _rotVelocityMax || vtrans > _trnsVelocityMax)
+    //if(diffrot > _rotVelocityMax || difftrans > _trnsVelocityMax)
+    {
+      ROS_INFO("-----ODOM-RECOVER-----");
+//      obvious::Matrix relative_odom = tfToObviouslyMatrix3x3(_tfRelativeOdom);
+//      obvious::Matrix tfLaser = tfToObviouslyMatrix3x3(_tfLaser);
+//      std::cout << "-----ODOM-RECOVER-----" << std::endl;
+//      std::cout << "dx: " << dx << ", dy: " << dy << ", vrot: " << vrot << ", vtrans:" <<
+//          vtrans << ", dt: " << dt << ", _trnsVelocityMax: " << _trnsVelocityMax << ", _rotVelocityMax: " << _rotVelocityMax << std::endl;
+//      std::cout << "grid cellsize: " << _grid.getCellSize() << std::endl;
+//      std::cout << "T_laser_on_base: \n" << T_laserOnBaseFootprint << std::endl;
+//      std::cout << "relative_odom: \n" << relative_odom << std::endl;
+//      std::cout << "T_slam: \n" << T_slam << std::endl;
+//      std::cout << "StaticLaser: \n" << tfLaser << std::endl;
+////      std::cout << "t_diff: \n" << T_diff << std::endl;
+//      std::cout << "---------" << std::endl;
 
-    //_tfRelativeOdom.setRotation(tf::createQuaternionFromYaw(-tf::getYaw(_tfRelativeOdom.getRotation())));
+      //_tfRelativeOdom.setRotation(tf::createQuaternionFromYaw(-tf::getYaw(_tfRelativeOdom.getRotation())));
 
-    T_slam =
-      tfToObviouslyMatrix3x3(_tfLaser).getInverse() *
-      tfToObviouslyMatrix3x3(_tfRelativeOdom) *
-      tfToObviouslyMatrix3x3(_tfLaser);
+      T_slam =
+        tfToObviouslyMatrix3x3(_tfLaser).getInverse() *
+        tfToObviouslyMatrix3x3(_tfRelativeOdom) *
+        tfToObviouslyMatrix3x3(_tfLaser);
+    }
   }
 }
 
@@ -609,7 +630,7 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   _icp->iterate(&rms, &pairs, &it, &T44);
   T = _icp->getFinalTransformation();
   
-  if(_useOdomRescue) odomRescueCheck(T);
+  if(_useOdomRescue && _odomTfIsValid) odomRescueCheck(T);
   
   return T;
 }

@@ -465,6 +465,16 @@ private:
   bool _useOdomRescue;
 
   /**
+   * state of the actual odom tf
+   */
+  bool _odomTfIsValid;
+
+  /**
+   * time to wait for synced odom tf
+   */
+  ros::Duration _waitForOdomTf;
+
+  /**
    * Laser time stamps
    */
   ros::Time _laserStamp;

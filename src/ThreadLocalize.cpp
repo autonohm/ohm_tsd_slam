@@ -223,7 +223,7 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 
     if(_useOdomRescue) odomRescueInit();
 
-    _laserStampOld = scan.header.stamp;
+    _stampLaserOld = scan.header.stamp;
   }
   else
   {
@@ -279,8 +279,8 @@ void ThreadLocalize::odomRescueUpdate()
   // get new odom tf
   try
   {
-    _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, _laserStamp, _waitForOdomTf);
-    _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, _laserStamp, _tfReader);
+    _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, _stampLaser, _waitForOdomTf);
+    _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, _stampLaser, _tfReader);
   }
   catch(tf::TransformException ex)
   {
@@ -305,7 +305,7 @@ void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
   obvious::Matrix T_laserOnBaseFootprint = tfToObviouslyMatrix3x3(_tfLaser) * T_slam * tfToObviouslyMatrix3x3(_tfLaser).getInverse();
 
   // get dt
-  ros::Duration dtRos = _laserStamp - _laserStampOld;
+  ros::Duration dtRos = _stampLaser - _stampLaserOld;
   double dt = dtRos.sec + dtRos.nsec * 1e-9;
 
   // get velocities
@@ -318,38 +318,12 @@ void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
   double vrot = drot / dt;
   double vtrans = dtrans / dt;
 
-  // diff
-
-//  obvious::Matrix T_diff = tfToObviouslyMatrix3x3(_tfRelativeOdom).getInverse() * T_laserOnBaseFootprint;
-//  double diffx = T_diff(0,2);
-//  double diffy = T_diff(1,2);
-//
-//  double difftrans = sqrt(pow(diffx,2) + pow(diffy,2));
-//  double diffrot = abs(asin(T_diff(0,1)));
-
-  // -----
-
   // use odom instead of slam if slam translation is impossible for robot
   if(dtrans > _grid.getCellSize() * 2.0)
   {
     if(vrot > _rotVelocityMax || vtrans > _trnsVelocityMax)
-    //if(diffrot > _rotVelocityMax || difftrans > _trnsVelocityMax)
     {
       ROS_INFO("-----ODOM-RECOVER-----");
-//      obvious::Matrix relative_odom = tfToObviouslyMatrix3x3(_tfRelativeOdom);
-//      obvious::Matrix tfLaser = tfToObviouslyMatrix3x3(_tfLaser);
-//      std::cout << "-----ODOM-RECOVER-----" << std::endl;
-//      std::cout << "dx: " << dx << ", dy: " << dy << ", vrot: " << vrot << ", vtrans:" <<
-//          vtrans << ", dt: " << dt << ", _trnsVelocityMax: " << _trnsVelocityMax << ", _rotVelocityMax: " << _rotVelocityMax << std::endl;
-//      std::cout << "grid cellsize: " << _grid.getCellSize() << std::endl;
-//      std::cout << "T_laser_on_base: \n" << T_laserOnBaseFootprint << std::endl;
-//      std::cout << "relative_odom: \n" << relative_odom << std::endl;
-//      std::cout << "T_slam: \n" << T_slam << std::endl;
-//      std::cout << "StaticLaser: \n" << tfLaser << std::endl;
-////      std::cout << "t_diff: \n" << T_diff << std::endl;
-//      std::cout << "---------" << std::endl;
-
-      //_tfRelativeOdom.setRotation(tf::createQuaternionFromYaw(-tf::getYaw(_tfRelativeOdom.getRotation())));
 
       T_slam =
         tfToObviouslyMatrix3x3(_tfLaser).getInverse() *
@@ -405,8 +379,8 @@ void ThreadLocalize::eventLoop(void)
     if(_reverseScan)
       std::reverse(ranges.begin(),ranges.end());
 
-    _laserStampOld = _laserStamp;
-    _laserStamp = _laserData.front()->header.stamp;
+    _stampLaserOld = _stampLaser;
+    _stampLaser = _laserData.front()->header.stamp;
 
     _sensor->setRealMeasurementData(ranges);
     _sensor->setStandardMask();

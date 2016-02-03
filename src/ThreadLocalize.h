@@ -477,15 +477,15 @@ private:
   /**
    * Laser time stamps
    */
-  ros::Time _laserStamp;
-  ros::Time _laserStampOld;
+  ros::Time _stampLaser;
+  ros::Time _stampLaserOld;
 
   /**
    * Scan passed in clockwise rotation (mathematically negative increment)
    */
   bool _reverseScan;
 
-  ros::Time _stampLaser;
+
 };
 
 

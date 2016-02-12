@@ -89,6 +89,7 @@ public:
    * @param scan Laser data
    */
   void laserCallBack(const sensor_msgs::LaserScan& scan);
+  void terminateThread(void);
 protected:
 
   /**
@@ -96,6 +97,7 @@ protected:
    * Thread event loop
    */
   virtual void eventLoop(void);
+
 private:
 
   /**

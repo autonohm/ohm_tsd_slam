@@ -34,6 +34,8 @@ public:
    */
   virtual ~ThreadGrid();
 
+  void terminateThread(void);
+
 protected:
 
   /**

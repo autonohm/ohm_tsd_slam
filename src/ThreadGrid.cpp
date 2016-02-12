@@ -9,14 +9,17 @@
 
 namespace ohm_tsd_slam
 {
+
+static std::vector<ros::Duration> _iterTimes;
+
 ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffset, const double yOffset):
-        ThreadSLAM(*grid),
-        _occGrid(new nav_msgs::OccupancyGrid),
-        _occGridContent(new char[grid->getCellsX() * grid->getCellsY()]),
-        _gridCoords(new double[grid->getCellsX() * grid->getCellsY()]),
-        _width(grid->getCellsX()),
-        _height(grid->getCellsY()),
-        _cellSize(grid->getCellSize())
+                ThreadSLAM(*grid),
+                _occGrid(new nav_msgs::OccupancyGrid),
+                _occGridContent(new char[grid->getCellsX() * grid->getCellsY()]),
+                _gridCoords(new double[grid->getCellsX() * grid->getCellsY()]),
+                _width(grid->getCellsX()),
+                _height(grid->getCellsY()),
+                _cellSize(grid->getCellSize())
 
 {
   for(unsigned int i = 0; i < _grid.getCellsX() * _grid.getCellsY(); ++i)
@@ -56,6 +59,15 @@ ThreadGrid::~ThreadGrid()
   delete _occGrid;
   delete _occGridContent;
   delete _gridCoords;
+  //  std::ofstream stream;
+  //    stream.open("/tmp/griditer.log", std::ofstream::out);
+  //    if(!stream.is_open())
+  //      std::cout << __PRETTY_FUNCTION__ << "Error opening file" << "/tmp/griditer.log" <<std::endl;
+  //    for(std::vector<ros::Duration>::iterator iter = _iterTimes.begin(); iter < _iterTimes.end(); iter++)
+  //    {
+  //      stream << iter->toNSec() * 10e-9 << std::endl;
+  //    }
+  //    stream.close();
 }
 
 void ThreadGrid::eventLoop(void)
@@ -64,6 +76,7 @@ void ThreadGrid::eventLoop(void)
   while(_stayActive)
   {
     _sleepCond.wait(_sleepMutex);
+    ros::Time timer = ros::Time::now();
     unsigned int mapSize = 0;
     obvious::RayCastAxisAligned2D raycasterMap;
     raycasterMap.calcCoords(&_grid, _gridCoords, NULL, &mapSize, _occGridContent);
@@ -102,7 +115,17 @@ void ThreadGrid::eventLoop(void)
       }
     }
     _gridPub.publish(*_occGrid);
+    _iterTimes.push_back(ros::Time::now() - timer);
   }
+  //  std::ofstream stream;
+  //  stream.open("/tmp/griditer.log", std::ofstream::out);
+  //  if(!stream.is_open())
+  //    std::cout << __PRETTY_FUNCTION__ << "Error opening file" << "/tmp/griditer.log" <<std::endl;
+  //  for(std::vector<ros::Duration>::iterator iter = _iterTimes.begin(); iter < _iterTimes.end(); iter++)
+  //  {
+  //    stream << iter->toNSec() * 10e-9 << std::endl;
+  //  }
+  //  stream.close();
 }
 
 bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res)
@@ -115,4 +138,19 @@ bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::Ge
   return(true);
 }
 
+void ThreadGrid::terminateThread(void)
+{
+  std::cout << __PRETTY_FUNCTION__ << "write grid iter times to file" << std::endl;
+  std::ofstream stream;
+  stream.open("/tmp/griditer.log", std::ofstream::out);
+  if(!stream.is_open())
+    std::cout << __PRETTY_FUNCTION__ << "Error opening file" << "/tmp/griditer.log" <<std::endl;
+  for(std::vector<ros::Duration>::iterator iter = _iterTimes.begin(); iter < _iterTimes.end(); iter++)
+  {
+    stream << iter->toSec() << std::endl;
+  }
+  stream.close();
+  _stayActive = false;
+  this->unblock();
+}
 } /* namespace */

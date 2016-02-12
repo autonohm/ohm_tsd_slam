@@ -57,6 +57,7 @@ public:
    */
   void initPush(obvious::SensorPolar2D* sensor);
 
+  void terminateThread(void);
 protected:
 
   /**
@@ -64,6 +65,8 @@ protected:
    * Thread event loop
    */
   virtual void eventLoop(void);
+
+
 
 private:
 

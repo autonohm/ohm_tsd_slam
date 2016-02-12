@@ -97,24 +97,28 @@ SlamNode::SlamNode(void)
 
 SlamNode::~SlamNode()
 {
+  std::cout << __PRETTY_FUNCTION__ << "killing localizers" << std::endl;
   //stop all localization threads
   for(std::vector<ThreadLocalize*>::iterator iter = _localizers.begin(); iter < _localizers.end(); iter++)
   {
     (*iter)->terminateThread();
     while((*iter)->alive(THREAD_TERM_MS))
       usleep(THREAD_TERM_MS);
-    delete *iter;
+  //  delete *iter;
   }
   delete _loopRate;
   delete _gridInterval;
   //stop mapping threads
+  std::cout << __PRETTY_FUNCTION__ << "killing grid" << std::endl;
   _threadGrid->terminateThread();
   while(_threadGrid->alive(THREAD_TERM_MS))
     usleep(THREAD_TERM_MS);
-  delete _threadGrid;
+
+  std::cout << __PRETTY_FUNCTION__ << "killing mapping" << std::endl;
   _threadMapping->terminateThread();
   while(_threadMapping->alive(THREAD_TERM_MS))
     usleep(THREAD_TERM_MS);
+  delete _threadGrid;
   delete _threadMapping;
   delete _grid;
 }

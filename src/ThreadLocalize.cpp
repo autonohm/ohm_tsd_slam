@@ -27,21 +27,23 @@
 namespace ohm_tsd_slam
 {
 
+static std::vector<ros::Duration> _iterTimes;
+
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffset, const double yOffset):
-                    ThreadSLAM(*grid),
-                    _nh(nh),
-                    _mapper(*mapper),
-                    _sensor(NULL),
-                    _initialized(false),
-                    _gridWidth(grid->getCellsX() * grid->getCellSize()),
-                    _gridHeight(grid->getCellsY() * grid->getCellSize()),
-                    _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
-                    _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
-                    _xOffset(xOffset),
-                    _yOffset(yOffset),
-                    _nameSpace(nameSpace),
-                    _stampLaser(ros::Time::now())
+                        ThreadSLAM(*grid),
+                        _nh(nh),
+                        _mapper(*mapper),
+                        _sensor(NULL),
+                        _initialized(false),
+                        _gridWidth(grid->getCellsX() * grid->getCellSize()),
+                        _gridHeight(grid->getCellsY() * grid->getCellSize()),
+                        _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
+                        _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
+                        _xOffset(xOffset),
+                        _yOffset(yOffset),
+                        _nameSpace(nameSpace),
+                        _stampLaser(ros::Time::now())
 {
   ros::NodeHandle prvNh("~");
 
@@ -180,14 +182,14 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
 ThreadLocalize::~ThreadLocalize()
 {
-//  // (debug)print grid
-//  // todo: remove printing grid
-//  double ratio = double(_grid.getCellsX())/double(_grid.getCellsY());
-//  unsigned w = 600;
-//  unsigned h = (unsigned int)(((double)w)/ratio);
-//  unsigned char* image = new unsigned char[3 * w * h];
-//  _grid.grid2ColorImage(image, w, h);
-//  obvious::serializePPM("/tmp/image_tsd.ppm", image, w, h, true);
+  //  // (debug)print grid
+  //  // todo: remove printing grid
+  //  double ratio = double(_grid.getCellsX())/double(_grid.getCellsY());
+  //  unsigned w = 600;
+  //  unsigned h = (unsigned int)(((double)w)/ratio);
+  //  unsigned char* image = new unsigned char[3 * w * h];
+  //  _grid.grid2ColorImage(image, w, h);
+  //  obvious::serializePPM("/tmp/image_tsd.ppm", image, w, h, true);
 
 
   delete _sensor;
@@ -199,6 +201,16 @@ ThreadLocalize::~ThreadLocalize()
   _stayActive = false;
   _thread->join();
   _laserData.clear();
+  //  std::cout << __PRETTY_FUNCTION__ << "saving iter times" << std::endl;
+  //    std::ofstream stream;
+  //    stream.open(std::string("/tmp/" + _nameSpace + "localiter.log").c_str(), std::ofstream::out);
+  //    if(!stream.is_open())
+  //      std::cout << __PRETTY_FUNCTION__ << "Error opening file" << std::string("/tmp/" + _nameSpace + "iter.log") <<std::endl;
+  //    for(std::vector<ros::Duration>::iterator iter = _iterTimes.begin(); iter < _iterTimes.end(); iter++)
+  //    {
+  //      stream << iter->toNSec() * 10e-9 << std::endl;
+  //    }
+  //    stream.close();
 }
 
 void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
@@ -229,7 +241,7 @@ void ThreadLocalize::eventLoop(void)
     {
       _sleepCond.wait(_sleepMutex);
     }
-
+    ros::Time timer = ros::Time::now();
     _dataMutex.lock();
 
     vector<float> ranges = _laserData.front()->ranges;
@@ -303,7 +315,18 @@ void ThreadLocalize::eventLoop(void)
         _mapper.queuePush(_sensor);
       }
     }
+    _iterTimes.push_back(ros::Time::now() - timer);
   }
+  //  std::cout << __PRETTY_FUNCTION__ << "saving iter times" << std::endl;
+  //  std::ofstream stream;
+  //  stream.open(std::string("/tmp/" + _nameSpace + "localiter.log").c_str(), std::ofstream::out);
+  //  if(!stream.is_open())
+  //    std::cout << __PRETTY_FUNCTION__ << "Error opening file" << std::string("/tmp/" + _nameSpace + "iter.log") <<std::endl;
+  //  for(std::vector<ros::Duration>::iterator iter = _iterTimes.begin(); iter < _iterTimes.end(); iter++)
+  //  {
+  //    stream << iter->toNSec() * 10e-9 << std::endl;
+  //  }
+  //  stream.close();
 }
 
 void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
@@ -373,7 +396,7 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     obvious::Matrix* Svalid
 )
 {
-//  const unsigned int measurementSize = sensor->getRealMeasurementSize();
+  //  const unsigned int measurementSize = sensor->getRealMeasurementSize();
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
   obvious::Matrix T(3,3);
@@ -463,7 +486,7 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
   _poseStamped.pose.orientation.y = quat.y();
   _poseStamped.pose.orientation.z = quat.z();
 
-//  _tf.stamp_ = ros::Time::now();
+  //  _tf.stamp_ = ros::Time::now();
   _tf.stamp_ = _stampLaser;
   _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
   _tf.setRotation(quat);
@@ -561,6 +584,27 @@ void ThreadLocalize::reduceResolution(bool* const maskIn, const obvious::Matrix*
     }
   }
   assert(cnt == pointsOut);
+}
+
+void ThreadLocalize::terminateThread(void)
+{
+  _dataMutex.lock();
+  std::cout << __PRETTY_FUNCTION__ << "saving iter times" << std::endl;
+  std::string nameSpace = _nameSpace;
+  nameSpace.erase(--nameSpace.end());
+  std::ofstream stream;
+  stream.open(std::string("/tmp/" + nameSpace  + "localizer.log").c_str(), std::ofstream::out);
+  if(!stream.is_open())
+    std::cout << __PRETTY_FUNCTION__ << "Error opening file" << std::string("/tmp/" + _nameSpace + "iter.log") <<std::endl;
+  for(std::vector<ros::Duration>::iterator iter = _iterTimes.begin(); iter < _iterTimes.end(); iter++)
+  {
+    //stream << iter->toNSec() * 10e-9 << std::endl;
+    stream << iter->toSec()  << std::endl;
+  }
+  stream.close();
+  _dataMutex.unlock();
+  _stayActive = false;
+  this->unblock();
 }
 
 } /* namespace ohm_tsd_slam */

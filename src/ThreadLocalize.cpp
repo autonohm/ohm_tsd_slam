@@ -149,7 +149,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
     _PDFMatcher = new obvious::PDFMatching(trials, epsThresh, sizeControlSet, zhit, zphi, zshort, zmax, zrand, percentagePointsInC, rangemax, sigphi, sighit, lamshort, maxAngleDiff, maxAnglePenalty);
     break;
   case TSD:
-    _TSD_PDFMatcher = new obvious::TSD_PDFMatching(_grid, trials, epsThresh, sizeControlSet, zhit, zphi, zshort, zmax, zrand, percentagePointsInC, rangemax, sigphi, sighit, lamshort, maxAngleDiff, maxAnglePenalty);
+    _TSD_PDFMatcher = new obvious::TSD_PDFMatching(_grid, trials, epsThresh, sizeControlSet, zrand);
     break;
   default:
     ROS_ERROR_STREAM("Unknown registration mode " << _regMode << " use default = ICP" << std::endl);
@@ -313,7 +313,7 @@ void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
   double dy = T_laserOnBaseFootprint(1,2);
   double dtrans = sqrt(pow(dx,2) + pow(dy,2));
 
-  double drot = abs(asin(T_laserOnBaseFootprint(0,1)));
+  double drot = abs(asin(T_laserOnBaseFootprint(0,1))); // dont use acos here --> missing sign
 
   double vrot = drot / dt;
   double vtrans = dtrans / dt;

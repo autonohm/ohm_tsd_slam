@@ -40,6 +40,8 @@
     <arg name="use_odom_rescue" default="false" />
     <arg name="max_velocity_rot" default="6.28" />
     <arg name="max_velocity_lin" default="1.0" />
+    
+    <arg name="zrand" default="0.05" />
 
     <!-- ******************* -->
 
@@ -98,17 +100,19 @@
         <param name="ransac_ctrlset_size" type="int" value="180" />    <!-- number of points taking for ransac -->
         <param name="ransac_phi_max" type="double" value="45.0" />    <!-- maximum angle for ransac matching -->
 
-        <!-- parameter set for PDF and EXPERIMENTAL registration -->
-        <param type="int" name="trials" value="$(arg trials)" />
-        <param type="double" name="epsThresh" value="0.15" />
-        <param type="int" name="sizeControlSet" value="$(arg sizeControlSet)" />
+        <!-- parameter set for EXPERIMENTAL, PDF and TSD_PDF registration -->
+        <param type="int" name="trials" value="$(arg trials)" />    <!-- Trials for RNM -->
+        <param type="double" name="epsThresh" value="0.15" /> 
+        <param type="int" name="sizeControlSet" value="$(arg sizeControlSet)" />    <!-- Subsampling -->
+
+        <!-- parameter for PDF and TSD_PDF registration -->
+        <param type="double" name="zrand" value="$(arg zrand)" />   <!-- random probability range: [0.0;1.0[ -->
 
         <!-- parameter only for PDF registration -->
         <param type="double" name="zhit" value="0.2" />
         <param type="double" name="zphi" value="0.2" />
         <param type="double" name="zshort" value="0.2" />
-        <param type="double" name="zmax" value="0.2" />
-        <param type="double" name="zrand" value="0.2" />
+        <param type="double" name="zmax" value="0.2" />     
         <param type="double" name="percentagePointsInC" value="0.6" />
         <param type="double" name="rangemax" value="65" />
         <param type="double" name="sigphi" value="0.052" /> <!-- 3 degree -->

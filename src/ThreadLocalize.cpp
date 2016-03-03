@@ -27,8 +27,6 @@
 namespace ohm_tsd_slam
 {
 
-static std::vector<ros::Duration> _iterTimes;
-
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffset, const double yOffset):
                         ThreadSLAM(*grid),
@@ -589,7 +587,7 @@ void ThreadLocalize::reduceResolution(bool* const maskIn, const obvious::Matrix*
 void ThreadLocalize::terminateThread(void)
 {
   _dataMutex.lock();
-  std::cout << __PRETTY_FUNCTION__ << "saving iter times" << std::endl;
+  std::cout << __PRETTY_FUNCTION__ << _nameSpace << " saving iter times" << std::endl;
   std::string nameSpace = _nameSpace;
   nameSpace.erase(--nameSpace.end());
   std::ofstream stream;

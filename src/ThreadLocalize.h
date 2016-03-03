@@ -402,6 +402,8 @@ private:
   bool _reverseScan;
 
   ros::Time _stampLaser;
+
+  std::vector<ros::Duration> _iterTimes;
 };
 
 

@@ -29,8 +29,8 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
   _occGrid->info.origin.orientation.x = 0.0;
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;
-  _occGrid->info.origin.position.x    = 0.0 - (_grid.getCellsX() * _grid.getCellSize() * 0.5 + xOffset);
-  _occGrid->info.origin.position.y    = 0.0 - (_grid.getCellsY() * _grid.getCellSize() * 0.5 + yOffset);
+  _occGrid->info.origin.position.x    = 0.0 - (static_cast<double>(_grid.getCellsX()) * static_cast<double>(_grid.getCellSize()) * 0.5 + xOffset);
+  _occGrid->info.origin.position.y    = 0.0 - (static_cast<double>(_grid.getCellsY()) * static_cast<double>(_grid.getCellSize()) * 0.5 + yOffset);
   _occGrid->info.origin.position.z    = 0.0;
   _occGrid->data.resize(_grid.getCellsX() * _grid.getCellsY());
 

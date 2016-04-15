@@ -193,7 +193,7 @@ private:
    * @param pointsOut Amount of points in filtered data
    * @param reductionFactor Reduction factor
    */
-  void reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
+  void reduceResolution(bool* const maskIn, obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
       unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
 
   /**
@@ -221,7 +221,7 @@ private:
    * @param ob Obvious matrix to convert
    * @return transformed tf matrix
    */
-  tf::Transform obviouslyMatrix3x3ToTf(const obvious::Matrix& ob);
+  tf::Transform obviouslyMatrix3x3ToTf(obvious::Matrix& ob);
 
   /**
    * tfToObviouslyMatrix3x3

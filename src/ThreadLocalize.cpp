@@ -333,7 +333,7 @@ void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
   }
 }
 
-tf::Transform ThreadLocalize::obviouslyMatrix3x3ToTf(const obvious::Matrix& ob)
+tf::Transform ThreadLocalize::obviouslyMatrix3x3ToTf(obvious::Matrix& ob)
 {
   tf::Transform tf;
   tf.setOrigin( tf::Vector3(ob(0,2), ob(1,2), 0.0) );
@@ -687,7 +687,7 @@ obvious::Matrix ThreadLocalize::maskMatrix(obvious::Matrix* Mat, bool* mask, uns
 }
 
 //toDo: maybe obsolete with pca matching, definitely not nice
-void ThreadLocalize::reduceResolution(bool* const maskIn, const obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
+void ThreadLocalize::reduceResolution(bool* const maskIn, obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
     const unsigned int pointsIn, const unsigned int pointsOut, const unsigned int reductionFactor)
 {
   assert(pointsIn > pointsOut);

@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   tf
+  pcl_ros
 )
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall")
@@ -116,14 +117,14 @@ link_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(slam_node src/slam_node.cpp
-                                 src/SlamNode.cpp
-                                 src/ThreadLocalize.cpp
-                                 src/ThreadSLAM.cpp
-                                 src/ThreadMapping.cpp
-                                 src/ThreadGrid.cpp
-                                 )
-
+#add_executable(slam_node src/slam_node.cpp
+#                                 src/SlamNode.cpp
+#                                 src/ThreadLocalize.cpp
+#                                 src/ThreadSLAM.cpp
+#                                 src/ThreadMapping.cpp
+#                                 src/ThreadGrid.cpp
+#                                 )
+add_executable(slam_3d_node src/slam_3d_node.cpp)
                                   
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -133,11 +134,20 @@ add_executable(slam_node src/slam_node.cpp
 #   ${catkin_LIBRARIES}
 # )
 #SET(GRAPHICLIBS obgraphic vtkHybrid glut GL jpeg)
-target_link_libraries(slam_node
+#target_link_libraries(slam_node
+#                                 ${catkin_LIBRARIES}
+#                                 obvision
+#                                 obcore
+#                                 gsl
+#                                 gslcblas
+#                                 ann
+#                                 flann
+#                                 ${Boost_LIBRARIES}
+#                                 )
+target_link_libraries(slam_3d_node
                                  ${catkin_LIBRARIES}
                                  obvision
                                  obcore
- #                                ${GRAPHICLIBS}
                                  gsl
                                  gslcblas
                                  ann
@@ -160,11 +170,11 @@ target_link_libraries(slam_node
 # )
 
 ## Mark executables and/or libraries for installation
-install(TARGETS slam_node
-   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+#install(TARGETS slam_node
+#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+#)
 
 ## Mark cpp header files for installation
 # install(DIRECTORY include/${PROJECT_NAME}/

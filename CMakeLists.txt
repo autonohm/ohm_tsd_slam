@@ -132,12 +132,12 @@ add_executable(slam_node src/slam_node.cpp
 # target_link_libraries(ohm_tsd_slam_node
 #   ${catkin_LIBRARIES}
 # )
-SET(GRAPHICLIBS obgraphic vtkHybrid glut GL jpeg)
+#SET(GRAPHICLIBS obgraphic vtkHybrid glut GL jpeg)
 target_link_libraries(slam_node
                                  ${catkin_LIBRARIES}
                                  obvision
                                  obcore
-                                 ${GRAPHICLIBS}
+ #                                ${GRAPHICLIBS}
                                  gsl
                                  gslcblas
                                  ann

@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
 )
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall -std=c++11")
 
 
 ## System dependencies are found with CMake's conventions

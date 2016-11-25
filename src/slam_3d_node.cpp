@@ -15,7 +15,7 @@
 #include "obvision/registration/icp/icp_def.h"
 #include "obvision/normals/NormalsEstimator.h"
 #include "obvision/reconstruct/space/TsdSpace.h"
-#include "obvision/reconstruct/space/SensorVelodyne32.h"
+#include "obvision/reconstruct/space/SensorPolar3D.h"
 #include "obvision/reconstruct/space/RayCast3D.h"
 #include "obcore/base/tools.h"
 #include "obcore/base/Logger.h"
@@ -37,7 +37,7 @@ static ros::Publisher _pubGlobPcl;
 static ros::Subscriber _subPcl;
 static obvious::TsdSpace* _space;
 static obvious::RayCast3D* _rayCaster;
-static obvious::SensorVelodyne32* _sensor;
+static obvious::SensorPolar3D* _sensor;
 static obvious::Matrix* _T;
 static obvious::Matrix _Tinit(4, 4);
 static obvious::Icp* _icp;
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 
   double tr[3];
   _space->getCentroid(tr);
-  tr[2] = 0.0;
+  tr[2] = 3.0;
   double tf[16]={1,  0, 0, tr[0],
       0,  1, 0, tr[1],
       0,  0, 1, tr[2],
@@ -210,6 +210,34 @@ void callBackCloud(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
       _sensor->setRealMeasurementMask(_mask);
       _space->push(_sensor);
     }
+    tf::Matrix3x3 R;
+    for(unsigned int i = 0; i < 3; i++)
+      R[i].setValue(T(i, 0), T(0, 1), T(i, 2));
+
+    tf::Quaternion quat;
+    R.getRotation(quat);
+
+    tf::StampedTransform tf;
+    tf.stamp_ = ros::Time::now();
+    tf.child_frame_id_ = "velodyne";
+    tf.frame_id_ = "map";
+    tf.setRotation(quat);
+    tf.setOrigin(tf::Vector3(T(0, 3), T(1, 3), T(2, 3)));
+    _broadcaster->sendTransform(tf);
+//      _poseStamped.pose.orientation.w = quat.w();
+//      _poseStamped.pose.orientation.x = quat.x();
+//      _poseStamped.pose.orientation.y = quat.y();
+//      _poseStamped.pose.orientation.z = quat.z();
+//
+//    //  _tf.stamp_ = ros::Time::now();
+//      _tf.stamp_ = _stampLaser;
+//      _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
+//      _tf.setRotation(quat);
+//
+//      _posePub.publish(_poseStamped);
+
+
+
   }
   else
     ROS_ERROR_STREAM("Registration failed, RMS " << rms);
@@ -223,8 +251,10 @@ bool initialize(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
 //  resetMask(msg->points.size());
   if(!msg->points.size())
     return false;
-
-  _sensor = new obvious::SensorVelodyne32(msg->points.size() / 32);
+  double thetaRes = obvious::deg2rad(1.3);
+  double thetaMin = obvious::deg2rad(-120);
+  //obvious::SensorPolar3D* sensor = new obvious::SensorPolar3D(thetaMin, thetaRes, 32, 0.0, obvious::deg2rad(0.16), 2250);
+  _sensor = new obvious::SensorPolar3D(thetaMin, thetaRes, 32, 0.0, obvious::deg2rad(0.16), msg->points.size() / 32);
   _sensor->transform(&_Tinit);
   ROS_INFO_STREAM("Initial Pose");
     Matrix Tmp = _sensor->getTransformation();
@@ -248,6 +278,8 @@ bool initialize(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& msg)
   _sensor->setRealMeasurementMask(_mask);
   //for(unsigned int i = 0; i < 20; i++)
     _space->push(_sensor);
+    _space->serializeSliceImages(EnumSpaceAxis::Z);
+    _space->serializeSliceImages(EnumSpaceAxis::X);
 
   return true;
 }
@@ -260,27 +292,30 @@ void resetMask(const unsigned int size)
 
 bool callBackGenerateGlPcl(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
 {
-  const unsigned int maxSize = _space->getXDimension()*_space->getYDimension()*_space->getZDimension() / 6;
+  const unsigned int maxSize = _space->getXDimension()*_space->getYDimension()*_space->getZDimension();
   double* cloud = new double[maxSize*3];
     double* normals = new double[maxSize*3];
   obvious::RayCastAxisAligned3D raca;
   unsigned int size = 0;
-  raca.calcCoords(_space, cloud, normals, NULL, &size);
+  //raca.calcCoords(_space, cloud, normals, NULL, &size);
+  _rayCaster->calcCoordsFromCurrentPose(_space, _sensor, cloud, normals, NULL, &size);
   if(!size)
   {
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error! Raycaster found no valid coordinates");
     return false;
   }
+  else
+    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " raycast found " << size / 3 << " points");
   sensor_msgs::PointCloud cloudRos;
   cloudRos.header.frame_id = "map";
-  cloudRos.points.resize(size / 3);
+  cloudRos.points.resize(size);
   for(unsigned int i = 0; i < size; i += 3)
   {
     geometry_msgs::Point32 point;
     point.x = static_cast<float>(cloud[i]);
     point.y = static_cast<float>(cloud[i + 1]);
     point.z = static_cast<float>(cloud[i + 2]);
-    cloudRos.points[size / 3] = point;
+    cloudRos.points[i / 3] = point;
   }
   _pubGlobPcl.publish(cloudRos);
   return true;

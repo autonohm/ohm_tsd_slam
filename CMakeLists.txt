@@ -15,6 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall -std=c++11")
 
+FIND_PACKAGE(VTK REQUIRED)
+INCLUDE(${VTK_USE_FILE})
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
@@ -153,6 +155,8 @@ target_link_libraries(slam_3d_node
                                  ann
                                  flann
                                  ${Boost_LIBRARIES}
+                                 obgraphic
+                                 ${VTK_LIBRARIES}
                                  )
 
 #############

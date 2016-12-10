@@ -2,6 +2,8 @@
 
 <launch>
 
+	<node pkg="tf" type="static_transform_publisher" name="laser_link" args="-0.12 0 0 0 0 0 laser base_link 100" />
+	
     <!-- extern parameters -->
     <arg name="loop_rate" default="100.0" />
     <arg name="map_topic" default="map" />    <!-- topic of occupancy grid -->
@@ -13,7 +15,7 @@
     <arg name="y_offset" default="0.0" />
     <arg name="yaw_offset" default="0.0" />
 
-    <arg name="map_size" default="11" />
+    <arg name="map_size" default="12" />
     <arg name="cellsize" default="0.025" />
     <arg name="truncation_radius" default="10" />
 
@@ -82,7 +84,7 @@
         <param name="footprint_x_offset" type="double" value="0.0" />    <!-- offset of laser in meters -->
         <param name="max_velocity_rot" type="double" value="$(arg max_velocity_rot)" />    <!-- maximal rotational speed on base_footprint in rad/sec -->
         <param name="max_velocity_lin" type="double" value="$(arg max_velocity_lin)" />    <!-- maximal linear speed in m/s -->
-
+        <param name = "local_offset_x" type = "double" value = "0.12"/>
         <!-- registration parameters -->
         <param name="registration_mode" type="int" value="$(arg registration_mode)" />    <!-- 0:ICP 1:EXPERIMENTAL 2:PDF 3:TSD_PDF -->
         <param name="use_odom_rescue" type="bool" value="$(arg use_odom_rescue)" />

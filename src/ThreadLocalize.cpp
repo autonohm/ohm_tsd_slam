@@ -9,6 +9,7 @@
 
 #include "SlamNode.h"
 #include "ThreadMapping.h"
+#include "UtilitiesTransform.h"
 
 #include "obcore/math/linalg/linalg.h"
 #include "obcore/base/Logger.h"
@@ -246,7 +247,7 @@ void ThreadLocalize::odomRescueInit()
     _tfListener.waitForTransform(_tfFootprintFrameId, _tfChildFrameId, ros::Time(0), ros::Duration(10.0));
     _tfListener.lookupTransform(_tfFootprintFrameId, _tfChildFrameId, ros::Time(0), _tfReader);
   }
-  catch(tf::TransformException ex)
+  catch(tf::TransformException& ex)
   {
     ROS_ERROR("%s", ex.what());
     ros::Duration(1.0).sleep();
@@ -262,7 +263,7 @@ void ThreadLocalize::odomRescueInit()
     _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, ros::Time(0), ros::Duration(10.0));
     _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, ros::Time(0), _tfReader);
   }
-  catch(tf::TransformException ex)
+  catch(tf::TransformException& ex)
   {
     ROS_ERROR("%s", ex.what());
     ros::Duration(1.0).sleep();
@@ -282,7 +283,7 @@ void ThreadLocalize::odomRescueUpdate()
     _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, _stampLaser, _waitForOdomTf);
     _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, _stampLaser, _tfReader);
   }
-  catch(tf::TransformException ex)
+  catch(tf::TransformException& ex)
   {
     ROS_ERROR("%s", ex.what());
     _odomTfIsValid = false;
@@ -302,7 +303,8 @@ void ThreadLocalize::odomRescueUpdate()
 void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
 {
   // transform transformation from slam to odom e.g. form laser to base footprint system
-  obvious::Matrix T_laserOnBaseFootprint = tfToObviouslyMatrix3x3(_tfLaser) * T_slam * tfToObviouslyMatrix3x3(_tfLaser).getInverse();
+  UtilitiesTransform tfUtils;
+  obvious::Matrix T_laserOnBaseFootprint = tfUtils.tfToObviouslyMatrix3x3(_tfLaser) * T_slam * tfUtils.tfToObviouslyMatrix3x3(_tfLaser).getInverse();
 
   // get dt
   ros::Duration dtRos = _stampLaser - _stampLaserOld;
@@ -326,41 +328,41 @@ void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
       ROS_INFO("-----ODOM-RECOVER-----");
 
       T_slam =
-        tfToObviouslyMatrix3x3(_tfLaser).getInverse() *
-        tfToObviouslyMatrix3x3(_tfRelativeOdom) *
-        tfToObviouslyMatrix3x3(_tfLaser);
+        tfUtils.tfToObviouslyMatrix3x3(_tfLaser).getInverse() *
+        tfUtils.tfToObviouslyMatrix3x3(_tfRelativeOdom) *
+        tfUtils.tfToObviouslyMatrix3x3(_tfLaser);
     }
   }
 }
 
-tf::Transform ThreadLocalize::obviouslyMatrix3x3ToTf(obvious::Matrix& ob)
-{
-  tf::Transform tf;
-  tf.setOrigin( tf::Vector3(ob(0,2), ob(1,2), 0.0) );
-  tf.setRotation( tf::createQuaternionFromYaw( asin( ob(0,1) ) ) );
-
-  return tf;
-}
-
-obvious::Matrix ThreadLocalize::tfToObviouslyMatrix3x3(const tf::Transform& tf)
-{
-  obvious::Matrix ob(3,3);
-  ob.setIdentity();
-
-  double theta = tf::getYaw(tf.getRotation());
-  double x = tf.getOrigin().getX();
-  double y = tf.getOrigin().getY();
-
-  // problem with sin() returns -0.0 (avoid with +0.0)
-  ob(0, 0) = cos(theta) + 0.0;
-  ob(0, 1) = -sin(theta) + 0.0;
-  ob(0, 2) = x + 0.0;
-  ob(1, 0) = sin(theta) + 0.0;
-  ob(1, 1) = cos(theta) + 0.0;
-  ob(1, 2) = y + 0.0;
-
-  return ob;
-}
+//tf::Transform ThreadLocalize::obviouslyMatrix3x3ToTf(obvious::Matrix& ob)
+//{
+//  tf::Transform tf;
+//  tf.setOrigin( tf::Vector3(ob(0,2), ob(1,2), 0.0) );
+//  tf.setRotation( tf::createQuaternionFromYaw( asin( ob(0,1) ) ) );
+//
+//  return tf;
+//}
+//
+//obvious::Matrix ThreadLocalize::tfToObviouslyMatrix3x3(const tf::Transform& tf)
+//{
+//  obvious::Matrix ob(3,3);
+//  ob.setIdentity();
+//
+//  double theta = tf::getYaw(tf.getRotation());
+//  double x = tf.getOrigin().getX();
+//  double y = tf.getOrigin().getY();
+//
+//  // problem with sin() returns -0.0 (avoid with +0.0)
+//  ob(0, 0) = cos(theta) + 0.0;
+//  ob(0, 1) = -sin(theta) + 0.0;
+//  ob(0, 2) = x + 0.0;
+//  ob(1, 0) = sin(theta) + 0.0;
+//  ob(1, 1) = cos(theta) + 0.0;
+//  ob(1, 2) = y + 0.0;
+//
+//  return ob;
+//}
 
 void ThreadLocalize::eventLoop(void)
 {
@@ -522,6 +524,8 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     obvious::Matrix* Svalid
 )
 {
+  static ros::Time last;
+  static bool valid = false;
 //  const unsigned int measurementSize = sensor->getRealMeasurementSize();
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
@@ -532,45 +536,58 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
 #endif
 
   // RANSAC pre-registration (rough)
-  switch(_regMode)
-  {
-  case ICP:
-    // no pre-registration
-    break;
-  case EXP:
-    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
-    T = _RandomNormalMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-    T44(0, 0) = T(0, 0);
-    T44(0, 1) = T(0, 1);
-    T44(0, 3) = T(0, 2);
-    T44(1, 0) = T(1, 0);
-    T44(1, 1) = T(1, 1);
-    T44(1, 3) = T(1, 2);
-    break;
-  case PDF:
-    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
-    T = _PDFMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-    T44(0, 0) = T(0, 0);
-    T44(0, 1) = T(0, 1);
-    T44(0, 3) = T(0, 2);
-    T44(1, 0) = T(1, 0);
-    T44(1, 1) = T(1, 1);
-    T44(1, 3) = T(1, 2);
-    break;
-  case TSD:
-    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
-    T = _TSD_PDFMatcher->match(sensor->getTransformation(), M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-    T44(0, 0) = T(0, 0);
-    T44(0, 1) = T(0, 1);
-    T44(0, 3) = T(0, 2);
-    T44(1, 0) = T(1, 0);
-    T44(1, 1) = T(1, 1);
-    T44(1, 3) = T(1, 2);
-    break;
-  default:
-    // no pre-registration
-    break;
-  }
+//  switch(_regMode)
+//  {
+//  case ICP:
+//    // no pre-registration
+//    break;
+//  case EXP:
+//    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+//    T = _RandomNormalMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+//    T44(0, 0) = T(0, 0);
+//    T44(0, 1) = T(0, 1);
+//    T44(0, 3) = T(0, 2);
+//    T44(1, 0) = T(1, 0);
+//    T44(1, 1) = T(1, 1);
+//    T44(1, 3) = T(1, 2);
+//    break;
+//  case PDF:
+//    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+//    T = _PDFMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+//    T44(0, 0) = T(0, 0);
+//    T44(0, 1) = T(0, 1);
+//    T44(0, 3) = T(0, 2);
+//    T44(1, 0) = T(1, 0);
+//    T44(1, 1) = T(1, 1);
+//    T44(1, 3) = T(1, 2);
+//    break;
+//  case TSD:
+//    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+//    T = _TSD_PDFMatcher->match(sensor->getTransformation(), M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+//    T44(0, 0) = T(0, 0);
+//    T44(0, 1) = T(0, 1);
+//    T44(0, 3) = T(0, 2);
+//    T44(1, 0) = T(1, 0);
+//    T44(1, 1) = T(1, 1);
+//    T44(1, 3) = T(1, 2);
+//    break;
+//  default:
+//    // no pre-registration
+//    break;
+//  }
+  obvious::Matrix pretr(3, 3);
+  if(valid)
+    if(_odom.getOdomTf(last, _stampLaser, &pretr, "odom", "base_link"))
+    {
+      T44(0, 0) = pretr(0, 0);
+      T44(0, 1) = pretr(0, 1);
+      T44(0, 3) = pretr(0, 2);
+      T44(1, 0) = pretr(1, 0);
+      T44(1, 1) = pretr(1, 1);
+      T44(1, 3) = pretr(1, 2);
+    }
+//    else
+//      ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " odom shit failed");
 
   _icp->reset();
   obvious::Matrix P = sensor->getTransformation();
@@ -583,6 +600,8 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   unsigned int it = 0;
   _icp->iterate(&rms, &pairs, &it, &T44);
   T = _icp->getFinalTransformation();
+  last = ros::Time::now();
+  valid = true;
   
   if(_useOdomRescue && _odomTfIsValid) odomRescueCheck(T);
   

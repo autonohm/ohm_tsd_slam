@@ -9,6 +9,7 @@
 #define THREADLOCALIZE_H_
 
 #include "ThreadSLAM.h"
+#include "ControllerOdom.h"
 
 #include <sensor_msgs/LaserScan.h>
 #include <ros/ros.h>
@@ -215,21 +216,21 @@ private:
    */
   void odomRescueCheck(obvious::Matrix& T);
 
-  /**
-   * obviouslyMatrix3x3ToTf
-   * converts an 3x3 obvious matrix to a tf matrix
-   * @param ob Obvious matrix to convert
-   * @return transformed tf matrix
-   */
-  tf::Transform obviouslyMatrix3x3ToTf(obvious::Matrix& ob);
-
-  /**
-   * tfToObviouslyMatrix3x3
-   * converts an tf matrix to a 3x3 obvious matrix
-   * @param tf tf matrix to transform
-   * @return transformed obvious matrix
-   */
-  obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf);
+//  /**
+//   * obviouslyMatrix3x3ToTf
+//   * converts an 3x3 obvious matrix to a tf matrix
+//   * @param ob Obvious matrix to convert
+//   * @return transformed tf matrix
+//   */
+//  tf::Transform obviouslyMatrix3x3ToTf(obvious::Matrix& ob);
+//
+//  /**
+//   * tfToObviouslyMatrix3x3
+//   * converts an tf matrix to a 3x3 obvious matrix
+//   * @param tf tf matrix to transform
+//   * @return transformed obvious matrix
+//   */
+//  obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf);
 
   /**
    * Pointer to main NodeHandle
@@ -485,7 +486,7 @@ private:
    */
   bool _reverseScan;
 
-
+  ControllerOdom _odom;
 };
 
 

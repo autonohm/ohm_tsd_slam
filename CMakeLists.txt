@@ -130,6 +130,7 @@ add_executable(slam_node src/slam_node.cpp
                                  )
 #add_executable(slam_3d_node src/slam_3d_node.cpp)
 add_executable(odom_to_tf src/odom_to_tf.cpp)
+add_executable(odom_tf_test src/odom_tf_test.cpp)
                                   
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -165,7 +166,10 @@ target_link_libraries(slam_node
 target_link_libraries(odom_to_tf
                                  ${catkin_LIBRARIES}
                                  )
-
+                                 
+target_link_libraries(odom_tf_test
+                                 ${catkin_LIBRARIES}
+                                 )
 #############
 ## Install ##
 #############

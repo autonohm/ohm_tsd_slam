@@ -43,6 +43,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
                     _yOffset(yOffset),
                     _nameSpace(nameSpace),
                     _stampLaser(ros::Time::now())
+//                    _odom(_tfListener)
 {
   ros::NodeHandle prvNh("~");
 
@@ -222,7 +223,7 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
     this->init(scan);
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
 
-    if(_useOdomRescue) odomRescueInit();
+if(_useOdomRescue) odomRescueInit();
 
     _stampLaserOld = scan.header.stamp;
   }
@@ -242,7 +243,7 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 void ThreadLocalize::odomRescueInit()
 {
   // get bf -> laser transform at init, aussuming its a static transform
-  try
+/*  try
   {
     _tfListener.waitForTransform(_tfFootprintFrameId, _tfChildFrameId, ros::Time(0), ros::Duration(10.0));
     _tfListener.lookupTransform(_tfFootprintFrameId, _tfChildFrameId, ros::Time(0), _tfReader);
@@ -272,13 +273,13 @@ void ThreadLocalize::odomRescueInit()
 
   ROS_INFO_STREAM("Received first odom tf for initialization of odom rescue");
   // transform odom to laser frame
-  _tfOdomOld = _tfReader;
+  _tfOdomOld = _tfReader;*/
 }
 
 void ThreadLocalize::odomRescueUpdate()
 {
   // get new odom tf
-  try
+ /* try
   {
     _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, _stampLaser, _waitForOdomTf);
     _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, _stampLaser, _tfReader);
@@ -297,13 +298,13 @@ void ThreadLocalize::odomRescueUpdate()
   // push state ahead
   _tfOdomOld = _tfOdom;
 
-  _odomTfIsValid = true;
+  _odomTfIsValid = true;*/
 }
 
 void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
 {
   // transform transformation from slam to odom e.g. form laser to base footprint system
-  UtilitiesTransform tfUtils;
+/*  UtilitiesTransform tfUtils;
   obvious::Matrix T_laserOnBaseFootprint = tfUtils.tfToObviouslyMatrix3x3(_tfLaser) * T_slam * tfUtils.tfToObviouslyMatrix3x3(_tfLaser).getInverse();
 
   // get dt
@@ -332,7 +333,7 @@ void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
         tfUtils.tfToObviouslyMatrix3x3(_tfRelativeOdom) *
         tfUtils.tfToObviouslyMatrix3x3(_tfLaser);
     }
-  }
+  }*/
 }
 
 //tf::Transform ThreadLocalize::obviouslyMatrix3x3ToTf(obvious::Matrix& ob)
@@ -374,6 +375,7 @@ void ThreadLocalize::eventLoop(void)
     {
       _sleepCond.wait(_sleepMutex);
     }
+     ros::Time timer = ros::Time::now();
 
     _dataMutex.lock();
 
@@ -433,6 +435,9 @@ void ThreadLocalize::eventLoop(void)
     obvious::Matrix T(3, 3);
 
     T = doRegistration(_sensor, &M, &Mvalid, &N, &Nvalid, &S, &Svalid);  //3x3 Transformation Matrix
+
+
+//    std::cout << __PRETTY_FUNCTION__ << " cycle time = " << (ros::Time::now() - timer).toSec() << " (s)" << std::endl;
 
     /** analyze registration result */
     _tf.stamp_ = ros::Time::now();
@@ -575,9 +580,11 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
 //    // no pre-registration
 //    break;
 //  }
+  
+  static ControllerOdom odom;
   obvious::Matrix pretr(3, 3);
   if(valid)
-    if(_odom.getOdomTf(last, _stampLaser, &pretr, "odom", "base_link"))
+    if(odom.getOdomTf(last, _stampLaser, &pretr, "odom", "base_footprint"))
     {
       T44(0, 0) = pretr(0, 0);
       T44(0, 1) = pretr(0, 1);
@@ -585,6 +592,7 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
       T44(1, 0) = pretr(1, 0);
       T44(1, 1) = pretr(1, 1);
       T44(1, 3) = pretr(1, 2);
+      T44.print();
     }
 //    else
 //      ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " odom shit failed");

@@ -11,7 +11,8 @@
 namespace ohm_tsd_slam
 {
 
-ControllerOdom::ControllerOdom()
+ControllerOdom::ControllerOdom(void)//tf::TransformListener& listener):
+//  _listenerTf(listener)
 {
   // TODO Auto-generated constructor stub
 

@@ -428,7 +428,7 @@ private:
    * Ros tf interface
    */
   tf::TransformBroadcaster _tfBroadcaster;
-  tf::TransformListener _tfListener;
+//  tf::TransformListener _tfListener;
 
   /**
    * Container for reading tfs

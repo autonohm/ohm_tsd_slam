@@ -24,15 +24,13 @@ int main(int argc, char **argv)
 
 void callBackScan(const sensor_msgs::LaserScan& scan)
 {
+  ros::Time timer = ros::Time::now();
   static tf::TransformListener listener;
   static ros::Time last = ros::Time::now();
   obvious::Matrix tf(3, 3);
 
   tf::StampedTransform tfLast;
   tf::StampedTransform tfCurrent;
-  //  tf.frame_id_ = "odom";
-  //  tf.child_frame_id_ = "base_footprint";
-  //  tf.stamp_ = scan.header.stamp;
 
   try
   {
@@ -58,11 +56,6 @@ void callBackScan(const sensor_msgs::LaserScan& scan)
   obvLast.invert();
   tf = obvLast * obvCur;
   tf.print();
-
-
-
-
-
-
   last = ros::Time::now();
+  std::cout << __PRETTY_FUNCTION__ << " cycle time = " << (ros::Time::now() - timer).toSec() << " (s)" << std::endl;
 }

@@ -19,7 +19,7 @@ namespace ohm_tsd_slam
 class ControllerOdom
 {
 public:
-  ControllerOdom();
+  ControllerOdom(void);//tf::TransformListener& listener);
   virtual ~ControllerOdom();
   bool getOdomTf(const ros::Time& last, const ros::Time& current, obvious::Matrix* const tf,
                  const std::string& parentFrame, const std::string& childFrame);

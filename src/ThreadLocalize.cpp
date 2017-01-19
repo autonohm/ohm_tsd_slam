@@ -30,20 +30,20 @@ namespace ohm_tsd_slam
 
 ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
     const double xOffset, const double yOffset):
-                    ThreadSLAM(*grid),
-                    _nh(nh),
-                    _mapper(*mapper),
-                    _sensor(NULL),
-                    _initialized(false),
-                    _gridWidth(grid->getCellsX() * grid->getCellSize()),
-                    _gridHeight(grid->getCellsY() * grid->getCellSize()),
-                    _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
-                    _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
-                    _xOffset(xOffset),
-                    _yOffset(yOffset),
-                    _nameSpace(nameSpace),
-                    _stampLaser(ros::Time::now())
-//                    _odom(_tfListener)
+                        ThreadSLAM(*grid),
+                        _nh(nh),
+                        _mapper(*mapper),
+                        _sensor(NULL),
+                        _initialized(false),
+                        _gridWidth(grid->getCellsX() * grid->getCellSize()),
+                        _gridHeight(grid->getCellsY() * grid->getCellSize()),
+                        _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
+                        _gridOffSetY(-1.0 * (grid->getCellsY()* grid->getCellSize() * 0.5 + yOffset)),
+                        _xOffset(xOffset),
+                        _yOffset(yOffset),
+                        _nameSpace(nameSpace),
+                        _stampLaser(ros::Time::now()),
+                        _odom(new ControllerOdom)
 {
   ros::NodeHandle prvNh("~");
 
@@ -194,21 +194,21 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
 ThreadLocalize::~ThreadLocalize()
 {
-//  // (debug)print grid
-//  // todo: remove printing grid
-//  double ratio = double(_grid.getCellsX())/double(_grid.getCellsY());
-//  unsigned w = 600;
-//  unsigned h = (unsigned int)(((double)w)/ratio);
-//  unsigned char* image = new unsigned char[3 * w * h];
-//  _grid.grid2ColorImage(image, w, h);
-//  obvious::serializePPM("/tmp/image_tsd.ppm", image, w, h, true);
+  //  // (debug)print grid
+  //  // todo: remove printing grid
+  //  double ratio = double(_grid.getCellsX())/double(_grid.getCellsY());
+  //  unsigned w = 600;
+  //  unsigned h = (unsigned int)(((double)w)/ratio);
+  //  unsigned char* image = new unsigned char[3 * w * h];
+  //  _grid.grid2ColorImage(image, w, h);
+  //  obvious::serializePPM("/tmp/image_tsd.ppm", image, w, h, true);
 
 
   delete _sensor;
   delete _RandomNormalMatcher;
   delete _PDFMatcher;
   delete _TSD_PDFMatcher;
-  for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
+  for(std::deque<LocalScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
     delete *iter;
   _stayActive = false;
   _thread->join();
@@ -223,18 +223,66 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
     this->init(scan);
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
 
-if(_useOdomRescue) odomRescueInit();
+    if(_useOdomRescue) odomRescueInit();
 
     _stampLaserOld = scan.header.stamp;
   }
   else
   {
-    sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
-    *scanCopy = scan;
+    //sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
+    LocalScan* scanCopy = new LocalScan;
+    scanCopy->_scan = scan;
+    scanCopy->_tf = new obvious::Matrix(3, 3);
+    scanCopy->_tf->setIdentity();
 
+
+
+    ros::Time last;
+    _mutexLocalTime.lock();
+    last = _stampLastLocal;
+    _mutexLocalTime.unlock();
+    obvious::Matrix tf(3, 3);
+    if(_odom->getOdomTf(last, scan.header.stamp, &tf, "odom", "laser"))
+       *scanCopy->_tf = tf;
     _dataMutex.lock();
     _laserData.push_front(scanCopy);
     _dataMutex.unlock();
+
+/*ros::Time timer = ros::Time::now();
+  static tf::TransformListener listener;
+//  static ros::Time last = ros::Time::now();
+  obvious::Matrix tf(3, 3);
+
+  tf::StampedTransform tfLast;
+  tf::StampedTransform tfCurrent;
+
+  try
+  {
+   listener.lookupTransform("odom", "laser", last, tfLast);
+  }
+  catch(tf::TransformException& ex)
+  {
+    std::cout << __PRETTY_FUNCTION__ << " last tf failed " << ex.what() << std::endl;
+  }
+
+
+  try
+  {
+    listener.lookupTransform("odom", "laser", scan.header.stamp, tfCurrent);
+  }
+  catch(tf::TransformException& ex)
+  {
+    std::cout << __PRETTY_FUNCTION__ << " current tf failed" << ex.what() << std::endl;
+  }
+  ohm_tsd_slam::UtilitiesTransform tfUtilities;
+  obvious::Matrix obvLast = tfUtilities.tfToObviouslyMatrix3x3(tfLast);
+  obvious::Matrix obvCur  = tfUtilities.tfToObviouslyMatrix3x3(tfCurrent);
+  obvLast.invert();
+
+tf = obvLast * obvCur;
+  tf.print();
+  //last = ros::Time::now();
+  std::cout << __PRETTY_FUNCTION__ << " cycle time = " << (ros::Time::now() - timer).toSec() << " (s)" << std::endl;*/
 
     this->unblock();
   }
@@ -243,7 +291,7 @@ if(_useOdomRescue) odomRescueInit();
 void ThreadLocalize::odomRescueInit()
 {
   // get bf -> laser transform at init, aussuming its a static transform
-/*  try
+  /*  try
   {
     _tfListener.waitForTransform(_tfFootprintFrameId, _tfChildFrameId, ros::Time(0), ros::Duration(10.0));
     _tfListener.lookupTransform(_tfFootprintFrameId, _tfChildFrameId, ros::Time(0), _tfReader);
@@ -279,7 +327,7 @@ void ThreadLocalize::odomRescueInit()
 void ThreadLocalize::odomRescueUpdate()
 {
   // get new odom tf
- /* try
+  /* try
   {
     _tfListener.waitForTransform(_tfBaseFrameId, _tfOdomFrameId, _stampLaser, _waitForOdomTf);
     _tfListener.lookupTransform(_tfBaseFrameId, _tfOdomFrameId, _stampLaser, _tfReader);
@@ -289,7 +337,7 @@ void ThreadLocalize::odomRescueUpdate()
     ROS_ERROR("%s", ex.what());
     _odomTfIsValid = false;
   }
-  
+
   _tfOdom = _tfReader;
 
   // calc diff odom -> odom(t-1) -> odom(t)
@@ -304,7 +352,7 @@ void ThreadLocalize::odomRescueUpdate()
 void ThreadLocalize::odomRescueCheck(obvious::Matrix& T_slam)
 {
   // transform transformation from slam to odom e.g. form laser to base footprint system
-/*  UtilitiesTransform tfUtils;
+  /*  UtilitiesTransform tfUtils;
   obvious::Matrix T_laserOnBaseFootprint = tfUtils.tfToObviouslyMatrix3x3(_tfLaser) * T_slam * tfUtils.tfToObviouslyMatrix3x3(_tfLaser).getInverse();
 
   // get dt
@@ -375,21 +423,22 @@ void ThreadLocalize::eventLoop(void)
     {
       _sleepCond.wait(_sleepMutex);
     }
-     ros::Time timer = ros::Time::now();
+    ros::Time timer = ros::Time::now();
 
     _dataMutex.lock();
 
-    vector<float> ranges = _laserData.front()->ranges;
+    vector<float> ranges = _laserData.front()->_scan.ranges;
+    obvious::Matrix pre = *_laserData.front()->_tf;
     if(_reverseScan)
       std::reverse(ranges.begin(),ranges.end());
 
     _stampLaserOld = _stampLaser;
-    _stampLaser = _laserData.front()->header.stamp;
+    _stampLaser = _laserData.front()->_scan.header.stamp;
 
     _sensor->setRealMeasurementData(ranges);
     _sensor->setStandardMask();
 
-    for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
+    for(std::deque<LocalScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
       delete *iter;
     _laserData.clear();
     _dataMutex.unlock();
@@ -434,10 +483,10 @@ void ThreadLocalize::eventLoop(void)
     obvious::Matrix Svalid = maskMatrix(&S, _maskS, measurementSize, validScenePoints);
     obvious::Matrix T(3, 3);
 
-    T = doRegistration(_sensor, &M, &Mvalid, &N, &Nvalid, &S, &Svalid);  //3x3 Transformation Matrix
+    T = doRegistration(_sensor, &M, &Mvalid, &N, &Nvalid, &S, &Svalid, &pre);  //3x3 Transformation Matrix
 
 
-//    std::cout << __PRETTY_FUNCTION__ << " cycle time = " << (ros::Time::now() - timer).toSec() << " (s)" << std::endl;
+    //    std::cout << __PRETTY_FUNCTION__ << " cycle time = " << (ros::Time::now() - timer).toSec() << " (s)" << std::endl;
 
     /** analyze registration result */
     _tf.stamp_ = ros::Time::now();
@@ -526,12 +575,13 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
     obvious::Matrix* N,
     obvious::Matrix* Nvalid,
     obvious::Matrix* S,
-    obvious::Matrix* Svalid
+    obvious::Matrix* Svalid,
+      obvious::Matrix* pre
 )
 {
   static ros::Time last;
   static bool valid = false;
-//  const unsigned int measurementSize = sensor->getRealMeasurementSize();
+  //  const unsigned int measurementSize = sensor->getRealMeasurementSize();
   obvious::Matrix T44(4, 4);
   T44.setIdentity();
   obvious::Matrix T(3,3);
@@ -541,50 +591,54 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
 #endif
 
   // RANSAC pre-registration (rough)
-//  switch(_regMode)
-//  {
-//  case ICP:
-//    // no pre-registration
-//    break;
-//  case EXP:
-//    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
-//    T = _RandomNormalMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-//    T44(0, 0) = T(0, 0);
-//    T44(0, 1) = T(0, 1);
-//    T44(0, 3) = T(0, 2);
-//    T44(1, 0) = T(1, 0);
-//    T44(1, 1) = T(1, 1);
-//    T44(1, 3) = T(1, 2);
-//    break;
-//  case PDF:
-//    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
-//    T = _PDFMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-//    T44(0, 0) = T(0, 0);
-//    T44(0, 1) = T(0, 1);
-//    T44(0, 3) = T(0, 2);
-//    T44(1, 0) = T(1, 0);
-//    T44(1, 1) = T(1, 1);
-//    T44(1, 3) = T(1, 2);
-//    break;
-//  case TSD:
-//    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
-//    T = _TSD_PDFMatcher->match(sensor->getTransformation(), M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-//    T44(0, 0) = T(0, 0);
-//    T44(0, 1) = T(0, 1);
-//    T44(0, 3) = T(0, 2);
-//    T44(1, 0) = T(1, 0);
-//    T44(1, 1) = T(1, 1);
-//    T44(1, 3) = T(1, 2);
-//    break;
-//  default:
-//    // no pre-registration
-//    break;
-//  }
-  
-  static ControllerOdom odom;
-  obvious::Matrix pretr(3, 3);
-  if(valid)
-    if(odom.getOdomTf(last, _stampLaser, &pretr, "odom", "base_footprint"))
+  //  switch(_regMode)
+  //  {
+  //  case ICP:
+  //    // no pre-registration
+  //    break;
+  //  case EXP:
+  //    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+  //    T = _RandomNormalMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+  //    T44(0, 0) = T(0, 0);
+  //    T44(0, 1) = T(0, 1);
+  //    T44(0, 3) = T(0, 2);
+  //    T44(1, 0) = T(1, 0);
+  //    T44(1, 1) = T(1, 1);
+  //    T44(1, 3) = T(1, 2);
+  //    break;
+  //  case PDF:
+  //    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+  //    T = _PDFMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+  //    T44(0, 0) = T(0, 0);
+  //    T44(0, 1) = T(0, 1);
+  //    T44(0, 3) = T(0, 2);
+  //    T44(1, 0) = T(1, 0);
+  //    T44(1, 1) = T(1, 1);
+  //    T44(1, 3) = T(1, 2);
+  //    break;
+  //  case TSD:
+  //    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+  //    T = _TSD_PDFMatcher->match(sensor->getTransformation(), M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+  //    T44(0, 0) = T(0, 0);
+  //    T44(0, 1) = T(0, 1);
+  //    T44(0, 3) = T(0, 2);
+  //    T44(1, 0) = T(1, 0);
+  //    T44(1, 1) = T(1, 1);
+  //    T44(1, 3) = T(1, 2);
+  //    break;
+  //  default:
+  //    // no pre-registration
+  //    break;
+  //  }
+
+ // static ControllerOdom odom;
+/*  obvious::Matrix pretr(3, 3);
+  obvious::Matrix tr(4, 4);
+  tr.setIdentity();
+  tr(0, 3) = -0.12;
+  if(0)//valid)
+   // if(odom.getOdomTf(last, _stampLaser, &pretr, "odom", "base_footprint"))
+
     {
       T44(0, 0) = pretr(0, 0);
       T44(0, 1) = pretr(0, 1);
@@ -592,10 +646,24 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
       T44(1, 0) = pretr(1, 0);
       T44(1, 1) = pretr(1, 1);
       T44(1, 3) = pretr(1, 2);
-      T44.print();
+      T44 = T44 * tr;
+    //  T44.print();
     }
-//    else
-//      ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " odom shit failed");
+ //     else
+ //       ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " odom shit failed"); */
+
+//  tf.print();
+
+if(pre)
+    {
+      T44(0, 0) = (*pre)(0, 0);
+      T44(0, 1) = (*pre)(0, 1);
+      T44(0, 3) = (*pre)(0, 2);
+      T44(1, 0) = (*pre)(1, 0);
+      T44(1, 1) = (*pre)(1, 1);
+      T44(1, 3) = (*pre)(1, 2);
+}
+
 
   _icp->reset();
   obvious::Matrix P = sensor->getTransformation();
@@ -608,11 +676,12 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   unsigned int it = 0;
   _icp->iterate(&rms, &pairs, &it, &T44);
   T = _icp->getFinalTransformation();
+  
   last = ros::Time::now();
   valid = true;
-  
+
   if(_useOdomRescue && _odomTfIsValid) odomRescueCheck(T);
-  
+
   return T;
 }
 
@@ -642,13 +711,16 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
   _poseStamped.pose.orientation.y = quat.y();
   _poseStamped.pose.orientation.z = quat.z();
 
-//  _tf.stamp_ = ros::Time::now();
+  //  _tf.stamp_ = ros::Time::now();
   _tf.stamp_ = _stampLaser;
   _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
   _tf.setRotation(quat);
 
   _posePub.publish(_poseStamped);
   _tfBroadcaster.sendTransform(_tf);
+  _mutexLocalTime.lock();
+  _stampLastLocal = ros::Time::now();
+  _mutexLocalTime.unlock();
 }
 
 void ThreadLocalize::sendNanTransform()

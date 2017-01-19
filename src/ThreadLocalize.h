@@ -59,6 +59,13 @@ const int RANSAC_CTRL_SET_SIZE = 180;
 const double RANSAC_PHI_MAX = 30.0;
 }
 
+
+struct LocalScan
+{
+  sensor_msgs::LaserScan _scan;
+  obvious::Matrix* _tf;
+};
+
 class ThreadLocalize: public ThreadSLAM
 {
   enum EnumRegModes
@@ -146,7 +153,8 @@ private:
       obvious::Matrix* N,
       obvious::Matrix* Nvalid,
       obvious::Matrix* S,
-      obvious::Matrix* Svalid
+      obvious::Matrix* Svalid,
+      obvious::Matrix* pre
   );
 
   /**
@@ -340,7 +348,8 @@ private:
   /**
    * Container for laser sensor data (filled by callback)
    */
-  std::deque<sensor_msgs::LaserScan*> _laserData;
+//  std::deque<sensor_msgs::LaserScan*> _laserData;
+  std::deque<LocalScan*> _laserData;
 
   /**
    * Buffer for model coordinates
@@ -486,7 +495,12 @@ private:
    */
   bool _reverseScan;
 
-  ControllerOdom _odom;
+  ControllerOdom* _odom;
+
+  boost::mutex _mutexLocalTime;
+
+  ros::Time _stampLastLocal;
+
 };
 
 

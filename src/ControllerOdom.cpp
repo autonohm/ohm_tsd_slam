@@ -28,6 +28,12 @@ bool ControllerOdom::getOdomTf(const ros::Time& last, const ros::Time& current, 
 {
   tf::StampedTransform tfLast;
   tf::StampedTransform tfCurrent;
+  const double delay = 0.01;
+ if(!_listenerTf.waitForTransform(parentFrame, childFrame, last, ros::Duration(delay)))
+ {
+   std::cout << __PRETTY_FUNCTION__ << " wait for last tf failed " << std::endl;
+   return false;
+ }
   try
   {
     _listenerTf.lookupTransform(parentFrame, childFrame, last, tfLast);
@@ -35,6 +41,11 @@ bool ControllerOdom::getOdomTf(const ros::Time& last, const ros::Time& current, 
   catch(tf::TransformException& ex)
   {
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " tf last failed: " << ex.what());
+    return false;
+  }
+  if(!_listenerTf.waitForTransform(parentFrame, childFrame, current, ros::Duration(delay)))
+  {
+    std::cout << __PRETTY_FUNCTION__ << " wait for current tf failed " << std::endl;
     return false;
   }
   try
@@ -47,8 +58,10 @@ bool ControllerOdom::getOdomTf(const ros::Time& last, const ros::Time& current, 
     return false;
   }
   UtilitiesTransform tfUtilities;
+//  std::cout << "here?\n";
   obvious::Matrix obvLast = tfUtilities.tfToObviouslyMatrix3x3(tfLast);
   obvious::Matrix obvCur  = tfUtilities.tfToObviouslyMatrix3x3(tfCurrent);
+//  std::cout << "not\n";
   obvLast.invert();
   *tf = obvLast * obvCur;
   return true;

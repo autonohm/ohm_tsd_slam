@@ -26,10 +26,19 @@ UtilitiesTransform::~UtilitiesTransform()
 tf::Transform UtilitiesTransform::obviouslyMatrix3x3ToTf(obvious::Matrix& ob)
 {
   tf::Transform tf;
-  tf.setOrigin( tf::Vector3(ob(0,2), ob(1,2), 0.0) );
-  tf.setRotation( tf::createQuaternionFromYaw( asin( ob(0,1) ) ) );
-
-  return tf;
+    tf.setOrigin(tf::Vector3(ob(0,2), ob(1,2), 0.0));
+      double angle          = 0.0;
+        const double ARCSIN   = std::asin(ob(1,0));
+          const double ARCSINEG = std::asin(ob(0,1));
+            const double ARCOS    = std::acos(ob(0,0));
+              if((ARCSIN > 0.0) && (ARCSINEG < 0.0))
+                    angle = ARCOS;
+                else if((ARCSIN < 0.0) && (ARCSINEG > 0.0))
+                      angle = 2.0 * M_PI - ARCOS;
+                  tf.setRotation( tf::createQuaternionFromYaw(angle));
+                  if(std::isnan(tf.getRotation().getX()))
+                    std::cout << __PRETTY_FUNCTION__ << " angle " << angle << std::endl;
+                    return tf;
 }
 
 obvious::Matrix UtilitiesTransform::tfToObviouslyMatrix3x3(const tf::Transform& tf)

@@ -71,8 +71,9 @@ SlamNode::SlamNode(void)
   if(robotNbr == 1)  //single slam
   {
     threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, nameSpace, xOffset, yOffset);
-    subs = _nh.subscribe(topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
-    _subsLaser.push_back(subs);
+    SubsObject object(topicLaser, *threadLocalize, _nh);
+    //subs = _nh.subscribe(topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
+    _subsLaser.push_back(object);
     _localizers.push_back(threadLocalize);
     ROS_INFO_STREAM("Single SLAM started" << std::endl);
   }
@@ -86,13 +87,15 @@ SlamNode::SlamNode(void)
       std::string dummy = sstream.str();
       prvNh.param(dummy, nameSpace, std::string("default_ns"));
       threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, nameSpace, xOffset, yOffset);
-      subs = _nh.subscribe(nameSpace + "/" + topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
-      _subsLaser.push_back(subs);
+      SubsObject object(nameSpace + "/" + topicLaser, *threadLocalize, _nh);
+      //subs = _nh.subscribe(nameSpace + "/" + topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
+      _subsLaser.push_back(object);
       _localizers.push_back(threadLocalize);
       ROS_INFO_STREAM("started for thread for " << nameSpace << std::endl);
     }
     ROS_INFO_STREAM("Multi SLAM started!");
   }
+  _serverStartStopSlam = _nh.advertiseService("start_stop_slam", &SlamNode::callBackStartStopSLAM, this);
 }
 
 SlamNode::~SlamNode()
@@ -139,6 +142,37 @@ void SlamNode::run(void)
     this->timedGridPub();
     _loopRate->sleep();
   }
+}
+
+bool SlamNode::callBackStartStopSLAM(ohm_tsd_slam::StartStopSLAM::Request& req, ohm_tsd_slam::StartStopSLAM::Response& res)
+{
+  std::string topic = req.topic;
+  if(!topic.size())
+  {
+    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error. Topic invalid");
+    return false;
+  }
+  for(auto& iter : _subsLaser)
+  {
+    if(iter._subsLaser.getTopic() == topic)
+    {
+      if(req.startStop)
+      {
+        iter._subsLaser = _nh.subscribe(topic, 1, &ThreadLocalize::laserCallBack, &iter._localizer);
+        res.newState = true;
+        ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " localization for topic " << topic << " restartet");
+        return true;
+      }
+      else
+      {
+        ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " localization for topic " << topic << " stopped");
+        iter._subsLaser.shutdown();
+        res.newState = false;
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 } /* namespace ohm_tsd_slam */

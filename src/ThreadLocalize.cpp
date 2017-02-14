@@ -237,52 +237,16 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 
 
 
-    ros::Time last;
-    _mutexLocalTime.lock();
-    last = _stampLastLocal;
-    _mutexLocalTime.unlock();
-    obvious::Matrix tf(3, 3);
-    if(_odom->getOdomTf(last, scan.header.stamp, &tf, "odom", "laser"))
-       *scanCopy->_tf = tf;
+//    ros::Time last;
+//    _mutexLocalTime.lock();
+//    last = _stampLastLocal;
+//    _mutexLocalTime.unlock();
+//    obvious::Matrix tf(3, 3);
+//    if(_odom->getOdomTf(last, scan.header.stamp, &tf, "odom", "laser"))
+//       *scanCopy->_tf = tf;
     _dataMutex.lock();
     _laserData.push_front(scanCopy);
     _dataMutex.unlock();
-
-/*ros::Time timer = ros::Time::now();
-  static tf::TransformListener listener;
-//  static ros::Time last = ros::Time::now();
-  obvious::Matrix tf(3, 3);
-
-  tf::StampedTransform tfLast;
-  tf::StampedTransform tfCurrent;
-
-  try
-  {
-   listener.lookupTransform("odom", "laser", last, tfLast);
-  }
-  catch(tf::TransformException& ex)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " last tf failed " << ex.what() << std::endl;
-  }
-
-
-  try
-  {
-    listener.lookupTransform("odom", "laser", scan.header.stamp, tfCurrent);
-  }
-  catch(tf::TransformException& ex)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " current tf failed" << ex.what() << std::endl;
-  }
-  ohm_tsd_slam::UtilitiesTransform tfUtilities;
-  obvious::Matrix obvLast = tfUtilities.tfToObviouslyMatrix3x3(tfLast);
-  obvious::Matrix obvCur  = tfUtilities.tfToObviouslyMatrix3x3(tfCurrent);
-  obvLast.invert();
-
-tf = obvLast * obvCur;
-  tf.print();
-  //last = ros::Time::now();
-  std::cout << __PRETTY_FUNCTION__ << " cycle time = " << (ros::Time::now() - timer).toSec() << " (s)" << std::endl;*/
 
     this->unblock();
   }
@@ -590,79 +554,57 @@ obvious::Matrix ThreadLocalize::doRegistration(obvious::SensorPolar2D* sensor,
   obvious::Matrix T_old(3,3);
 #endif
 
-  // RANSAC pre-registration (rough)
-  //  switch(_regMode)
-  //  {
-  //  case ICP:
-  //    // no pre-registration
-  //    break;
-  //  case EXP:
-  //    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
-  //    T = _RandomNormalMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-  //    T44(0, 0) = T(0, 0);
-  //    T44(0, 1) = T(0, 1);
-  //    T44(0, 3) = T(0, 2);
-  //    T44(1, 0) = T(1, 0);
-  //    T44(1, 1) = T(1, 1);
-  //    T44(1, 3) = T(1, 2);
-  //    break;
-  //  case PDF:
-  //    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
-  //    T = _PDFMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-  //    T44(0, 0) = T(0, 0);
-  //    T44(0, 1) = T(0, 1);
-  //    T44(0, 3) = T(0, 2);
-  //    T44(1, 0) = T(1, 0);
-  //    T44(1, 1) = T(1, 1);
-  //    T44(1, 3) = T(1, 2);
-  //    break;
-  //  case TSD:
-  //    // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
-  //    T = _TSD_PDFMatcher->match(sensor->getTransformation(), M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-  //    T44(0, 0) = T(0, 0);
-  //    T44(0, 1) = T(0, 1);
-  //    T44(0, 3) = T(0, 2);
-  //    T44(1, 0) = T(1, 0);
-  //    T44(1, 1) = T(1, 1);
-  //    T44(1, 3) = T(1, 2);
-  //    break;
-  //  default:
-  //    // no pre-registration
-  //    break;
-  //  }
-
- // static ControllerOdom odom;
-/*  obvious::Matrix pretr(3, 3);
-  obvious::Matrix tr(4, 4);
-  tr.setIdentity();
-  tr(0, 3) = -0.12;
-  if(0)//valid)
-   // if(odom.getOdomTf(last, _stampLaser, &pretr, "odom", "base_footprint"))
-
+   //RANSAC pre-registration (rough)
+    switch(_regMode)
     {
-      T44(0, 0) = pretr(0, 0);
-      T44(0, 1) = pretr(0, 1);
-      T44(0, 3) = pretr(0, 2);
-      T44(1, 0) = pretr(1, 0);
-      T44(1, 1) = pretr(1, 1);
-      T44(1, 3) = pretr(1, 2);
-      T44 = T44 * tr;
-    //  T44.print();
+    case ICP:
+      // no pre-registration
+      break;
+    case EXP:
+      // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+      T = _RandomNormalMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+      T44(0, 0) = T(0, 0);
+      T44(0, 1) = T(0, 1);
+      T44(0, 3) = T(0, 2);
+      T44(1, 0) = T(1, 0);
+      T44(1, 1) = T(1, 1);
+      T44(1, 3) = T(1, 2);
+      break;
+    case PDF:
+      // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+      T = _PDFMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+      T44(0, 0) = T(0, 0);
+      T44(0, 1) = T(0, 1);
+      T44(0, 3) = T(0, 2);
+      T44(1, 0) = T(1, 0);
+      T44(1, 1) = T(1, 1);
+      T44(1, 3) = T(1, 2);
+      break;
+    case TSD:
+      // todo: check normals N for matching function (Daniel Ammon, Tobias Fink)
+      T = _TSD_PDFMatcher->match(sensor->getTransformation(), M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
+      T44(0, 0) = T(0, 0);
+      T44(0, 1) = T(0, 1);
+      T44(0, 3) = T(0, 2);
+      T44(1, 0) = T(1, 0);
+      T44(1, 1) = T(1, 1);
+      T44(1, 3) = T(1, 2);
+      break;
+    default:
+      // no pre-registration
+      break;
     }
- //     else
- //       ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " odom shit failed"); */
 
-//  tf.print();
 
-if(pre)
-    {
-      T44(0, 0) = (*pre)(0, 0);
-      T44(0, 1) = (*pre)(0, 1);
-      T44(0, 3) = (*pre)(0, 2);
-      T44(1, 0) = (*pre)(1, 0);
-      T44(1, 1) = (*pre)(1, 1);
-      T44(1, 3) = (*pre)(1, 2);
-}
+//if(pre)
+//    {
+//      T44(0, 0) = (*pre)(0, 0);
+//      T44(0, 1) = (*pre)(0, 1);
+//      T44(0, 3) = (*pre)(0, 2);
+//      T44(1, 0) = (*pre)(1, 0);
+//      T44(1, 1) = (*pre)(1, 1);
+//      T44(1, 3) = (*pre)(1, 2);
+//}
 
 
   _icp->reset();

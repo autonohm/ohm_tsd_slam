@@ -3,6 +3,9 @@
 
 #include <ros/ros.h>
 
+#include "ohm_tsd_slam/StartStopSLAM.h"
+#include "ThreadLocalize.h"
+
 #include <vector>
 
 #include "obvision/reconstruct/grid/TsdGrid.h"
@@ -17,7 +20,18 @@ namespace ohm_tsd_slam
 class ThreadSLAM;
 class ThreadMapping;
 class ThreadGrid;
-class ThreadLocalize;
+
+struct SubsObject
+{
+  SubsObject(const std::string& topic, ThreadLocalize& localizer, ros::NodeHandle& nh):
+    _localizer(localizer)
+  {
+    _subsLaser = nh.subscribe(topic, 1, &ThreadLocalize::laserCallBack, &localizer);
+  }
+  ros::Subscriber _subsLaser;
+  ThreadLocalize& _localizer;
+};
+
 
 /**
  * @class SlamNode
@@ -56,6 +70,8 @@ private:
    * Enables occupancy grid thread with certain frequency
    */
   void timedGridPub(void);
+
+  bool callBackStartStopSLAM(ohm_tsd_slam::StartStopSLAM::Request& req, ohm_tsd_slam::StartStopSLAM::Response& res);
 
   /**
    * Main node handle
@@ -100,13 +116,17 @@ private:
   /**
    * Ros laser subscriber
    */
-  std::vector<ros::Subscriber> _subsLaser;
+  //std::vector<ros::Subscriber> _subsLaser;
+
+  std::vector<SubsObject> _subsLaser;
 
 
   /**
    * Localizing threads
    */
   std::vector<ThreadLocalize*> _localizers;
+
+  ros::ServiceServer _serverStartStopSlam;
 };
 
 } /* namespace ohm_tsd_slam */

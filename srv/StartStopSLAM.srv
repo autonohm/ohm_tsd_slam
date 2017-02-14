@@ -1,0 +1,4 @@
+bool startStop
+string topic
+---
+bool newState

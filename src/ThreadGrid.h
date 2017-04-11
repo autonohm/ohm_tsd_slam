@@ -93,6 +93,10 @@ private:
    */
   ros::Publisher _gridPub;
 
+  ros::Publisher _pubColorImage;
+
+  bool _pubTsdColorMap;
+
   /**
    * Object inflation factor
    */

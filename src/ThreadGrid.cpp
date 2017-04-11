@@ -6,6 +6,9 @@
 #include "obvision/reconstruct/grid/RayCastAxisAligned2D.h"
 #include "obcore/base/Logger.h"
 
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/image_encodings.h>
+
 
 namespace ohm_tsd_slam
 {
@@ -37,14 +40,19 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
   ros::NodeHandle prvNh("~");
   std::string mapTopic;
   std::string getMapTopic;
+  std::string topicTsdColorMap;
   int intVar         = 0;
-
+  prvNh.param<bool>("pub_tsd_color_map", _pubTsdColorMap, true);
   prvNh.param("map_topic", mapTopic, std::string("map"));
   prvNh.param("get_map_topic", getMapTopic, std::string("map"));
+  prvNh.param<std::string>("topic_tsd_color_map", topicTsdColorMap, "tsd");
+
   prvNh.param<int>("object_inflation_factor", intVar, 2);
   prvNh.param<bool>("use_object_inflation", _objectInflation, false);  //toDo: exchange with if inflation > 0
 
+
   _gridPub          = nh->advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
+  _pubColorImage = nh->advertise<sensor_msgs::Image>(topicTsdColorMap, 1);
   _getMapServ       = nh->advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
   _objInflateFactor = static_cast<unsigned int>(intVar);
 }
@@ -61,6 +69,11 @@ ThreadGrid::~ThreadGrid()
 void ThreadGrid::eventLoop(void)
 {
   static unsigned int frameId = 0;
+  sensor_msgs::Image image;
+  image.header.frame_id = "map";
+  unsigned char* colorBuffer = new unsigned char[_grid.getCellsX() * _grid.getCellsY() * 3];
+  image.data.resize(_grid.getCellsX() * _grid.getCellsY() * 3);
+  image.step = _grid.getCellsY() * 3;
   while(_stayActive)
   {
     _sleepCond.wait(_sleepMutex);
@@ -102,7 +115,20 @@ void ThreadGrid::eventLoop(void)
       }
     }
     _gridPub.publish(*_occGrid);
+    image.header.stamp = ros::Time::now();
+    image.header.seq++;
+    image.height = _occGrid->info.height;
+    image.width = _occGrid->info.width;
+    image.encoding = sensor_msgs::image_encodings::RGB8;
+
+    _grid.grid2ColorImage(colorBuffer, _grid.getCellsX(), _grid.getCellsY());
+    for(unsigned int i = 0; i < _grid.getCellsX() * _grid.getCellsY() * 3; i++)
+    {
+      image.data[i] = colorBuffer[i];
+    }
+    _pubColorImage.publish(image);
   }
+  delete colorBuffer;
 }
 
 bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res)

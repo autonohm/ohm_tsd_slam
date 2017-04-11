@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall -std=c++11")
 
 
 ## System dependencies are found with CMake's conventions
@@ -56,11 +56,11 @@ find_package(Boost REQUIRED COMPONENTS system)
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
+ add_service_files(
+   FILES
+   StartStopSLAM.srv
 #   Service2.srv
-# )
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -70,10 +70,10 @@ find_package(Boost REQUIRED COMPONENTS system)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
+generate_messages(
 #   DEPENDENCIES
 #   geometry_msgs#   nav_msgs#   sensor_msgs
-# )
+)
 
 ###################################
 ## catkin specific configuration ##

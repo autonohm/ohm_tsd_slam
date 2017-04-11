@@ -8,7 +8,9 @@
 #include "SlamNode.h"
 #include "ThreadMapping.h"
 #include "ThreadGrid.h"
-#include "ThreadLocalize.h"
+
+
+
 
 #include "obcore/math/mathbase.h"
 
@@ -27,6 +29,7 @@ SlamNode::SlamNode(void)
   double xOffset = 0.0;
   double yOffset = 0.0;
   std::string topicLaser;
+  std::string topicServiceStartStop;
   prvNh.param<int>("robot_nbr", iVar, 1);
   unsigned int robotNbr = static_cast<unsigned int>(iVar);
   prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
@@ -43,6 +46,7 @@ SlamNode::SlamNode(void)
   prvNh.param<double>("occ_grid_time_interval", gridPublishInterval, 2.0);
   prvNh.param<double>("loop_rate", loopRateVar, 40.0);
   prvNh.param<std::string>("laser_topic", topicLaser, "scan");
+  prvNh.param<std::string>("topic_service_start_stop", topicServiceStartStop, "start_stop_slam");
 
   _loopRate = new ros::Rate(loopRateVar);
   _gridInterval = new ros::Duration(gridPublishInterval);
@@ -64,14 +68,16 @@ SlamNode::SlamNode(void)
   _threadGrid    = new ThreadGrid(_grid, &_nh, xOffset, yOffset);
 
   ThreadLocalize* threadLocalize = NULL;
-  ros::Subscriber subs;
+  TaggedSubscriber subs;
   std::string nameSpace = "";
 
   //instanciate localization threads
   if(robotNbr == 1)  //single slam
   {
     threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, nameSpace, xOffset, yOffset);
-    subs = _nh.subscribe(topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
+    subs = TaggedSubscriber(topicLaser, *threadLocalize, _nh);
+    subs.switchOn();
+    //subs = _nh.subscribe(topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
     _subsLaser.push_back(subs);
     _localizers.push_back(threadLocalize);
     ROS_INFO_STREAM("Single SLAM started" << std::endl);
@@ -86,13 +92,15 @@ SlamNode::SlamNode(void)
       std::string dummy = sstream.str();
       prvNh.param(dummy, nameSpace, std::string("default_ns"));
       threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, nameSpace, xOffset, yOffset);
-      subs = _nh.subscribe(nameSpace + "/" + topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
+//      subs = _nh.subscribe(nameSpace + "/" + topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
+      subs = TaggedSubscriber(nameSpace + "/" + topicLaser, *threadLocalize, _nh);
       _subsLaser.push_back(subs);
       _localizers.push_back(threadLocalize);
       ROS_INFO_STREAM("started for thread for " << nameSpace << std::endl);
     }
     ROS_INFO_STREAM("Multi SLAM started!");
   }
+  _serviceStartStopSLAM = _nh.advertiseService(topicServiceStartStop, &SlamNode::callBackServiceStartStopSLAM, this);
 }
 
 SlamNode::~SlamNode()
@@ -139,6 +147,37 @@ void SlamNode::run(void)
     this->timedGridPub();
     _loopRate->sleep();
   }
+}
+
+bool SlamNode::callBackServiceStartStopSLAM(ohm_tsd_slam::StartStopSLAM::Request& req, ohm_tsd_slam::StartStopSLAM::Response& res)
+{
+  TaggedSubscriber* subsCur = NULL;
+  for(auto iter = _subsLaser.begin(); iter < _subsLaser.end(); iter++)
+  {
+    if(iter->topic(req.topic))
+      subsCur = &*iter;
+  }
+  if(!subsCur)
+  {
+    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " Error! Topic " << req.topic << " invalid!");
+    return false;
+  }
+  if(req.startStop == req.START)
+  {
+    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " Started SLAM for topic " << req.topic);
+    subsCur->switchOn();
+  }
+  else if(req.startStop == req.STOP)
+  {
+    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " Stopped SLAM for topic " << req.topic);
+    subsCur->switchOff();
+  }
+  else
+  {
+    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " Error. Unknown request for service");
+    return false;
+  }
+  return true;
 }
 
 } /* namespace ohm_tsd_slam */

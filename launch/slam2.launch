@@ -45,7 +45,7 @@
 
     <!-- ******************* -->
 
-    <node name="slam_node" pkg="ohm_tsd_slam" type="slam_node" output="screen">
+    <node name="slam_node2" pkg="ohm_tsd_slam" type="slam_node" output="screen">
         <!-- topic/node parameters -->
         <param name="loop_rate" type="double" value="$(arg loop_rate)" />
         <param name="map_topic" type="string" value="$(arg map_topic)" />    <!-- topic of occupancy grid -->

@@ -41,11 +41,14 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
   std::string mapTopic;
   std::string getMapTopic;
   std::string topicTsdColorMap;
+  std::string tfBaseFrame;
   int intVar         = 0;
   prvNh.param<bool>("pub_tsd_color_map", _pubTsdColorMap, true);
   prvNh.param("map_topic", mapTopic, std::string("map"));
   prvNh.param("get_map_topic", getMapTopic, std::string("map"));
   prvNh.param<std::string>("topic_tsd_color_map", topicTsdColorMap, "tsd");
+  prvNh.param<std::string>("tf_base_frame", tfBaseFrame, "map");
+  _occGrid->header.frame_id = tfBaseFrame;
 
   prvNh.param<int>("object_inflation_factor", intVar, 2);
   prvNh.param<bool>("use_object_inflation", _objectInflation, false);  //toDo: exchange with if inflation > 0

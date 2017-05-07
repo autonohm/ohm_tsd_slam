@@ -121,6 +121,7 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param<double>("lamshort", lamshort, 0.08);
   prvNh.param<double>("maxAngleDiff", maxAngleDiff, 3.0);
   prvNh.param<double>("maxAnglePenalty", maxAnglePenalty, 0.5);
+  prvNh.param<double>("las_min_range", _lasMinRange, 0.0);
 
 
   //ransac options
@@ -215,10 +216,18 @@ ThreadLocalize::~ThreadLocalize()
 
 void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 {
+  sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
+      *scanCopy = scan;
+  //sensor_msgs::LaserScan scanCopy = scan;
+  for(auto& iter : scanCopy->ranges)
+  {
+    if(iter < _lasMinRange)
+      iter = 0.0;
+  }
   if(!_initialized)
   {
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") received first scan. Initialize node...\n");
-    this->init(scan);
+    this->init(*scanCopy);
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
 
     if(_useOdomRescue) odomRescueInit();
@@ -227,8 +236,8 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
   }
   else
   {
-    sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
-    *scanCopy = scan;
+//    sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
+//    *scanCopy = scan;
 
     _dataMutex.lock();
     _laserData.push_front(scanCopy);
@@ -246,7 +255,7 @@ void ThreadLocalize::odomRescueInit()
     _tfListener.waitForTransform(_tfFootprintFrameId, _tfChildFrameId, ros::Time(0), ros::Duration(10.0));
     _tfListener.lookupTransform(_tfFootprintFrameId, _tfChildFrameId, ros::Time(0), _tfReader);
   }
-  catch(tf::TransformException ex)
+  catch(tf::TransformException& ex)
   {
     ROS_ERROR("%s", ex.what());
     ros::Duration(1.0).sleep();

@@ -13,7 +13,7 @@
     <arg name="y_offset" default="0.0" />
     <arg name="yaw_offset" default="0.0" />
 
-    <arg name="map_size" default="11" />
+    <arg name="map_size" default="13" />
     <arg name="cellsize" default="0.025" />
     <arg name="truncation_radius" default="10" />
 
@@ -120,6 +120,7 @@
         <param type="double" name="lamshort" value="0.08" />
         <param type="double" name="maxAngleDiff" value="1.5" />
         <param type="double" name="maxAnglePenalty" value="0.5" />
+		<param name = "las_min_range" type = "double" value = "0.26"/>
     </node>
 </launch>
 

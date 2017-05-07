@@ -485,7 +485,7 @@ private:
    */
   bool _reverseScan;
 
-
+  double _lasMinRange;
 };
 
 

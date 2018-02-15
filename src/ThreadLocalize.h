@@ -191,38 +191,6 @@ private:
    */
   obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints);
 
-  /**
-   * reduceResolution
-   * Method to reduce the values in a matrix with a given factor.
-   * @param maskIn Input mask
-   * @param matIn Input data
-   * @param maskOut Output mask
-   * @param matOut Filtered data
-   * @param pointsIn Amount of points in un filtered data
-   * @param pointsOut Amount of points in filtered data
-   * @param reductionFactor Reduction factor
-   */
-  void reduceResolution(bool* const maskIn, obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
-      unsigned int pointsIn, unsigned int pointsOut, unsigned int reductionFactor);
-
-  /**
-   * odomRescueInit
-   * Method to initialize odom recover system
-   */
-  void odomRescueInit();
-
-  /**
-   * odomRescueUpdate
-   * updates odometry data if a new scan comes in
-   */
-  void odomRescueUpdate();
-
-  /**
-   * odomRescueCheck
-   * check if slam transformation is plausible and overwrites T with odometry as transformation if not
-   * @param T Transformation matrix to check and correct
-   */
-  void odomRescueCheck(obvious::Matrix& T);
 
 //  /**
 //   * obviouslyMatrix3x3ToTf

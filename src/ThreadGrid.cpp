@@ -25,7 +25,7 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
   _occGrid->info.resolution           = static_cast<double>(_grid.getCellSize());
   _occGrid->info.width                = _grid.getCellsX();
   _occGrid->info.height               = _grid.getCellsY();
-  _occGrid->info.origin.orientation.w = 0.0;
+  _occGrid->info.origin.orientation.w = 1.0;
   _occGrid->info.origin.orientation.x = 0.0;
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;

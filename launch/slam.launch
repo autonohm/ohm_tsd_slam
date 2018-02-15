@@ -3,16 +3,16 @@
 <launch>
 
 	
-	<node pkg="tf" type="static_transform_publisher" name="laser_link" args="-0.12 0 0 0 0 0 laser base_link 100" />
+	<node pkg="tf" type="static_transform_publisher" name="laser_link" args="0 0 0 0 0 0 laser base_link 100" />
 	<node pkg="tf" type="static_transform_publisher" name="link_print" args="0 0 0 0 0 0 base_link base_footprint 100" />	
 	
 	<node pkg="ohm_tsd_slam" type="odom_to_tf" name="odom_to_tf" />
 			
     <!-- extern parameters -->
     <arg name="loop_rate" default="100.0" />
-    <arg name="map_topic" default="map" />    <!-- topic of occupancy grid -->
+    <arg name="map_topic" default="map_slam" />    <!-- topic of occupancy grid -->
     <arg name="pose_topic" default="pose" />    <!-- topic for robot's pose -->
-    <arg name="laser_topic" default="/scan" />    <!-- topic to receive laser scan -->
+    <arg name="laser_topic" default="/robot0/laser_0" />    <!-- topic to receive laser scan -->
     <arg name="get_map_topic" default="map" />
 
     <arg name="x_offset" default="0.0" />

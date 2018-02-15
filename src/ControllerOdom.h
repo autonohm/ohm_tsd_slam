@@ -23,6 +23,24 @@ public:
   virtual ~ControllerOdom();
   bool getOdomTf(const ros::Time& last, const ros::Time& current, obvious::Matrix* const tf,
                  const std::string& parentFrame, const std::string& childFrame);
+  /**
+     * odomRescueInit
+     * Method to initialize odom recover system
+     */
+    void odomRescueInit();
+
+    /**
+     * odomRescueUpdate
+     * updates odometry data if a new scan comes in
+     */
+    void odomRescueUpdate();
+
+    /**
+     * odomRescueCheck
+     * check if slam transformation is plausible and overwrites T with odometry as transformation if not
+     * @param T Transformation matrix to check and correct
+     */
+    void odomRescueCheck(obvious::Matrix& T);
 private:
   tf::TransformListener _listenerTf;
 

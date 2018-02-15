@@ -727,33 +727,4 @@ obvious::Matrix ThreadLocalize::maskMatrix(obvious::Matrix* Mat, bool* mask, uns
   return retMat;
 }
 
-//toDo: maybe obsolete with pca matching, definitely not nice
-void ThreadLocalize::reduceResolution(bool* const maskIn, obvious::Matrix* matIn, bool* const maskOut, obvious::Matrix* matOut,
-    const unsigned int pointsIn, const unsigned int pointsOut, const unsigned int reductionFactor)
-{
-  assert(pointsIn > pointsOut);
-  //fixme we only support scan with even number of points like 1080. if a scan has 1081 points is not usable for subsampling here!
-  const unsigned int factor = pointsIn / pointsOut;
-  assert(factor == reductionFactor);
-
-  unsigned int cnt = 0;
-  for(unsigned int i = 0; i < pointsIn; i++)
-  {
-    if(!(i % factor)) // i % factor == 0
-    {
-      cnt++;
-      if (maskIn[i]) {
-        maskOut[i/factor] = true;
-        (*matOut)(i/factor, 0) = (*matIn)(i, 0);
-        (*matOut)(i/factor, 1) = (*matIn)(i, 1);
-      }
-      else
-      {
-        maskOut[i/factor] = false;
-      }
-    }
-  }
-  assert(cnt == pointsOut);
-}
-
 } /* namespace ohm_tsd_slam */

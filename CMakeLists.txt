@@ -122,6 +122,7 @@ add_executable(slam_node src/slam_node.cpp
                                  src/ThreadSLAM.cpp
                                  src/ThreadMapping.cpp
                                  src/ThreadGrid.cpp
+                                 src/OdometryAnalyzer.cpp
                                  )
 
                                   

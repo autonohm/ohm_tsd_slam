@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-
+	
     <!-- extern parameters -->
     <arg name="loop_rate" default="100.0" />
     <arg name="map_topic" default="map" />    <!-- topic of occupancy grid -->
@@ -13,39 +13,21 @@
     <arg name="y_offset" default="0.0" />
     <arg name="yaw_offset" default="0.0" />
 
-    <arg name="map_size" default="13" />
+    <arg name="map_size" default="11" />
     <arg name="cellsize" default="0.025" />
-    <arg name="truncation_radius" default="10" />
-
-    <arg name="min_range" default="0.0" />
-    <arg name="max_range" default="30.0" />
-
-    <arg name="object_inflation_factor" default="1" />
-
-    <arg name="registration_mode" default="3" />
-    <arg name="icp_iterations" default="30" />
-
-    <arg name="reg_trs_max" default="1.0" />
-    <arg name="reg_sin_rot_max" default="0.5" />
-
-
-    <arg name="trials" default="30" />
-    <arg name="sizeControlSet" default="360" />
 
     <arg name="tf_base_frame" default="map" />
     <arg name="tf_child_frame" default="laser" />
     <arg name="tf_odom_frame" default="wheelodom" />
     <arg name="tf_footprint_frame" default="base_footprint" />
 
-    <arg name="use_odom_rescue" default="false" />
     <arg name="max_velocity_rot" default="6.28" />
     <arg name="max_velocity_lin" default="1.0" />
     
-    <arg name="zrand" default="0.05" />
-
     <!-- ******************* -->
 
     <node name="slam_node" pkg="ohm_tsd_slam" type="slam_node" output="screen">
+	<rosparam command="load" file="$(find ohm_tsd_slam)/config/slamparams.yaml" /> 
         <!-- topic/node parameters -->
         <param name="loop_rate" type="double" value="$(arg loop_rate)" />
         <param name="map_topic" type="string" value="$(arg map_topic)" />    <!-- topic of occupancy grid -->
@@ -57,18 +39,9 @@
         <param name="x_offset" type="double" value="$(arg x_offset)" />    <!-- offset of robot in map in meters -->
         <param name="y_offset" type="double" value="$(arg y_offset)" />    <!-- offset of robot in map in meters -->
         <param name="yaw_offset" type="double" value="$(arg yaw_offset)" />    <!-- offset of yaw -->
-
         <param name="map_size" type="int" value="$(arg map_size)" />    <!-- map size -->
         <param name="cellsize" type="double" value="$(arg cellsize)" />    <!-- cell size in meters -->
-        <param name="truncation_radius" type="int" value="$(arg truncation_radius)" />    <!-- radius as factor of cell size -->
         <param name="occ_grid_time_interval" type="double" value="2.0" />    <!-- frequency to publish map -->
-        <param name="object_inflation_factor" type="int" value="$(arg object_inflation_factor)" />    <!-- factor to inflate obstacles -->
-        <param name="use_object_inflation" type="bool" value="true" />
-
-        <!-- raycasting parameters -->
-        <param name="min_range" type="double" value="$(arg min_range)" />    <!-- minimum range of raycaster in meters -->
-        <param name="max_range" type="double" value="$(arg max_range)" />    <!-- maximum range of raycaster in meters -->
-        <param name="low_reflectivity_range" type="double" value="0.0" />
 
         <!-- tf parameters -->
         <param name="tf_base_frame" type="string" value="$(arg tf_base_frame)" />
@@ -79,48 +52,10 @@
         <!-- robot parameters -->
         <param name="footprint_width" type="double" value="1.0" />    <!-- width of robot in meters -->
         <param name="footprint_height" type="double" value="1.0" />    <!-- length of robot in meters -->
-        <param name="footprint_x_offset" type="double" value="0.0" />    <!-- offset of laser in meters -->
+        <param name="footprint_x_offset" type="double" value="-0.4" />    <!-- offset of laser in meters -->
         <param name="max_velocity_rot" type="double" value="$(arg max_velocity_rot)" />    <!-- maximal rotational speed on base_footprint in rad/sec -->
-        <param name="max_velocity_lin" type="double" value="$(arg max_velocity_lin)" />    <!-- maximal linear speed in m/s -->
-
-        <!-- registration parameters -->
-        <param name="registration_mode" type="int" value="$(arg registration_mode)" />    <!-- 0:ICP 1:EXPERIMENTAL 2:PDF 3:TSD_PDF -->
-        <param name="use_odom_rescue" type="bool" value="$(arg use_odom_rescue)" />
-
-        <!-- ICP parameters -->
-        <param name="dist_filter_max" type="double" value="0.4" />    <!-- maximum distance for matching points -->
-        <param name="dist_filter_min" type="double" value="0.02" />    <!-- minimum distance for matching points -->
-        <param name="icp_iterations" type="int" value="$(arg icp_iterations)" />    <!-- number of icp iterations -->
-        <param name="reg_trs_max" type="double" value="$(arg reg_trs_max)" />    <!-- maximum translation between two scans -->
-        <param name="reg_sin_rot_max" type="double" value="$(arg reg_sin_rot_max)" />    <!-- maximum rotation between two scans -->
-
-        <!-- ransac parameters -->
-        <param name="ransac_trials" type="int" value="50" />    <!-- number of ransac trials -->
-        <param name="ransac_eps_thresh" type="double" value="0.15" />    <!-- threshold for outlier rejection in meters -->
-        <param name="ransac_ctrlset_size" type="int" value="180" />    <!-- number of points taking for ransac -->
-        <param name="ransac_phi_max" type="double" value="45.0" />    <!-- maximum angle for ransac matching -->
-
-        <!-- parameter set for EXPERIMENTAL, PDF and TSD_PDF registration -->
-        <param type="int" name="trials" value="$(arg trials)" />    <!-- Trials for RNM -->
-        <param type="double" name="epsThresh" value="0.15" /> 
-        <param type="int" name="sizeControlSet" value="$(arg sizeControlSet)" />    <!-- Subsampling -->
-
-        <!-- parameter for PDF and TSD_PDF registration -->
-        <param type="double" name="zrand" value="$(arg zrand)" />   <!-- random probability range: [0.0;1.0[ -->
-
-        <!-- parameter only for PDF registration -->
-        <param type="double" name="zhit" value="0.2" />
-        <param type="double" name="zphi" value="0.2" />
-        <param type="double" name="zshort" value="0.2" />
-        <param type="double" name="zmax" value="0.2" />     
-        <param type="double" name="percentagePointsInC" value="0.6" />
-        <param type="double" name="rangemax" value="65" />
-        <param type="double" name="sigphi" value="0.052" /> <!-- 3 degree -->
-        <param type="double" name="sighit" value="0.1" />
-        <param type="double" name="lamshort" value="0.08" />
-        <param type="double" name="maxAngleDiff" value="1.5" />
-        <param type="double" name="maxAnglePenalty" value="0.5" />
-		<param name = "las_min_range" type = "double" value = "0.26"/>
+	<param name="max_velocity_lin" type="double" value="$(arg max_velocity_lin)" />    <!-- maximal linear speed in m/s -->
+	<param name="local_offset_x" type = "double" value="0.4"/>
+        
     </node>
 </launch>
-

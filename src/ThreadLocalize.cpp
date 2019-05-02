@@ -362,7 +362,7 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   double footPrintWidth			= 0.0;
   double footPrintHeight		= 0.0;
   double footPrintXoffset		= 0.0;
-  std::string frameSensorMount;
+  //std::string frameSensorMount;
 
   ros::NodeHandle prvNh("~");
 
@@ -375,27 +375,27 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   prvNh.param<double>(_nameSpace + "footprint_width", footPrintWidth, 1.0);
   prvNh.param<double>(_nameSpace + "footprint_height", footPrintHeight, 1.0);
   prvNh.param<double>(_nameSpace + "footprint_x_offset", footPrintXoffset, 0.28);
-  prvNh.param<std::string>(_nameSpace + "frame_sensor_mount", frameSensorMount, "base_link");
+  //prvNh.param<std::string>(_nameSpace + "frame_sensor_mount", frameSensorMount, "base_link");
 
-  if(!_tfListener.waitForTransform(scan.header.frame_id, frameSensorMount, ros::Time::now(), ros::Duration(0.5)))
-  {
-    std::cout << __PRETTY_FUNCTION__ << "looking up sensor mount frame failed " << std::endl;
-    _tfFrameSensorMount.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
-    _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-  }
-  else
-  {
-    try
-    {
-      _tfListener.lookupTransform(scan.header.frame_id, frameSensorMount, ros::Time(0), _tfFrameSensorMount);
-    }
-    catch(tf::TransformException& ex)
-    {
-      std::cout << __PRETTY_FUNCTION__ << "looking up sensor mount frame failed " << ex.what() << std::endl;
-      _tfFrameSensorMount.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
-      _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-    }
-  }
+//  if(!_tfListener.waitForTransform(scan.header.frame_id, frameSensorMount, ros::Time::now(), ros::Duration(0.5)))
+//  {
+//    std::cout << __PRETTY_FUNCTION__ << "looking up sensor mount frame failed " << std::endl;
+//    _tfFrameSensorMount.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
+//    _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+//  }
+//  else
+//  {
+//    try
+//    {
+//      _tfListener.lookupTransform(scan.header.frame_id, frameSensorMount, ros::Time(0), _tfFrameSensorMount);
+//    }
+//    catch(tf::TransformException& ex)
+//    {
+//      std::cout << __PRETTY_FUNCTION__ << "looking up sensor mount frame failed " << ex.what() << std::endl;
+//      _tfFrameSensorMount.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
+//      _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+//    }
+//  }
 
   const double phi		= localYawOffset;
   const double startX	= _gridWidth * 0.5 + _xOffset + localXoffset;
@@ -403,8 +403,8 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   double tf[9] 			= {std::cos(phi), 	-std::sin(phi), 	startX,
                        std::sin(phi), 	 std::cos(phi),		startY,
                                    0,				         0,				1};
-  obvious::Matrix Tbla(3, 3);
-  Tbla = this->tfToObviouslyMatrix3x3(_tfFrameSensorMount);
+//  obvious::Matrix Tbla(3, 3);
+//  Tbla = this->tfToObviouslyMatrix3x3(_tfFrameSensorMount);
   //Tbla.invert();
 //  std::cout << __PRETTY_FUNCTION__ << " inverted\n";
 //  Tbla.print();
@@ -414,9 +414,9 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
 
   obvious::Matrix Tinit(3,3);
   Tinit.setData(tf);
-  Tinit =  Tbla * Tinit;
+//  Tinit =  Tbla * Tinit;
 
-  std::cout << __PRETTY_FUNCTION__ << "Tinit = \n " << Tinit << std::endl;
+  //std::cout << __PRETTY_FUNCTION__ << "Tinit = \n " << Tinit << std::endl;
 
   double inc 			= scan.angle_increment;
   double angle_min		= scan.angle_min;

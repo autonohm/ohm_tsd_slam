@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall -std=c++11")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall -std=c++17")
 
 
 ## System dependencies are found with CMake's conventions
@@ -125,6 +125,8 @@ add_executable(slam_node src/slam_node.cpp
                                  src/OdometryAnalyzer.cpp
                                  )
 
+                                 add_executable(test_reg src/test.cpp
+                                                     src/registration/TsdPdfMatcher.cpp)
                                   
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -145,6 +147,17 @@ target_link_libraries(slam_node
                                  flann
                                  ${Boost_LIBRARIES}
                                  )
+
+target_link_libraries(test_reg
+                                 ${catkin_LIBRARIES}                                 obcore
+ #                                ${GRAPHICLIBS}
+                                 gsl
+                                 gslcblas
+                                 ann
+                                 flann
+                                 ${Boost_LIBRARIES}
+                                 tinyxml2
+                                 )                                 
 
 #############
 ## Install ##

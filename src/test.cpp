@@ -1,22 +1,26 @@
 #include <ros/ros.h>
-#include "registration/TsdfPdfMatcher.h"
+#include "registration/Registration.h"
 #include <tinyxml2.h>
+#include "obvision/reconstruct/grid/SensorPolar2D.h"
+#include "obvision/reconstruct/grid/TsdGrid.h"
 
 int main(int argc, char** argv)
 {
 ros::init(argc, argv, "teset");
 ros::NodeHandle nh;
-tinyxml2::XMLDocument xmlDoc;
-tinyxml2::XMLNode* pRoot = xmlDoc.NewElement("tsdf_pdf_config");
-xmlDoc.InsertFirstChild(pRoot);
-tinyxml2::XMLElement* pElement = xmlDoc.NewElement("IntValue");
-pElement->SetText(100);
-pRoot->InsertEndChild(pElement);
-tinyxml2::XMLElement* pElement2 = xmlDoc.NewElement("FloatValue");
-pElement2->SetText(0.15f);
-pRoot->InsertEndChild(pElement2);
-tinyxml2::XMLError eResult = xmlDoc.SaveFile("SavedData.xml");
+ obvious::SensorPolar2D sensor(200, 0.1, 0.1);
+ TsdGrid grid(0.05, obvious::LAYOUT_1024x1024, obvious::LAYOUT_8192x8192);  
 
-TsdPdfMatcher matcher;
+try
+{
+ Registration registration(RegModes::TSD, grid, sensor); 
+}
+catch(char const*& e)
+{
+  std::cout << e << '\n';
+}
+
+ 
+ //TsdPdfMatcher matcher(sensor);
 return 0;
 }

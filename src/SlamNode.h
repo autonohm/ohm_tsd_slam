@@ -15,9 +15,6 @@
 #define INIT_PSHS 1      //number of initial pushes into the grid
 #define THREAD_TERM_MS 1   //time in ms waiting for thread to terminate
 
-
-
-
 namespace ohm_tsd_slam
 {
 class ThreadSLAM;
@@ -25,7 +22,7 @@ class ThreadMapping;
 class ThreadGrid;
 //class ThreadLocalize;
 
-struct TaggedSubscriber
+struct TaggedSubscriber //TODO: create a class
 {
   TaggedSubscriber(std::string topic, ThreadLocalize& localizer, ros::NodeHandle& nh):
     _topic(topic),

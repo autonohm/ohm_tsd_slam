@@ -1,25 +1,30 @@
 #ifndef TSDPDFMATCHER_H_
 #define TSDPDFMATCHER_H_
-#include "IPreMatcher.h"
 
+#include "IPreMatcher.h"
+#include "obvision/reconstruct/grid/SensorPolar2D.h"
+#include "obvision/registration/ransacMatching/TSD_PDFMatching.h"
+#include <memory>
 #include <string>
 #include <tinyxml2.h>
 
 class TsdPdfMatcher : public IPrematcher
 {
 public:
-  TsdPdfMatcher();
+  TsdPdfMatcher(obvious::SensorPolar2D& sensor, obvious::TsdGrid& grid);
   virtual ~TsdPdfMatcher();
   virtual bool init(const std::string& configXml) override;
-  virtual bool doRegistration(obvious::SensorPolar2D* sensor, obvious::Matrix* M, obvious::Matrix* Mvalid, obvious::Matrix* N, obvious::Matrix* Nvalid,
-                              obvious::Matrix* S, obvious::Matrix* Svalid, obvious::Matrix& T) override;
-
+virtual bool match(obvious::SensorPolar2D& sensor, obvious::Matrix* M, bool* maskM, obvious::Matrix* S, bool* maskS, obvious::Matrix& T)override;
 private:
-  std::string _configXml;
-  int         _trials;
-  int         _sizeControlSet;
-  double      _epsThresh;
-  double      _zrand;
+  std::string                               _configXml;
+  int                                       _trials;
+  int                                       _sizeControlSet;
+  double                                    _epsThresh;
+  double                                    _zrand;
+  double                                    _ranPhiMax; // TODO: base class
+  double                                    _transMax;  // TODO: base class
+  std::unique_ptr<obvious::TSD_PDFMatching> _matcher;
+  std::shared_ptr<obvious::SensorPolar2D>   _sensor; // TODO base class
+  obvious::TsdGrid& _grid;
 };
-
 #endif

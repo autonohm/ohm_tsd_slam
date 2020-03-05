@@ -12,9 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O2 -mtune=native -Wall -std=c++17")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O0 -mtune=native  -std=c++17") #-Wall
 
-
+SET(CMAKE_BUILD_TYPE Debug)
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 
@@ -117,16 +117,22 @@ link_directories(
 
 ## Declare a cpp executable
 add_executable(slam_node src/slam_node.cpp
+                                 src/utilities.cpp
                                  src/SlamNode.cpp
                                  src/ThreadLocalize.cpp
                                  src/ThreadSLAM.cpp
                                  src/ThreadMapping.cpp
                                  src/ThreadGrid.cpp
                                  src/OdometryAnalyzer.cpp
+                                 src/registration/Registration.cpp
+                                 src/registration/TsdPdfMatcher.cpp
+                                 
                                  )
 
                                  add_executable(test_reg src/test.cpp
-                                                     src/registration/TsdPdfMatcher.cpp)
+                                                         src/registration/Registration.cpp
+                                                     src/registration/TsdPdfMatcher.cpp
+                                                     src/utilities.cpp)
                                   
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -146,11 +152,14 @@ target_link_libraries(slam_node
                                  ann
                                  flann
                                  ${Boost_LIBRARIES}
+                                 tinyxml2
                                  )
 
 target_link_libraries(test_reg
-                                 ${catkin_LIBRARIES}                                 obcore
+                                 ${catkin_LIBRARIES}                                 
+                                 obcore
  #                                ${GRAPHICLIBS}
+                                 obvision
                                  gsl
                                  gslcblas
                                  ann

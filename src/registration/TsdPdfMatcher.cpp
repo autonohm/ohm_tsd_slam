@@ -1,18 +1,28 @@
 #include "TsdfPdfMatcher.h"
+#include "utilities.h"
 #include <ros/ros.h>
-TsdPdfMatcher::TsdPdfMatcher()
+TsdPdfMatcher::TsdPdfMatcher(obvious::SensorPolar2D& sensor, obvious::TsdGrid& grid)
     : _trials(0)
     , _sizeControlSet(0)
     , _epsThresh(0.0)
     , _zrand(0.0)
+    , _sensor(&sensor)
+    , _grid(grid)
 {
   ros::NodeHandle prvNh("~");
-  prvNh.param<std::string>("tsd_pdf/config_file", _configXml, "/home/phil/workspace/ros/src/ohm_tsd_slam/config/config_tsdf_pdf_matcher.xml");
+  prvNh.param<std::string>("tsd_pdf/config_file", _configXml,
+                           "/home/phil/workspace/ros/src/ohm_tsd_slam/config/"
+                           "config_tsdf_pdf_matcher.xml");
   if(!_configXml.size())
     throw "config not found";
-  this->init(_configXml);
+  if(!this->init(_configXml))
+    throw "config invalid";
 }
-TsdPdfMatcher::~TsdPdfMatcher() {}
+TsdPdfMatcher::~TsdPdfMatcher()
+{
+  // delete _maskM;
+  // delete _maskM;
+}
 
 bool TsdPdfMatcher::init(const std::string& configXml)
 {
@@ -33,62 +43,31 @@ bool TsdPdfMatcher::init(const std::string& configXml)
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error! Wrong config file. Root node must be " << std::string("tsdf_pdf_config") << std::endl);
     return false;
   }
+  if(!utilities::loadTyniXmlParameter(_trials, std::string("trials"), *rootNode))
+    return false;
+  if(!utilities::loadTyniXmlParameter(_epsThresh, std::string("epsthresh"), *rootNode))
+    return false;
+  if(!utilities::loadTyniXmlParameter(_sizeControlSet, std::string("sizeControlSet"), *rootNode))
+    return false;
+  if(!utilities::loadTyniXmlParameter(_zrand, std::string("zrand"), *rootNode))
+    return false;
+  if(!utilities::loadTyniXmlParameter(_ranPhiMax, std::string("ranphimax"), *rootNode))
+    return false;
+  if(!utilities::loadTyniXmlParameter(_transMax, std::string("reg_trs_max"), *rootNode))
+    return false;
 
-  tinyxml2::XMLElement* element = rootNode->FirstChild()->ToElement();
-  element                       = rootNode->FirstChildElement("trials");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter trials " << std::endl);
-    return false;
-  }
-  else
-  {
-    int val = 0;
-    element->QueryIntText(&val);
-    std::cout << __PRETTY_FUNCTION__ << " trials " << val << std::endl;
-  }
-  element = rootNode->FirstChildElement("epsthresh");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error reading paramer epsthresh " << std::endl);
-    return false;
-  }
-  else
-  {
-    float val = 0;
-    element->QueryFloatText(&val);
-    std::cout << __PRETTY_FUNCTION__ << " epsthresh " << val << std::endl;
-  }
-  element = rootNode->FirstChildElement("sizeControlSet");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << "error reading paramer sizeControlSet " << std::endl);
-    return false;
-  }
-  else
-  {
-    int val = 0;
-    element->QueryIntText(&val);
-    std::cout << __PRETTY_FUNCTION__ << " sizeControlSet " << val << std::endl;
-  }
-  element = rootNode->FirstChildElement("zrand");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error reading paramer zrand " << std::endl);
-    return false;
-  }
-  else
-  {
-    float val = 0;
-    element->QueryFloatText(&val);
-    std::cout << __PRETTY_FUNCTION__ << " zrand " << val << std::endl;
-  }
+  _matcher = std::make_unique<obvious::TSD_PDFMatching>(_grid, _trials, _epsThresh, _sizeControlSet, _zrand);
   return true;
 }
-bool TsdPdfMatcher::doRegistration(obvious::SensorPolar2D* sensor, obvious::Matrix* M, obvious::Matrix* Mvalid, obvious::Matrix* N, obvious::Matrix* Nvalid,
-                                   obvious::Matrix* S, obvious::Matrix* Svalid, obvious::Matrix& T)
+bool TsdPdfMatcher::match(obvious::SensorPolar2D& sensor, obvious::Matrix* M, bool* maskM, obvious::Matrix* S, bool* maskS, obvious::Matrix& T)
+// bool match(obvious::SensorPolar2D& sensor, obvious::Matrix* M, obvious::Matrix* S, obvious::Matrix& T)
 {
 
-T = _PDFMatcher->match(M, _maskM, NULL, S, _maskS, obvious::deg2rad(_ranPhiMax), _trnsMax, sensor->getAngularResolution());
-
+  if(!_matcher)
+  {
+    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " matcher uninitialized call init first " << std::endl);
+    return false;
+  }
+  obvious::Matrix Ttemp =
+      _matcher->match(sensor.getTransformation(), M, maskM, NULL, S, maskS, obvious::deg2rad(_ranPhiMax), _transMax, sensor.getAngularResolution());
 }

@@ -6,14 +6,14 @@
     <arg name="loop_rate" default="100.0" />
     <arg name="map_topic" default="map" />    <!-- topic of occupancy grid -->
     <arg name="pose_topic" default="pose" />    <!-- topic for robot's pose -->
-    <arg name="laser_topic" default="scan" />    <!-- topic to receive laser scan -->
+    <arg name="laser_topic" default="/puck_rear/scan" />    <!-- topic to receive laser scan -->
     <arg name="get_map_topic" default="map" />
 
     <arg name="x_offset" default="0.0" />
     <arg name="y_offset" default="0.0" />
     <arg name="yaw_offset" default="0.0" />
 
-    <arg name="map_size" default="11" />
+    <arg name="map_size" default="12" />
     <arg name="cellsize" default="0.025" />
 
     <arg name="tf_base_frame" default="map" />

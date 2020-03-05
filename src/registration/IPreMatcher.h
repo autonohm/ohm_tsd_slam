@@ -11,10 +11,18 @@ class IPrematcher
 public:
   IPrematcher(){}
   virtual ~IPrematcher(){}
-protected:
+
   virtual bool init(const std::string& configXml)                                             = 0;
-  virtual bool doRegistration(obvious::SensorPolar2D* sensor, obvious::Matrix* M, obvious::Matrix* Mvalid, obvious::Matrix* N, obvious::Matrix* Nvalid,
-                              obvious::Matrix* S, obvious::Matrix* Svalid, obvious::Matrix& T) = 0;
+  // virtual bool match(obvious::SensorPolar2D& sensor,
+  //                                       obvious::Matrix* M,
+  //                                       const bool* maskM,
+  //                                       obvious::Matrix* NM,
+  //                                       obvious::Matrix* S,
+  //                                       const bool* maskS,
+  //                                       double phiMax,
+  //                                       const double transMax,
+  //                                       const double resolution, obvious::Matrix& T) = 0;
+  virtual bool match(obvious::SensorPolar2D& sensor, obvious::Matrix* M, bool* maskM, obvious::Matrix* S, bool* maskS, obvious::Matrix& T) = 0;
 };
 
 #endif

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pdf_config>
+  <trials>100</trials> 
+  <epsthresh>0.15f</epsthresh>
+  <sizeControlSet>360</sizeControlSet>
+  <zhit>0.2</zhit>
+  <zphj>0.2</zphj>
+  <zshort>0.2</zshort>
+  <zmax>0.2</zmax>
+  <percentage_points_inc>0.6</percentage_points_inc>
+  <rangemax>30.0</rangemax>
+  <sigphi>0.052</sigphi>
+  <sighit>0.1</sighit>
+  <lamshort>0.08</lamshort>
+  <maxAngleDiff>1.5</maxAngleDiff>
+  <maxAnglePenalty>0.5</maxAnglePenalty>
+</pdf_config>
+

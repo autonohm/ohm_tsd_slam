@@ -4,4 +4,6 @@
   <epsthresh>0.15f</epsthresh>
   <sizeControlSet>360</sizeControlSet>
   <zrand>0.05</zrand>
+  <ranphimax>45.0</ranphimax>
+  <reg_trs_max>1.0</reg_trs_max>   <!-- TODO this is a general ICP parameter, -->
 </tsdf_pdf_config>

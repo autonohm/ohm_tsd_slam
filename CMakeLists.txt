@@ -126,8 +126,8 @@ add_executable(slam_node src/slam_node.cpp
                                  src/OdometryAnalyzer.cpp
                                  src/registration/Registration.cpp
                                  src/registration/TsdPdfMatcher.cpp
-                                 
-                                 )
+                                 src/registration/PdfMatcher.cpp
+                                 src/registration/RandomNormalMatcher.cpp)
 
                                  add_executable(test_reg src/test.cpp
                                                          src/registration/Registration.cpp

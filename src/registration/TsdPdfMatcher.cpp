@@ -2,11 +2,7 @@
 #include "utilities.h"
 #include <ros/ros.h>
 TsdPdfMatcher::TsdPdfMatcher(obvious::SensorPolar2D& sensor, obvious::TsdGrid& grid)
-    : _trials(0)
-    , _sizeControlSet(0)
-    , _epsThresh(0.0)
-    , _zrand(0.0)
-    , _sensor(&sensor)
+    : _sensor(&sensor)
     , _grid(grid)
 {
   ros::NodeHandle prvNh("~");
@@ -43,20 +39,25 @@ bool TsdPdfMatcher::init(const std::string& configXml)
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error! Wrong config file. Root node must be " << std::string("tsdf_pdf_config") << std::endl);
     return false;
   }
-  if(!utilities::loadTyniXmlParameter(_trials, std::string("trials"), *rootNode))
+  int    trials         = 0;
+  int    sizeControlSet = 0;
+  double epsThresh      = 0.0;
+  double zrand          = 0.0;
+
+  if(!utilities::loadTyniXmlParameter(trials, std::string("trials"), *rootNode))
     return false;
-  if(!utilities::loadTyniXmlParameter(_epsThresh, std::string("epsthresh"), *rootNode))
+  if(!utilities::loadTyniXmlParameter(epsThresh, std::string("epsthresh"), *rootNode))
     return false;
-  if(!utilities::loadTyniXmlParameter(_sizeControlSet, std::string("sizeControlSet"), *rootNode))
+  if(!utilities::loadTyniXmlParameter(sizeControlSet, std::string("sizeControlSet"), *rootNode))
     return false;
-  if(!utilities::loadTyniXmlParameter(_zrand, std::string("zrand"), *rootNode))
+  if(!utilities::loadTyniXmlParameter(zrand, std::string("zrand"), *rootNode))
     return false;
   if(!utilities::loadTyniXmlParameter(_ranPhiMax, std::string("ranphimax"), *rootNode))
     return false;
   if(!utilities::loadTyniXmlParameter(_transMax, std::string("reg_trs_max"), *rootNode))
     return false;
 
-  _matcher = std::make_unique<obvious::TSD_PDFMatching>(_grid, _trials, _epsThresh, _sizeControlSet, _zrand);
+  _matcher = std::make_unique<obvious::TSD_PDFMatching>(_grid, trials, epsThresh, sizeControlSet, zrand);
   return true;
 }
 bool TsdPdfMatcher::match(obvious::SensorPolar2D& sensor, obvious::Matrix* M, bool* maskM, obvious::Matrix* S, bool* maskS, obvious::Matrix& T)
@@ -68,6 +69,5 @@ bool TsdPdfMatcher::match(obvious::SensorPolar2D& sensor, obvious::Matrix* M, bo
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " matcher uninitialized call init first " << std::endl);
     return false;
   }
-  obvious::Matrix Ttemp =
-      _matcher->match(sensor.getTransformation(), M, maskM, NULL, S, maskS, obvious::deg2rad(_ranPhiMax), _transMax, sensor.getAngularResolution());
+  T = _matcher->match(sensor.getTransformation(), M, maskM, NULL, S, maskS, obvious::deg2rad(_ranPhiMax), _transMax, sensor.getAngularResolution());
 }

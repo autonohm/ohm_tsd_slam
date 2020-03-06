@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config_random_normal_matcher>
+  <trials>30</trials> 
+  <epsthresh>0.15f</epsthresh>
+  <sizeControlSet>360</sizeControlSet>
+  <ranphimax>45.0</ranphimax>
+  <reg_trs_max>1.0</reg_trs_max>   <!-- TODO this is a general ICP parameter, -->
+</config_random_normal_matcher>

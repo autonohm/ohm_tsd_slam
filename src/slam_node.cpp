@@ -17,7 +17,18 @@ int main(int argc, char** argv)
 
   LOGMSG_CONF("slamlog.log", obvious::Logger::file_off|obvious::Logger::screen_off, DBG_DEBUG, DBG_ERROR);
 
-  ohm_tsd_slam::SlamNode slamNode;
-  slamNode.start();
+  try
+  {
+    ohm_tsd_slam::SlamNode slamNode;
+    slamNode.start();
+  }
+  catch(char const*& e)
+  {
+    std::cout << e << '\n';
+    exit(1);
+  }
+  
+  
+  
 }
 

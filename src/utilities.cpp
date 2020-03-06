@@ -82,12 +82,10 @@ bool loadTyniXmlParameter(unsigned int& param, const std::string& tag, tinyxml2:
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter " << tag << std::endl);
     return false;
   }
-  else
-  {
     int val = 0;
     element->QueryUnsignedText(&param);
     std::cout << __PRETTY_FUNCTION__ << " " << tag << " : " << param << std::endl;
-  }
+    return true;
 }
 
 bool loadTyniXmlParameter(int& param, const std::string& tag, tinyxml2::XMLNode& rootNode)
@@ -98,7 +96,6 @@ bool loadTyniXmlParameter(int& param, const std::string& tag, tinyxml2::XMLNode&
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter " << tag << std::endl);
     return false;
   }
-
   element->QueryIntText(&param);
   std::cout << __PRETTY_FUNCTION__ << " " << tag << " : " << param << std::endl;
   return true;
@@ -111,7 +108,6 @@ bool loadTyniXmlParameter(float& param, const std::string& tag, tinyxml2::XMLNod
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter " << tag << std::endl);
     return false;
   }
-
   element->QueryFloatText(&param);
   std::cout << __PRETTY_FUNCTION__ << " " << tag << " : " << param << std::endl;
   return true;

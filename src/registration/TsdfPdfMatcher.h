@@ -17,10 +17,6 @@ public:
 virtual bool match(obvious::SensorPolar2D& sensor, obvious::Matrix* M, bool* maskM, obvious::Matrix* S, bool* maskS, obvious::Matrix& T)override;
 private:
   std::string                               _configXml;
-  int                                       _trials;
-  int                                       _sizeControlSet;
-  double                                    _epsThresh;
-  double                                    _zrand;
   double                                    _ranPhiMax; // TODO: base class
   double                                    _transMax;  // TODO: base class
   std::unique_ptr<obvious::TSD_PDFMatching> _matcher;

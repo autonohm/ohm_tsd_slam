@@ -70,79 +70,32 @@ bool Registration::init(const std::string& configFileXml)
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error! Wrong config file. Root node must be " << std::string("config_icp") << std::endl);
     return false;
   }
-
-  tinyxml2::XMLElement* element = rootNode->FirstChild()->ToElement();
-  element                       = rootNode->FirstChildElement("dist_filter_max");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter dist_filter_max " << std::endl);
+  if(!utilities::loadTyniXmlParameter(_distFilterThreshMax, std::string("dist_filter_max"), *rootNode))
     return false;
-  }
-  else
-  {
-    element->QueryDoubleText(&_distFilterThreshMax);
-    std::cout << __PRETTY_FUNCTION__ << " dist_filter_max " << _distFilterThreshMax << std::endl;
-  }
-
-  element = rootNode->FirstChildElement("dist_filter_min");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter dist_filter_min " << std::endl);
+ if(!utilities::loadTyniXmlParameter(_distFilterThreshMin, std::string("dist_filter_min"), *rootNode))
     return false;
-  }
-  else
-  {
-    element->QueryDoubleText(&_distFilterThreshMin);
-    std::cout << __PRETTY_FUNCTION__ << " dist_filter_max " << _distFilterThreshMin << std::endl;
-  }
-
-  element = rootNode->FirstChildElement("icp_iterations");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter icp_iterations " << std::endl);
+if(!utilities::loadTyniXmlParameter(_icpIterations, std::string("icp_iterations"), *rootNode))
     return false;
-  }
-  else
-  {
-    element->QueryUnsignedText(&_icpIterations);
-    std::cout << __PRETTY_FUNCTION__ << " icp_iterations " << _icpIterations << std::endl;
-  }
-
-  element = rootNode->FirstChildElement("icp_thresh_rms");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter icp_thresh_rms " << std::endl);
+  if(!utilities::loadTyniXmlParameter(_icpThreshRms, std::string("icp_thresh_rms"), *rootNode))  
     return false;
-  }
-  else
-  {
-    element->QueryDoubleText(&_icpThreshRms);
-    std::cout << __PRETTY_FUNCTION__ << " icp_iterations " << _icpThreshRms << std::endl;
-  }
 
-  element = rootNode->FirstChildElement("thresh_error_ang");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter thresh_error_ang " << std::endl);
+  //  tinyxml2::XMLElement* element = rootNode->FirstChildElement("icp_thresh_rms");
+  //  std::cout << __PRETTY_FUNCTION__ <<  " element ptr = " << element << std::endl;
+  // if(!element)
+  // {
+  //   ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter icp_thresh_rms " << std::endl);
+  //   return false;
+  // }
+  // else
+  // {
+  //   element->QueryDoubleText(&_icpThreshRms);
+  //   std::cout << __PRETTY_FUNCTION__ << " icp_iterations " << _icpThreshRms << std::endl;
+  // }
+if(!utilities::loadTyniXmlParameter(_threshErrorAng, std::string("thresh_error_ang"), *rootNode))
     return false;
-  }
-  else
-  {
-    element->QueryDoubleText(&_threshErrorAng);
-    std::cout << __PRETTY_FUNCTION__ << " thresh_error_ang " << _threshErrorAng << std::endl;
-  }
-
-  element = rootNode->FirstChildElement("thresh_error_lin");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter thresh_error_lin " << std::endl);
+  
+if(!utilities::loadTyniXmlParameter(_threshErrorLin, std::string("thresh_error_lin"), *rootNode))
     return false;
-  }
-  else
-  {
-    element->QueryDoubleText(&_threshErrorLin);
-    std::cout << __PRETTY_FUNCTION__ << " thresh_error_lin " << _threshErrorLin << std::endl;
-  }
 
   return true;
 }
@@ -200,25 +153,6 @@ bool Registration::doRegistration(obvious::Matrix& T, double* coordsModel, doubl
   return regErrorT;
 }
 
-// obvious::Matrix Registration::maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints)
-// {
-//   assert(Mat->getRows() == maskSize);
-//   assert(Mat->getCols() == 2);
-//   obvious::Matrix retMat(validPoints, 2);
-//   unsigned int    cnt = 0;
-
-//   for(unsigned int i = 0; i < maskSize; i++)
-//   {
-//     if(mask[i])
-//     {
-//       retMat(cnt, 0) = (*Mat)(i, 0);
-//       retMat(cnt, 1) = (*Mat)(i, 1);
-//       cnt++;
-//     }
-//   }
-//   return retMat;
-// }
-
 bool Registration::isRegistrationError(obvious::Matrix* T, const double trnsMax, const double rotMax)
 {
   const double deltaX   = (*T)(0, 2);
@@ -227,16 +161,3 @@ bool Registration::isRegistrationError(obvious::Matrix* T, const double trnsMax,
   const double deltaPhi = utilities::calcAngle(T);
   return (trnsAbs > trnsMax) || (std::abs(std::sin(deltaPhi)) > rotMax);
 }
-
-// double Registration::calcAngle(obvious::Matrix* T)
-// {
-//   double       angle    = 0.0;
-//   const double ARCSIN   = std::asin((*T)(1, 0));
-//   const double ARCSINEG = std::asin((*T)(0, 1));
-//   const double ARCOS    = std::acos((*T)(0, 0));
-//   if((ARCSIN > 0.0) && (ARCSINEG < 0.0))
-//     angle = ARCOS;
-//   else if((ARCSIN < 0.0) && (ARCSINEG > 0.0))
-//     angle = 2.0 * M_PI - ARCOS;
-//   return (angle);
-// }

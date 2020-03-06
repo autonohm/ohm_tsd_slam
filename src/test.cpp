@@ -13,7 +13,7 @@ ros::NodeHandle nh;
 
 try
 {
- Registration registration(RegModes::TSD, grid, sensor); 
+ Registration registration(grid, sensor); 
 }
 catch(char const*& e)
 {

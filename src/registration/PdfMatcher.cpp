@@ -3,9 +3,19 @@
 #include <ros/ros.h>
 #include <tinyxml2.h>
 
-PdfMatcher::PdfMatcher(obvious::SensorPolar2D& sensor)
-    : _sensor(&sensor)
+PdfMatcher::PdfMatcher(obvious::SensorPolar2D& sensor, const std::string& nameSpace)
+    : _nameSpace(nameSpace)
+    , _sensor(&sensor)
 {
+   std::string configXml;
+  ros::NodeHandle prvNh("~");
+  prvNh.param<std::string>(nameSpace + "/pdf_matcher/config_file", configXml,
+                           "/home/phil/workspace/ros/src/ohm_tsd_slam/config/"
+                           "config_pdf_matcher.xml");
+  if(!configXml.size())
+    throw "config not found";
+  if(!this->init(configXml))
+    throw "config invalid";
 }
 
 PdfMatcher::~PdfMatcher() {}

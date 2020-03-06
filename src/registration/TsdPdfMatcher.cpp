@@ -1,12 +1,13 @@
 #include "TsdfPdfMatcher.h"
 #include "utilities.h"
 #include <ros/ros.h>
-TsdPdfMatcher::TsdPdfMatcher(obvious::SensorPolar2D& sensor, obvious::TsdGrid& grid)
-    : _sensor(&sensor)
+TsdPdfMatcher::TsdPdfMatcher(obvious::SensorPolar2D& sensor, obvious::TsdGrid& grid, const std::string& nameSpace)
+    : _nameSpace(nameSpace)
+    , _sensor(&sensor)
     , _grid(grid)
 {
   ros::NodeHandle prvNh("~");
-  prvNh.param<std::string>("tsd_pdf/config_file", _configXml,
+  prvNh.param<std::string>(nameSpace + "/tsd_pdf/config_file", _configXml,
                            "/home/phil/workspace/ros/src/ohm_tsd_slam/config/"
                            "config_tsdf_pdf_matcher.xml");
   if(!_configXml.size())

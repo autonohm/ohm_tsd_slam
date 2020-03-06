@@ -23,9 +23,10 @@
 namespace ohm_tsd_slam
 {
 
-ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace, const double xOffset,
-                               const double yOffset)
+ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, const double xOffset, const double yOffset,
+                               const std::string& nameSpace)
     : ThreadSLAM(*grid)
+    , _nameSpace(nameSpace)
     , _nh(nh)
     , _mapper(*mapper)
     , _sensor(NULL)
@@ -37,18 +38,15 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
     , _gridOffSetY(-1.0 * (grid->getCellsY() * grid->getCellSize() * 0.5 + yOffset))
     , _xOffset(xOffset)
     , _yOffset(yOffset)
-    , _nameSpace(nameSpace)
     , _stampLaser(ros::Time::now())
 {
   std::string poseTopic;
   std::string topicPoseStampedCov;
   int         iVar = 0;
 
-  /*** Read parameters from ros parameter server. Use namespace if provided. Multirobot use. ***/
-  _nameSpace               = nameSpace;
-  std::string::iterator it = _nameSpace.end() - 1; // stores last symbol of nameSpace
-  if(*it != '/' && _nameSpace.size() > 0)
-    _nameSpace += "/";
+  // std::string::iterator it = _nameSpace.end() - 1; // stores last symbol of nameSpace
+  // if(*it != '/' && _nameSpace.size() > 0)
+  //   _nameSpace += "/";
 
   ros::NodeHandle prvNh("~");
 
@@ -257,8 +255,8 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
     _mapper.initPush(_sensor);
   _initialized = true;
   //_sensor->transform()
-  _registration = std::make_unique<Registration>(_regMode, _grid, *_sensor); // TODO: registration mode
-  this->unblock();                                                           // Method from ThreadSLAM to set a thread from sleep mode to run mode
+  _registration = std::make_unique<Registration>(_grid, *_sensor); // TODO: registration mode
+  this->unblock();                                                 // Method from ThreadSLAM to set a thread from sleep mode to run mode
 }
 
 void ThreadLocalize::sendTransform(obvious::Matrix* T)

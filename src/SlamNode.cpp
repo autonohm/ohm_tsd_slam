@@ -74,7 +74,7 @@ SlamNode::SlamNode(void)
   //instanciate localization threads
   if(robotNbr == 1)  //single slam
   {
-    threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, nameSpace, xOffset, yOffset);
+    threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, xOffset, yOffset, nameSpace);
     subs = TaggedSubscriber(topicLaser, *threadLocalize, _nh);
     subs.switchOn();
     //subs = _nh.subscribe(topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
@@ -91,7 +91,7 @@ SlamNode::SlamNode(void)
       sstream << i << "/namespace";
       std::string dummy = sstream.str();
       prvNh.param(dummy, nameSpace, std::string("default_ns"));
-      threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, nameSpace, xOffset, yOffset);
+      threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, xOffset, yOffset, nameSpace);
 //      subs = _nh.subscribe(nameSpace + "/" + topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
       subs = TaggedSubscriber(nameSpace + "/" + topicLaser, *threadLocalize, _nh);
       _subsLaser.push_back(subs);

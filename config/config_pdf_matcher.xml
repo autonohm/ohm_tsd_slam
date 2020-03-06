@@ -16,6 +16,6 @@
   <max_angle_diff>1.5</max_angle_diff>
   <max_angle_penalty>0.5</max_angle_penalty>
   <ranphimax>45.0</ranphimax>
-  <reg_trs_max>1.0</reg_trs_max>   <!-- TODO this is a general ICP parameter, -->
+  <reg_trs_max>1.0</reg_trs_max>   <!-- this parameter is not used in obviously -->
 </pdf_config>
 

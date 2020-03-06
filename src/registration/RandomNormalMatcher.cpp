@@ -4,7 +4,19 @@
 #include <ros/ros.h>
 #include <tinyxml2.h>
 
-RandomNormalMatcher::RandomNormalMatcher() {}
+RandomNormalMatcher::RandomNormalMatcher(const std::string& nameSpace):
+_nameSpace(nameSpace) 
+{
+  std::string configXml;
+  ros::NodeHandle prvNh("~");
+  prvNh.param<std::string>(nameSpace + "/random_normal_matcher/config_file", configXml,
+                           "/home/phil/workspace/ros/src/ohm_tsd_slam/config/"
+                           "config_random_normal_matcher.xml");
+  if(!configXml.size())
+    throw "config not found";
+  if(!this->init(configXml))
+    throw "config invalid";
+}
 
 RandomNormalMatcher::~RandomNormalMatcher() {}
 

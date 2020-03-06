@@ -11,11 +11,12 @@
 class TsdPdfMatcher : public IPrematcher
 {
 public:
-  TsdPdfMatcher(obvious::SensorPolar2D& sensor, obvious::TsdGrid& grid);
+  TsdPdfMatcher(obvious::SensorPolar2D& sensor, obvious::TsdGrid& grid, const std::string& nameSpace = "");
   virtual ~TsdPdfMatcher();
   virtual bool init(const std::string& configXml) override;
 virtual bool match(obvious::SensorPolar2D& sensor, obvious::Matrix* M, bool* maskM, obvious::Matrix* S, bool* maskS, obvious::Matrix& T)override;
 private:
+  const std::string& _nameSpace;
   std::string                               _configXml;
   double                                    _ranPhiMax; // TODO: base class
   double                                    _transMax;  // TODO: base class

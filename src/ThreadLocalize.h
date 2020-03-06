@@ -84,8 +84,8 @@ public:
    * @param xOffset Origin x position
    * @param yOffset Origin y position
    */
-  ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
-  				const double xOffset, const double yOffset);
+  ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh,
+  				const double xOffset, const double yOffset, const std::string& nameSpace = "");
 
   /**
    * Destructor
@@ -112,22 +112,6 @@ private:
   void init(const sensor_msgs::LaserScan& scan);
 
   /**
-   * Method to analyze 2D transformation matrix.
-   * @param T Pointer to transformation matrix
-   * @return Calculated angle
-   */
- // double calcAngle(obvious::Matrix* T);
-
-  /**
-   * Method to determine whether the localized sensor has been moved significantly (value higher than thresh).
-   * A map update is only initiated in case this method returns true.
-   * @param lastPose Pointer to last known pose
-   * @param curPose Pointer to current pose
-   * @return True in case of significant pose change
-   */
- // bool isPoseChangeSignificant(obvious::Matrix* lastPose, obvious::Matrix* curPose);
-
-  /**
    * Method to broadcast the calculated transformation via ros::geometry_msgs::PoseStamped and ros::tf.
    * @param T Calculated Transformation that is being broadcasted
    */
@@ -138,19 +122,10 @@ private:
    */
   void sendNanTransform();
 
-  /**
-   * Method to convert an 3x3 obvious::Matrix to a tf matrix
-   * @param ob obvious::Matrix input to be converted
-   * @return tf matrix tf::Transform
+/**
+   * namespace for all topics and services
    */
-  //tf::Transform obviouslyMatrix3x3ToTf(obvious::Matrix& ob);  //TODO: utilities
-
-  /**
-   * Converts a tf matrix to a 3x3 obvious::Matrix
-   * @param tf matrix to be converted
-   * @return converted obvious::Matrix
-   */
-  //obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf); //TODO: utilities
+  const std::string _nameSpace;
 
   /**
    * Pointer to main NodeHandle
@@ -192,10 +167,7 @@ private:
    * Initial yOffset
    */
   const double _yOffset;
-  /**
-   * namespace for all topics and services
-   */
-  std::string _nameSpace;
+  
   /**
    * Laser time stamp now
    */

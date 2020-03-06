@@ -132,6 +132,8 @@ add_executable(slam_node src/slam_node.cpp
                                  add_executable(test_reg src/test.cpp
                                                          src/registration/Registration.cpp
                                                      src/registration/TsdPdfMatcher.cpp
+                                                     src/registration/PdfMatcher.cpp
+                                                     src/registration/RandomNormalMatcher.cpp
                                                      src/utilities.cpp)
                                   
 ## Add cmake target dependencies of the executable/library

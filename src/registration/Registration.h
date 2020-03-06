@@ -18,7 +18,7 @@ enum class RegModes
 class Registration
 {
 public:
-  Registration(const RegModes& mode, obvious::TsdGrid& grid, obvious::SensorPolar2D& sensor);
+  Registration(obvious::TsdGrid& grid, obvious::SensorPolar2D& sensor, const std::string& nameSpace = "");
   virtual ~Registration();
   // bool doRegistration(obvious::Matrix& T, obvious::Matrix* M, obvious::Matrix* Mvalid, obvious::Matrix* N, obvious::Matrix* Nvalid, obvious::Matrix* S,
   //                     obvious::Matrix* Svalid);
@@ -43,6 +43,7 @@ private:
    * @return Filtered matrix of type obvious::Matrix
    */
   //obvious::Matrix maskMatrix(obvious::Matrix* Mat, bool* mask, unsigned int maskSize, unsigned int validPoints);
+  const std::string _nameSpace;
   obvious::TsdGrid&            _grid;
   obvious::SensorPolar2D& _sensor;
   std::unique_ptr<IPrematcher> _matcherPre;
@@ -68,7 +69,7 @@ private:
    * ICP main instance
    */
   std::unique_ptr<obvious::Icp> _icp;
-  const RegModes                _regMode;
+  RegModes                _regMode;
 
   double       _distFilterThreshMin;
   double       _distFilterThreshMax;

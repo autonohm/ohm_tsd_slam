@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config_registration>
+  <pre_matcher_mode>3</pre_matcher_mode>   <!-- 0 - ICP only, 1 ICP + RandomNormalMatcher, 2 ICP + PDF, 3 ICP + TSD_PDF  -->
+  <!-- parameter for obviously ICP -->
+  <dist_filter_max>0.4</dist_filter_max> 
+  <dist_filter_min>0.02</dist_filter_min>
+  <icp_iterations>30</icp_iterations>
+  <icp_thresh_rms>0.0</icp_thresh_rms>
+  <thresh_error_ang>0.5</thresh_error_ang>  <!-- thresholds for detection of registration errors -->
+  <thresh_error_lin>1.0</thresh_error_lin>  <!-- thresholds for detection of registration errors -->
+</config_registration>

@@ -21,7 +21,8 @@ Registration::Registration(obvious::TsdGrid& grid, obvious::SensorPolar2D& senso
   std::cout << __PRETTY_FUNCTION__ << " huhu" << std::endl;
   ros::NodeHandle prvNh("~");
   std::string     configFileXml;
-  prvNh.param<std::string>(nameSpace + "/registration/config_file", configFileXml, "/home/phil/workspace/ros/src/ohm_tsd_slam/config/config_registration.xml");
+  prvNh.param<std::string>(nameSpace + "/registration/config_file", configFileXml,
+                           "/home/phil/workspace/ros/src/ohm_tsd_slam/config/config_registration.xml");
   if(!configFileXml.size())
     throw "config not found";
   if(!this->init(configFileXml))
@@ -102,22 +103,8 @@ bool Registration::init(const std::string& configFileXml)
     return false;
   if(!utilities::loadTyniXmlParameter(_icpThreshRms, std::string("icp_thresh_rms"), *rootNode))
     return false;
-
-  //  tinyxml2::XMLElement* element = rootNode->FirstChildElement("icp_thresh_rms");
-  //  std::cout << __PRETTY_FUNCTION__ <<  " element ptr = " << element << std::endl;
-  // if(!element)
-  // {
-  //   ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error parameter icp_thresh_rms " << std::endl);
-  //   return false;
-  // }
-  // else
-  // {
-  //   element->QueryDoubleText(&_icpThreshRms);
-  //   std::cout << __PRETTY_FUNCTION__ << " icp_iterations " << _icpThreshRms << std::endl;
-  // }
   if(!utilities::loadTyniXmlParameter(_threshErrorAng, std::string("thresh_error_ang"), *rootNode))
     return false;
-
   if(!utilities::loadTyniXmlParameter(_threshErrorLin, std::string("thresh_error_lin"), *rootNode))
     return false;
 

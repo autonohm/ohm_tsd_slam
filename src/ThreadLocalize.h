@@ -17,6 +17,7 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <std_srvs/SetBool.h>
 
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obvision/reconstruct/grid/TsdGrid.h"
@@ -35,6 +36,7 @@
 
 #include <string>
 #include <cmath>
+#include <Eigen/Dense>
 
 namespace ohm_tsd_slam
 {
@@ -95,7 +97,11 @@ public:
    * Callback method for laserscans
    * @param scan Laserscan data
    */
-  void laserCallBack(const sensor_msgs::LaserScan& scan);
+  void callBackLaser(const sensor_msgs::LaserScan& scan);
+  bool callBackStartStopSLAM(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
+
+  const Eigen::Vector2d& offsetInitial(void)const{return _offsetInitial;}
+  const std::string& nameSpace(void)const{return _nameSpace;}
 
 protected:
   /**
@@ -122,6 +128,11 @@ private:
    */
   void sendNanTransform();
 
+  ros::Subscriber _subsLaser;
+
+  ros::ServiceServer _startStopSLAM;
+
+
 /**
    * namespace for all topics and services
    */
@@ -146,7 +157,7 @@ private:
   /**
    * Width of tsd grid in m
    */
-  const double _gridWidth;
+  const double _gridWidth;   //TODO: all these parameters can be removed they are part of the grid class
   /**
    * Height of tsd grid in m
    */
@@ -167,6 +178,8 @@ private:
    * Initial yOffset
    */
   const double _yOffset;
+
+  const Eigen::Vector2d _offsetInitial;
   
   /**
    * Laser time stamp now

@@ -12,6 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fopenmp -O0 -mtune=native  -std=c++17") #-Wall
 
 SET(CMAKE_BUILD_TYPE Debug)
@@ -155,6 +157,7 @@ target_link_libraries(slam_node
                                  flann
                                  ${Boost_LIBRARIES}
                                  tinyxml2
+                                 Eigen3::Eigen
                                  )
 
 target_link_libraries(test_reg
@@ -168,6 +171,7 @@ target_link_libraries(test_reg
                                  flann
                                  ${Boost_LIBRARIES}
                                  tinyxml2
+                                 Eigen3::Eigen
                                  )                                 
 
 #############

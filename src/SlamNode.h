@@ -20,42 +20,6 @@ namespace ohm_tsd_slam
 class ThreadSLAM;
 class ThreadMapping;
 class ThreadGrid;
-//class ThreadLocalize;
-
-struct TaggedSubscriber //TODO: create a class
-{
-  TaggedSubscriber(std::string topic, ThreadLocalize& localizer, ros::NodeHandle& nh):
-    _topic(topic),
-    _localizer(&localizer),
-    _nh(&nh)
-  {}
-  TaggedSubscriber(const TaggedSubscriber& subs):
-    _subs(subs._subs),
-    _topic(subs._topic),
-    _localizer(subs._localizer),
-    _nh(subs._nh)
-  {}
-  TaggedSubscriber(void):
-    _localizer(NULL),
-    _nh(NULL)
-  {}
-  bool topic(const std::string topic)
-  {
-    return topic == _topic;
-  }
-  void switchOff(void)
-  {
-    _subs.shutdown();
-  }
-  void switchOn(void)
-  {
-    _subs = _nh->subscribe(_topic, 1, &ThreadLocalize::laserCallBack, _localizer);
-  }
-  ros::Subscriber _subs;
-  std::string _topic;
-  ThreadLocalize* _localizer;
-  ros::NodeHandle* _nh;
-};
 
 /**
  * @class SlamNode
@@ -90,14 +54,6 @@ private:
   void run(void);
 
   /**
-   * timedGridPub
-   * Enables occupancy grid thread with certain frequency
-   */
-  void timedGridPub(void);
-
-  bool callBackServiceStartStopSLAM(ohm_tsd_slam::StartStopSLAM::Request& req, ohm_tsd_slam::StartStopSLAM::Response& res);
-
-  /**
    * Main node handle
    */
   ros::NodeHandle _nh;
@@ -118,36 +74,11 @@ private:
   ThreadGrid* _threadGrid;
 
   /**
-   * X starting offset factor
-   */
-  double _xOffFactor;
-
-  /**
-   * Y starting offset factor
-   */
-  double _yOffFactor;
-
-  /**
-   * Rate used for occupancy grid generation
-   */
-  ros::Duration* _gridInterval;
-
-  /**
-   * Desired loop rate
-   */
-  ros::Rate* _loopRate;
-
-  /**
-   * Ros laser subscriber
-   */
-  std::vector<TaggedSubscriber> _subsLaser;
-
-  /**
    * Localizing threads
    */
-  std::vector<ThreadLocalize*> _localizers;
+  std::vector<ThreadLocalize*> _localizers;  //TODO: unique ptrs
 
-  ros::ServiceServer _serviceStartStopSLAM;
+ // ros::ServiceServer _serviceStartStopSLAM;
 };
 
 } /* namespace ohm_tsd_slam */

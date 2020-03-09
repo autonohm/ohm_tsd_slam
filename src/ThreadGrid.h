@@ -43,7 +43,7 @@ protected:
   virtual void eventLoop(void);
 
 private:
-
+  void callBackTimerMain(const ros::TimerEvent& ev);
   /**
    * getMapServCallBack
    * Ros service callback method for the get map service
@@ -62,6 +62,8 @@ private:
    * Ros get map service
    */
   ros::ServiceServer _getMapServ;
+
+  ros::Timer _timerMain;
 
   /**
    * Buffer for occupancy grid content
@@ -105,7 +107,7 @@ private:
   /**
    * Object inflation control flag
    */
-  bool _objectInflation;
+  //bool _objectInflation;
 };
 
 } /* namespace ohm_tsd_slam */

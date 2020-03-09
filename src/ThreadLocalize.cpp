@@ -17,6 +17,7 @@
 #include <tf/tf.h>
 #include <unistd.h>
 
+
 /// todo whats TRACE kommt unten nochmal
 //#define TRACE
 
@@ -38,11 +39,16 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
     , _gridOffSetY(-1.0 * (grid->getCellsY() * grid->getCellSize() * 0.5 + yOffset))
     , _xOffset(xOffset)
     , _yOffset(yOffset)
+    , _offsetInitial(Eigen::Vector2d(xOffset, yOffset))
     , _stampLaser(ros::Time::now())
 {
   std::string poseTopic;
   std::string topicPoseStampedCov;
   int         iVar = 0;
+
+  std::string topicLaser;
+  std::string topicStartStopSLAM;
+
 
   // std::string::iterator it = _nameSpace.end() - 1; // stores last symbol of nameSpace
   // if(*it != '/' && _nameSpace.size() > 0)
@@ -57,11 +63,16 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   prvNh.param("tf_footprint_frame", _tfFootprintFrameId, std::string("base_footprint"));
   prvNh.param<double>("laser_min_range", _lasMinRange, 0.0);
   prvNh.param<int>(_nameSpace + "registration_mode", iVar, 4);
+  
   prvNh.param<double>(_nameSpace + "thresh_min_pose_change_lin", _threshMinPoseChangeLin, 0.05);
   prvNh.param<double>(_nameSpace + "thresh_min_pose_change_ang", _threshMinPoseChangeAng, 0.03);
-  double _threshMinPoseChangeLin;
+ 
+  prvNh.param<std::string>(_nameSpace + "topic_laser", topicLaser,_nameSpace + "/scan");
+  prvNh.param<std::string>(_nameSpace + "topic_start_stop_slam", topicStartStopSLAM,_nameSpace + "/start_stop_slam");
 
-  double _threshMinPoseChangeAng;
+  _subsLaser = _nh->subscribe(topicLaser, 1, &ThreadLocalize::callBackLaser, this);
+  _startStopSLAM = _nh->advertiseService(topicStartStopSLAM, &ThreadLocalize::callBackStartStopSLAM, this);
+  
   _regMode = static_cast<RegModes>(iVar);
 
   _modelCoords  = NULL;
@@ -94,7 +105,7 @@ ThreadLocalize::~ThreadLocalize()
   _laserData.clear();
 }
 
-void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
+void ThreadLocalize::callBackLaser(const sensor_msgs::LaserScan& scan)
 {
   sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
   *scanCopy                        = scan;
@@ -123,6 +134,23 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
 
     this->unblock();
   }
+}
+
+bool ThreadLocalize::callBackStartStopSLAM(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res)
+{
+  if(req.data)
+  {
+    std::cout << __PRETTY_FUNCTION__ << " stored toppic is " << _subsLaser.getTopic() << std::endl;
+    _subsLaser = _nh->subscribe(_subsLaser.getTopic(), 1, &ThreadLocalize::callBackLaser, this);
+    res.message = "started topic " + _subsLaser.getTopic();
+  }
+  else
+  {
+    _subsLaser.shutdown();
+    res.message = "stopped topic " + _subsLaser.getTopic();
+  }
+  res.success = true;
+  return true;
 }
 
 void ThreadLocalize::eventLoop(void)

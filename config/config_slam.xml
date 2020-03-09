@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config_slam>
+  <robot namespace="" offset_x="0.0" offset_y="0.0"/>
+ <!-- <robot namespace="heini"    offset_x="0.0"  offset_y="0.0"/>
+  <robot namespace="dietlind" offset_x="0.5"  offset_y="0.5"/>
+  <robot namespace="heinrich" offset_x="-0.5" offset_y="-0.5"/> -->
+</config_slam>

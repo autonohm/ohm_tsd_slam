@@ -43,6 +43,7 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
   std::string topicTsdColorMap;
   std::string tfBaseFrame;
   int intVar         = 0;
+  double interval = 0;
   prvNh.param<bool>("pub_tsd_color_map", _pubTsdColorMap, true);
   prvNh.param("map_topic", mapTopic, std::string("map"));
   prvNh.param("get_map_topic", getMapTopic, std::string("map"));
@@ -50,14 +51,16 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
   prvNh.param<std::string>("tf_base_frame", tfBaseFrame, "map");
   _occGrid->header.frame_id = tfBaseFrame;
 
-  prvNh.param<int>("object_inflation_factor", intVar, 2);
-  prvNh.param<bool>("use_object_inflation", _objectInflation, false);  //toDo: exchange with if inflation > 0
-
+  prvNh.param<int>("object_inflation_factor", intVar, 0);
+ // prvNh.param<bool>("use_object_inflation", _objectInflation, false);  //toDo: exchange with if inflation > 0
+  //_objectInflation
+  prvNh.param<double>("map_publish_interval", interval, 0.5);
 
   _gridPub          = nh->advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
   _pubColorImage = nh->advertise<sensor_msgs::Image>(topicTsdColorMap, 1);
   _getMapServ       = nh->advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
   _objInflateFactor = static_cast<unsigned int>(intVar);
+  _timerMain = nh->createTimer(ros::Duration(interval), &ThreadGrid::callBackTimerMain, this);
 }
 
 ThreadGrid::~ThreadGrid()
@@ -103,7 +106,7 @@ void ThreadGrid::eventLoop(void)
       if(u > 0 && u < _width && v > 0 && v < _height)
       {
         _occGrid->data[v * _width + u] = 100;               //set grid cell to occupied
-        if(_objectInflation)
+        if(_objInflateFactor > 0)
         {
           for(unsigned int i = v-_objInflateFactor; i < v + _objInflateFactor; i++)
           {
@@ -142,6 +145,11 @@ bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::Ge
   _occGrid->header.seq = frameId++;
   _occGrid->info.map_load_time = ros::Time::now();
   return(true);
+}
+
+void ThreadGrid::callBackTimerMain(const ros::TimerEvent& ev)
+{
+  this->unblock();
 }
 
 } /* namespace */

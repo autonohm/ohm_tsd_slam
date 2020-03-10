@@ -193,11 +193,6 @@ private:
   double _threshMinPoseChangeAng;
 
   /**
-   * Registration mode
-   */
-  RegModes _regMode;   //TODO: move to config file of registration class
-
-  /**
    * Container for laser sensor data (filled by callback)
    */
   std::deque<sensor_msgs::LaserScan*> _laserData;
@@ -216,7 +211,7 @@ private:
   /**
    * Buffer for scene coordinates
    */
-  double* _scene;
+  double* _coordsScene;
   /**
    * Mask of scene
    */
@@ -225,7 +220,6 @@ private:
    * 2D reconstruction done by Raycaster
    */
   obvious::RayCastPolar2D* _rayCaster;
-  
   /**
    * Last pose stored in Matrix
    */
@@ -251,17 +245,9 @@ private:
    */
   tf::TransformListener _tfListener;
   /**
-   * Containre for reading tfs
-   */
-  tf::StampedTransform _tfReader;
-  /**
    * ROS current transform
    */
   tf::StampedTransform _tf;
-  /**
-   * ROS tf Transform from base_footprint to laser
-   */
-  tf::Transform _tfLaser;
   /**
    * ROS tf frame ids
    */
@@ -271,30 +257,6 @@ private:
    */
   std::string _tfChildFrameId;
   /**
-   * ROS tf frame ids
-   */
-  std::string _tfOdomFrameId;
-  /**
-   * ROS tf frame ids
-   */
-  std::string _tfFootprintFrameId;
-  /**
-   * use odom rescue flag
-   */
-  bool _useOdomRescue;
-  /**
-   * state of the actual odom tf transform
-   */
-  bool _odomTfIsValid;
-  /**
-   * time to wait for synchronized odom tf
-   */
-  ros::Duration _waitForOdomTf;
-  /**
-   * Laser time stamp old
-   */
-  ros::Time _stampLaserOld;
-  /**
    * Scan passed in clockwise rotation (mathematically negative increment)
    */
   bool _reverseScan;
@@ -303,7 +265,7 @@ private:
    */
   double _lasMinRange;
 
-  tf::StampedTransform _tfFrameSensorMount;
+  //tf::StampedTransform _tfFrameSensorMount;
 
   std::unique_ptr<Registration> _registration;
 

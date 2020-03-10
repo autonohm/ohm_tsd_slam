@@ -1,61 +1,45 @@
 <?xml version="1.0"?>
 
 <launch>
-	
     <!-- extern parameters -->
-    <arg name="loop_rate" default="100.0" />
-    <arg name="map_topic" default="map" />    <!-- topic of occupancy grid -->
-    <arg name="pose_topic" default="pose" />    <!-- topic for robot's pose -->
-    <arg name="laser_topic" default="/puck_rear/scan" />    <!-- topic to receive laser scan -->
-    <arg name="get_map_topic" default="map" />
-
-    <arg name="x_offset" default="0.0" />
-    <arg name="y_offset" default="0.0" />
-    <arg name="yaw_offset" default="0.0" />
-
-    <arg name="map_size" default="12" />
+    <arg name="map_topic" default="map" />             <!-- topic of occupancy grid -->
+    <arg name="get_map_topic" default="map" />         <!-- topic of occupancy grid -->
+    <arg name="map_global_offset_x" default="0.0" />   <!-- parameter to move the center of the occupancy grid map -->
+    <arg name="map_global_offset_y" default="0.0" />   <!-- parameter to move the center of the occupancy grid map -->
+    <arg name ="interval_map_publish" default="0.5"/>
+    <!-- <arg name="yaw_offset" default="0.0" /> -->
+    <arg name="map_size" default="12" />               <!-- TODO: add an explanation for this parameter -->
     <arg name="cellsize" default="0.025" />
-
     <arg name="tf_base_frame" default="map" />
-    <arg name="tf_child_frame" default="laser" />
-    <arg name="tf_odom_frame" default="wheelodom" />
-    <arg name="tf_footprint_frame" default="base_footprint" />
-
-    <arg name="max_velocity_rot" default="6.28" />
-    <arg name="max_velocity_lin" default="1.0" />
-    
+    <arg name="config_slam" default="$(find ohm_tsd_slam)/config/config_slam.xml"/>
+        
     <!-- ******************* -->
-
     <node name="slam_node" pkg="ohm_tsd_slam" type="slam_node" output="screen">
 	<rosparam command="load" file="$(find ohm_tsd_slam)/config/slamparams.yaml" /> 
         <!-- topic/node parameters -->
-        <param name="loop_rate" type="double" value="$(arg loop_rate)" />
         <param name="map_topic" type="string" value="$(arg map_topic)" />    <!-- topic of occupancy grid -->
-        <param name="pose_topic" type="string" value="$(arg pose_topic)" />    <!-- topic for robot's pose -->
-        <param name="laser_topic" type="string" value="$(arg laser_topic)" />    <!-- topic to receive laser scan -->
         <param name="get_map_topic" type="string" value="$(arg get_map_topic)" />
-
         <!-- map parameters -->
-        <param name="x_offset" type="double" value="$(arg x_offset)" />    <!-- offset of robot in map in meters -->
-        <param name="y_offset" type="double" value="$(arg y_offset)" />    <!-- offset of robot in map in meters -->
-        <param name="yaw_offset" type="double" value="$(arg yaw_offset)" />    <!-- offset of yaw -->
+        <param name="x_offset" type="double" value="$(arg map_global_offset_x)" />    <!-- offset of robot in map in meters -->
+        <param name="y_offset" type="double" value="$(arg map_global_offset_y)" />    <!-- offset of robot in map in meters -->
         <param name="map_size" type="int" value="$(arg map_size)" />    <!-- map size -->
         <param name="cellsize" type="double" value="$(arg cellsize)" />    <!-- cell size in meters -->
         <param name="occ_grid_time_interval" type="double" value="2.0" />    <!-- frequency to publish map -->
-
-        <!-- tf parameters -->
+        <param name="file_config_xml_slam" type="string" value="$(arg config_slam)"/>
         <param name="tf_base_frame" type="string" value="$(arg tf_base_frame)" />
-        <param name="tf_child_frame" type="string" value="$(arg tf_child_frame)" />
-        <param name="tf_odom_frame" type="string" value="$(arg tf_odom_frame)" />
-        <param name="tf_footprint_frame" type="string" value="$(arg tf_footprint_frame)" />
-
-        <!-- robot parameters -->
-        <param name="footprint_width" type="double" value="1.0" />    <!-- width of robot in meters -->
-        <param name="footprint_height" type="double" value="1.0" />    <!-- length of robot in meters -->
-        <param name="footprint_x_offset" type="double" value="-0.4" />    <!-- offset of laser in meters -->
-        <param name="max_velocity_rot" type="double" value="$(arg max_velocity_rot)" />    <!-- maximal rotational speed on base_footprint in rad/sec -->
-	<param name="max_velocity_lin" type="double" value="$(arg max_velocity_lin)" />    <!-- maximal linear speed in m/s -->
-	<param name="local_offset_x" type = "double" value="0.4"/>
+<!-- robot parameters use namespaces for multi slam -->   <!-- TODO: pass namespace to slam config xml -->
         
+        <param name="topic_pose" type="string" value="pose" />    <!-- topic for robot's pose -->
+        <param name="topic_laser" type="string" value="scan" />    <!-- topic to receive laser scan -->
+        
+        <param name="tf_child_frame" type="string" value="laser" />
+        <param name="tf_odom_frame"  type="string" value="odom_combined" />
+        <param name="footprint_width"    type="double"  value="1.0" />    <!-- width of robot in meters -->
+        <param name="footprint_height"   type="double"  value="1.0" />    <!-- length of robot in meters -->
+        <param name="footprint_x_offset" type="double"  value="0.15" />    <!-- offset of laser in meters -->
+        <param name="local_offset_x"     type = "double" value="0.0"/>
+        <param name="thresh_min_pose_change_lin" type = "double" value = "0.05"/>
+        <param name="thresh_min_pose_change_lin" type = "double" value = "0.03"/>
+        <param name="/tsd_pdf/config_file" type = "string" value = "$(find ohm_tsd_slam)/config/config_tsdf_pdf_matcher.xml"/> 
     </node>
 </launch>

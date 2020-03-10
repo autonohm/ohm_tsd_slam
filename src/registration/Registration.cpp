@@ -107,12 +107,11 @@ bool Registration::init(const std::string& configFileXml)
     return false;
   if(!utilities::loadTyniXmlParameter(_threshErrorLin, std::string("thresh_error_lin"), *rootNode))
     return false;
-
   return true;
 }
 
-bool Registration::doRegistration(obvious::Matrix& T, double* coordsModel, double* normalsModel, bool* maskModel, const unsigned int nPointsModel,
-                                  double* coordsScene, bool* maskScene)
+const bool Registration::doRegistration(obvious::Matrix& T, double* coordsModel, double* normalsModel, bool* maskModel, const unsigned int nPointsModel,
+                                        double* coordsScene, bool* maskScene)
 {
 
   const unsigned int measurementSize = _sensor.getRealMeasurementSize();

@@ -22,7 +22,7 @@ public:
   virtual ~Registration();
   // bool doRegistration(obvious::Matrix& T, obvious::Matrix* M, obvious::Matrix* Mvalid, obvious::Matrix* N, obvious::Matrix* Nvalid, obvious::Matrix* S,
   //                     obvious::Matrix* Svalid);
-  bool doRegistration(obvious::Matrix& T, double* coordsModel, double* normalsModel, bool* maskModel, const unsigned int nPointsModel, 
+  const bool doRegistration(obvious::Matrix& T, double* coordsModel, double* normalsModel, bool* maskModel, const unsigned int nPointsModel, 
                       double* coordsScene, bool* maskScene);                      
 private:
   bool                         init(const std::string& configFileXml);

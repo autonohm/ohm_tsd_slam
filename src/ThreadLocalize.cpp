@@ -17,7 +17,6 @@
 #include <tf/tf.h>
 #include <unistd.h>
 
-
 /// todo whats TRACE kommt unten nochmal
 //#define TRACE
 
@@ -42,13 +41,12 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
     , _offsetInitial(Eigen::Vector2d(xOffset, yOffset))
     , _stampLaser(ros::Time::now())
 {
-  std::string poseTopic;
-  std::string topicPoseStampedCov;
+  std::string topicPose;
+  std::string topicPoseCov;
   int         iVar = 0;
 
   std::string topicLaser;
   std::string topicStartStopSLAM;
-
 
   // std::string::iterator it = _nameSpace.end() - 1; // stores last symbol of nameSpace
   // if(*it != '/' && _nameSpace.size() > 0)
@@ -56,40 +54,37 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
   ros::NodeHandle prvNh("~");
 
-  prvNh.param(_nameSpace + "pose_topic", poseTopic, std::string("default_ns/pose"));
-  prvNh.param<std::string>(_nameSpace + "topic_pose_stamped_cov", topicPoseStampedCov, "default_ns/pose_stamped_cov");
+  prvNh.param(_nameSpace + "topic_pose", topicPose, std::string("default_ns/pose"));
+  prvNh.param<std::string>(_nameSpace + "topic_pose_cov", topicPoseCov, "default_ns/pose_cov");
   prvNh.param("tf_base_frame", _tfBaseFrameId, std::string("/map"));
   prvNh.param(_nameSpace + "tf_child_frame", _tfChildFrameId, std::string("default_ns/laser"));
-  prvNh.param("tf_footprint_frame", _tfFootprintFrameId, std::string("base_footprint"));
-  prvNh.param<double>("laser_min_range", _lasMinRange, 0.0);
+  prvNh.param<double>("laser_min_range", _lasMinRange, 0.0); // TODO: this parameter applied in the push of obviously already
   prvNh.param<int>(_nameSpace + "registration_mode", iVar, 4);
-  
-  prvNh.param<double>(_nameSpace + "thresh_min_pose_change_lin", _threshMinPoseChangeLin, 0.05);
-  prvNh.param<double>(_nameSpace + "thresh_min_pose_change_ang", _threshMinPoseChangeAng, 0.03);
- 
-  prvNh.param<std::string>(_nameSpace + "topic_laser", topicLaser,_nameSpace + "/scan");
-  prvNh.param<std::string>(_nameSpace + "topic_start_stop_slam", topicStartStopSLAM,_nameSpace + "/start_stop_slam");
 
-  _subsLaser = _nh->subscribe(topicLaser, 1, &ThreadLocalize::callBackLaser, this);
+  prvNh.param<double>(_nameSpace + "thresh_min_pose_change_lin", _threshMinPoseChangeLin, 0.05); // TODO: this should not be a launch file parameter
+  prvNh.param<double>(_nameSpace + "thresh_min_pose_change_ang", _threshMinPoseChangeAng, 0.03); // TODO: this should not be a launch file parameter
+
+  prvNh.param<std::string>(_nameSpace + "topic_laser", topicLaser, _nameSpace + "/scan");
+  prvNh.param<std::string>(_nameSpace + "topic_start_stop_slam", topicStartStopSLAM, _nameSpace + "/start_stop_slam");
+
+  _subsLaser     = _nh->subscribe(topicLaser, 1, &ThreadLocalize::callBackLaser, this);
   _startStopSLAM = _nh->advertiseService(topicStartStopSLAM, &ThreadLocalize::callBackStartStopSLAM, this);
-  
-  _regMode = static_cast<RegModes>(iVar);
 
   _modelCoords  = NULL;
   _modelNormals = NULL;
   _maskM        = NULL;
 
-  _scene     = NULL;
+  //_scene     = NULL;
   _maskS     = NULL;
   _lastPose  = new obvious::Matrix(3, 3);
   _rayCaster = new obvious::RayCastPolar2D();
 
-  _posePub                     = _nh->advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
+  _posePub                     = _nh->advertise<geometry_msgs::PoseStamped>(topicPose, 1);
   _poseStamped.header.frame_id = _tfBaseFrameId;
   _tf.frame_id_                = _tfBaseFrameId;
   _tf.child_frame_id_          = _nameSpace + _tfChildFrameId;
 
-  _pubPoseStCov                   = _nh->advertise<geometry_msgs::PoseWithCovarianceStamped>(topicPoseStampedCov, 1);
+  _pubPoseStCov                   = _nh->advertise<geometry_msgs::PoseWithCovarianceStamped>(topicPoseCov, 1);
   _poseStampedCov.header.frame_id = _tfBaseFrameId;
 
   _reverseScan = false;
@@ -99,7 +94,6 @@ ThreadLocalize::~ThreadLocalize()
 {
   for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
     delete *iter;
-
   _stayActive = false;
   _thread->join();
   _laserData.clear();
@@ -124,7 +118,7 @@ void ThreadLocalize::callBackLaser(const sensor_msgs::LaserScan& scan)
     //	        std::cout << __PRETTY_FUNCTION__ << "......................initialize OdometryAnalyzer.............. \n" << std::endl;
     //	    	_odomAnalyzer->odomRescueInit();
 
-    _stampLaserOld = scan.header.stamp;
+    //_stampLaserOld = scan.header.stamp;
   }
   else
   {
@@ -141,7 +135,7 @@ bool ThreadLocalize::callBackStartStopSLAM(std_srvs::SetBool::Request& req, std_
   if(req.data)
   {
     std::cout << __PRETTY_FUNCTION__ << " stored toppic is " << _subsLaser.getTopic() << std::endl;
-    _subsLaser = _nh->subscribe(_subsLaser.getTopic(), 1, &ThreadLocalize::callBackLaser, this);
+    _subsLaser  = _nh->subscribe(_subsLaser.getTopic(), 1, &ThreadLocalize::callBackLaser, this);
     res.message = "started topic " + _subsLaser.getTopic();
   }
   else
@@ -167,8 +161,7 @@ void ThreadLocalize::eventLoop(void)
     if(_reverseScan)
       std::reverse(ranges.begin(), ranges.end());
 
-    _stampLaserOld = _stampLaser;
-    _stampLaser    = _laserData.front()->header.stamp;
+    _stampLaser = _laserData.front()->header.stamp;
 
     _sensor->setRealMeasurementData(ranges);
     _sensor->setStandardMask();
@@ -180,16 +173,6 @@ void ThreadLocalize::eventLoop(void)
 
     const unsigned int measurementSize = _sensor->getRealMeasurementSize();
 
-    if(!_scene) // first call, initialize buffers  //TODO: move to init
-    {
-      _scene        = new double[measurementSize * 2];
-      _maskS        = new bool[measurementSize];
-      _modelCoords  = new double[measurementSize * 2];
-      _modelNormals = new double[measurementSize * 2];
-      _maskM        = new bool[measurementSize];
-      *_lastPose    = _sensor->getTransformation();
-    }
-
     // reconstruction
     unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(&_grid, _sensor, _modelCoords, _modelNormals, _maskM);
     if(validModelPoints == 0)
@@ -199,11 +182,11 @@ void ThreadLocalize::eventLoop(void)
     }
 
     // get current scan
-    const unsigned int validScenePoints = _sensor->dataToCartesianVectorMask(_scene, _maskS);
+    const unsigned int validScenePoints = _sensor->dataToCartesianVectorMask(_coordsScene, _maskS);
 
     obvious::Matrix T(3, 3);
 
-    const bool regErrorT = _registration->doRegistration(T, _modelCoords, _modelNormals, _maskM, validModelPoints, _scene, _maskS);
+    const bool regErrorT = _registration->doRegistration(T, _modelCoords, _modelNormals, _maskM, validModelPoints, _coordsScene, _maskS);
 
     _tf.stamp_ = ros::Time::now();
 
@@ -283,8 +266,15 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
     _mapper.initPush(_sensor);
   _initialized = true;
   //_sensor->transform()
-  _registration = std::make_unique<Registration>(_grid, *_sensor); // TODO: registration mode
-  this->unblock();                                                 // Method from ThreadSLAM to set a thread from sleep mode to run mode
+  _registration                      = std::make_unique<Registration>(_grid, *_sensor); // TODO: registration mode
+  const unsigned int measurementSize = _sensor->getRealMeasurementSize();
+  _coordsScene                       = new double[measurementSize * 2];
+  _maskS                             = new bool[measurementSize];
+  _modelCoords                       = new double[measurementSize * 2];
+  _modelNormals                      = new double[measurementSize * 2];
+  _maskM                             = new bool[measurementSize];
+  *_lastPose                         = _sensor->getTransformation();
+  this->unblock(); // Method from ThreadSLAM to set a thread from sleep mode to run mode
 }
 
 void ThreadLocalize::sendTransform(obvious::Matrix* T)

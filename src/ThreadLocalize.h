@@ -269,6 +269,9 @@ private:
 
   std::unique_ptr<Registration> _registration;
 
+  double _covMatched = 0.0;
+  double _covError = 0.0;
+
 };
 
 } /* namespace ohm_tsd_slam_ref */

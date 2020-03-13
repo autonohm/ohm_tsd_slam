@@ -54,6 +54,8 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
   ros::NodeHandle prvNh("~");
 
+  
+
   prvNh.param(_nameSpace + "topic_pose", topicPose, std::string("default_ns/pose"));
   prvNh.param<std::string>(_nameSpace + "topic_pose_cov", topicPoseCov, "default_ns/pose_cov");
   prvNh.param("tf_base_frame", _tfBaseFrameId, std::string("/map"));
@@ -66,6 +68,9 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
 
   prvNh.param<std::string>(_nameSpace + "topic_laser", topicLaser, _nameSpace + "/scan");
   prvNh.param<std::string>(_nameSpace + "topic_start_stop_slam", topicStartStopSLAM, _nameSpace + "/start_stop_slam");
+
+  prvNh.param<double>(_nameSpace + "cov_matched", _covMatched, 1e-17);
+  prvNh.param<double>(_nameSpace + "cov_error", _covError, 100.0);
 
   _subsLaser     = _nh->subscribe(topicLaser, 1, &ThreadLocalize::callBackLaser, this);
   _startStopSLAM = _nh->advertiseService(topicStartStopSLAM, &ThreadLocalize::callBackStartStopSLAM, this);
@@ -301,6 +306,16 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
 
   _posePub.publish(_poseStamped);
   _tfBroadcaster.sendTransform(_tf);
+
+  _poseStampedCov.header.stamp = _stampLaser;
+  _poseStampedCov.pose.pose = _poseStamped.pose;
+  _poseStampedCov.pose.covariance = {_covMatched,         0.0,         0.0,         0.0,         0.0,          0.0,
+                                             0.0, _covMatched,         0.0,         0.0,         0.0,          0.0,
+                                             0.0,         0.0, _covMatched,         0.0,         0.0,          0.0,
+                                             0.0,         0.0,         0.0, _covMatched,         0.0,          0.0,
+                                             0.0,         0.0,         0.0,         0.0, _covMatched,          0.0,
+                                             0.0,         0.0,         0.0,         0.0,         0.0,  _covMatched};
+  _pubPoseStCov.publish(_poseStampedCov);
 }
 
 void ThreadLocalize::sendNanTransform()
@@ -322,6 +337,16 @@ void ThreadLocalize::sendNanTransform()
 
   _posePub.publish(_poseStamped);
   _tfBroadcaster.sendTransform(_tf);
+  _poseStampedCov.header.stamp = _stampLaser;
+  _poseStampedCov.pose.pose = _poseStamped.pose;
+
+  _poseStampedCov.pose.covariance = {_covError,         0.0,         0.0,         0.0,         0.0,          0.0,
+                                             0.0, _covError,         0.0,         0.0,         0.0,          0.0,
+                                             0.0,         0.0, _covError,         0.0,         0.0,          0.0,
+                                             0.0,         0.0,         0.0, _covError,         0.0,          0.0,
+                                             0.0,         0.0,         0.0,         0.0, _covError,          0.0,
+                                             0.0,         0.0,         0.0,         0.0,         0.0,  _covError};
+ _pubPoseStCov.publish(_poseStampedCov);
 }
 
 } // namespace ohm_tsd_slam

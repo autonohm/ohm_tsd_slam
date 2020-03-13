@@ -154,7 +154,9 @@ bool ThreadLocalize::callBackStartStopSLAM(std_srvs::SetBool::Request& req, std_
 
 void ThreadLocalize::eventLoop(void)
 {
+  std::cout << __PRETTY_FUNCTION__ << " loop started but no data yet, sleeping" << std::endl;
   _sleepCond.wait(_sleepMutex);
+  std::cout << __PRETTY_FUNCTION__ << " first data element, start endless loop " << std::endl;
   while(_stayActive)
   {
     if(!_laserData.size())

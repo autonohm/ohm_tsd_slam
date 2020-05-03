@@ -66,6 +66,8 @@ Registration::Registration(obvious::TsdGrid& grid, obvious::SensorPolar2D& senso
     break;
   }
   default:
+    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error! Unknown registration mode " << static_cast<unsigned int>(_regMode));
+    throw "Unknown Registration mode";
     break;
   }
 }
@@ -135,6 +137,7 @@ const bool Registration::doRegistration(obvious::Matrix& T, double* coordsModel,
   Ttemp.setIdentity();
 
   // RANSAC pre-registration (rough)
+  std::cout << __PRETTY_FUNCTION__ << " pre matcher " << std::endl;
   if(_regMode != RegModes::ICP)
   {
     _matcherPre->match(_sensor, &M, maskModel, &S, maskScene, Ttemp);
@@ -145,6 +148,7 @@ const bool Registration::doRegistration(obvious::Matrix& T, double* coordsModel,
     T44(1, 1) = Ttemp(1, 1);
     T44(1, 3) = Ttemp(1, 2);
   }
+  std::cout << __PRETTY_FUNCTION__ << " pre matcher finished!" << std::endl;
 
   _icp->reset();
   obvious::Matrix P = _sensor.getTransformation();
@@ -155,7 +159,9 @@ const bool Registration::doRegistration(obvious::Matrix& T, double* coordsModel,
   double       rms   = 0.0;
   unsigned int pairs = 0;
   unsigned int it    = 0;
+  std::cout << __PRETTY_FUNCTION__ << " icp start " << std::endl;
   _icp->iterate(&rms, &pairs, &it, &T44);
+  std::cout << __PRETTY_FUNCTION__ << " icp end" << std::endl;
   T = _icp->getFinalTransformation();
 
   const bool regErrorT = isRegistrationError(&T, _threshErrorLin, _threshErrorAng);

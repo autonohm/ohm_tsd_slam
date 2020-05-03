@@ -30,13 +30,13 @@
 <!-- robot parameters use namespaces for multi slam -->   <!-- TODO: pass namespace to slam config xml -->
         
         <param name="topic_pose" type="string" value="pose" />    <!-- topic for robot's pose -->
-        <param name="topic_laser" type="string" value="scan" />    <!-- topic to receive laser scan -->
+        <param name="topic_laser" type="string" value="/scan" />    <!-- topic to receive laser scan -->
         
         <param name="tf_child_frame" type="string" value="laser" />
         <param name="tf_odom_frame"  type="string" value="odom_combined" />
         <param name="footprint_width"    type="double"  value="1.0" />    <!-- width of robot in meters -->
         <param name="footprint_height"   type="double"  value="1.0" />    <!-- length of robot in meters -->
-        <param name="footprint_x_offset" type="double"  value="0.15" />    <!-- offset of laser in meters -->
+        <param name="footprint_x_offset" type="double"  value="0.28" />    <!-- offset of laser in meters -->
         <param name="local_offset_x"     type = "double" value="0.0"/>
         <param name="thresh_min_pose_change_lin" type = "double" value = "0.05"/>
         <param name="thresh_min_pose_change_lin" type = "double" value = "0.03"/>

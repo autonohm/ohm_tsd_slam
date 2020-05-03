@@ -113,8 +113,11 @@ void ThreadLocalize::callBackLaser(const sensor_msgs::LaserScan& scan)
   {
     if(iter < _lasMinRange)
       iter = 0.0;
+    // if((std::isnan(iter)) || (std::isinf(iter)))
+    //   iter = 0.0;  
   }
-  std::reverse(scanCopy->ranges.begin(), scanCopy->ranges.end());
+  //std::reverse(scanCopy->ranges.begin(), scanCopy->ranges.end());
+  //_reverseScan = true;
   if(!_initialized)
   {
     ROS_INFO_STREAM("Localizer(" << _nameSpace << ") received first scan. Initialize node...\n");
@@ -195,7 +198,9 @@ void ThreadLocalize::eventLoop(void)
 
     obvious::Matrix T(3, 3);
 
+    std::cout << __PRETTY_FUNCTION__ << " here? " << std::endl;
     const bool regErrorT = _registration->doRegistration(T, _modelCoords, _modelNormals, _maskM, validModelPoints, _coordsScene, _maskS);
+    std::cout << __PRETTY_FUNCTION__ << " no" << std::endl;
 
     _tf.stamp_ = ros::Time::now();
 
@@ -376,15 +381,15 @@ else
   std::cout << localXoffset << " " << localYoffset << " " << localYawOffset << " " << maxRange << " " << minRange << " " << lowReflectivityRange << " "
             << footPrintWidth << " " << footPrintHeight << " " << footPrintXoffset << std::endl;
 
-  prvNh.param<double>(_nameSpace + "local_offset_x", localXoffset, 0.0);
-  prvNh.param<double>(_nameSpace + "local_offset_y", localYoffset, 0.0);
-  prvNh.param<double>(_nameSpace + "local_offset_yaw", localYawOffset, 0.0);
-  prvNh.param<double>(_nameSpace + "max_range", maxRange, 30.0);
-  prvNh.param<double>(_nameSpace + "min_range", minRange, 0.001);
-  prvNh.param<double>(_nameSpace + "low_reflectivity_range", lowReflectivityRange, 2.0);
-  prvNh.param<double>(_nameSpace + "footprint_width", footPrintWidth, 1.0);
-  prvNh.param<double>(_nameSpace + "footprint_height", footPrintHeight, 1.0);
-  prvNh.param<double>(_nameSpace + "footprint_x_offset", footPrintXoffset, 0.28);
+  // prvNh.param<double>(_nameSpace + "local_offset_x", localXoffset, 0.0);
+  // prvNh.param<double>(_nameSpace + "local_offset_y", localYoffset, 0.0);
+  // prvNh.param<double>(_nameSpace + "local_offset_yaw", localYawOffset, 0.0);
+  // prvNh.param<double>(_nameSpace + "max_range", maxRange, 30.0);
+  // prvNh.param<double>(_nameSpace + "min_range", minRange, 0.001);
+  // prvNh.param<double>(_nameSpace + "low_reflectivity_range", lowReflectivityRange, 2.0);
+  // prvNh.param<double>(_nameSpace + "footprint_width", footPrintWidth, 1.0);
+  // prvNh.param<double>(_nameSpace + "footprint_height", footPrintHeight, 1.0);
+  // prvNh.param<double>(_nameSpace + "footprint_x_offset", footPrintXoffset, 0.28);
 
   std::cout << localXoffset << " " << localYoffset << " " << localYawOffset << " " << maxRange << " " << minRange << " " << lowReflectivityRange << " "
             << footPrintWidth << " " << footPrintHeight << " " << footPrintXoffset << std::endl;
@@ -400,9 +405,15 @@ else
   double        inc       = scan.angle_increment;
   double        angle_min = scan.angle_min;
   vector<float> ranges    = scan.ranges;
+  std::cout << __PRETTY_FUNCTION__ << " min inc " << angle_min << " " << inc << std::endl;
+  std::cout << __PRETTY_FUNCTION__ << " angle min + size * incr = " << angle_min + static_cast<double>(scan.ranges.size() - 1) * inc << std::endl;
+  std::cout << __PRETTY_FUNCTION__ << " angle max " << scan.angle_max << std::endl;
+
+
 
   if(scan.angle_increment < 0.0 && scan.angle_min > 0)
   {
+    std::cout << __PRETTY_FUNCTION__ << " reverse this shit" << std::endl;
     _reverseScan = true;
     inc          = -inc;
     angle_min    = -angle_min;

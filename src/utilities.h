@@ -49,10 +49,10 @@ tf::Transform obviouslyMatrix3x3ToTf(obvious::Matrix& ob); // TODO: utilities
  */
 obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf); // TODO: utilities
 
-bool loadTyniXmlParameter(unsigned int& param, const std::string& tag, tinyxml2::XMLNode& rootNode);
-bool loadTyniXmlParameter(int& param, const std::string& tag, tinyxml2::XMLNode& rootNode);
-bool loadTyniXmlParameter(float& param, const std::string& tag, tinyxml2::XMLNode& rootNode);
-bool loadTyniXmlParameter(double& param, const std::string& tag, tinyxml2::XMLNode& rootNode); //toDO: change the node to element
+bool loadTyniXmlParameter(unsigned int& param, const std::string& tag, tinyxml2::XMLElement& rootNode);
+bool loadTyniXmlParameter(int& param, const std::string& tag, tinyxml2::XMLElement& rootNode);
+bool loadTyniXmlParameter(float& param, const std::string& tag, tinyxml2::XMLElement& rootNode);
+bool loadTyniXmlParameter(double& param, const std::string& tag, tinyxml2::XMLElement& rootNode); //toDO: change the node to element
 
 } // namespace utilities
 

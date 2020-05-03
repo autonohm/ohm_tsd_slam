@@ -25,7 +25,7 @@ bool RandomNormalMatcher::init(const std::string& configXml)
   tinyxml2::XMLDocument doc;
 
   doc.LoadFile(configXml.c_str());
-  tinyxml2::XMLNode* rootNode = doc.RootElement();
+  tinyxml2::XMLElement* rootNode = doc.RootElement();
 
   if(!rootNode)
   {

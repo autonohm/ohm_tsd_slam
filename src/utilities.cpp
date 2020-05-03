@@ -74,7 +74,7 @@ obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf)
   return ob;
 }
 
-bool loadTyniXmlParameter(unsigned int& param, const std::string& tag, tinyxml2::XMLNode& rootNode)
+bool loadTyniXmlParameter(unsigned int& param, const std::string& tag, tinyxml2::XMLElement& rootNode)
 {
   tinyxml2::XMLElement* element = rootNode.FirstChildElement(tag.c_str());
   if(!element)
@@ -88,7 +88,7 @@ bool loadTyniXmlParameter(unsigned int& param, const std::string& tag, tinyxml2:
     return true;
 }
 
-bool loadTyniXmlParameter(int& param, const std::string& tag, tinyxml2::XMLNode& rootNode)
+bool loadTyniXmlParameter(int& param, const std::string& tag, tinyxml2::XMLElement& rootNode)
 {
   tinyxml2::XMLElement* element = rootNode.FirstChildElement(tag.c_str());
   if(!element)
@@ -100,7 +100,7 @@ bool loadTyniXmlParameter(int& param, const std::string& tag, tinyxml2::XMLNode&
   std::cout << __PRETTY_FUNCTION__ << " " << tag << " : " << param << std::endl;
   return true;
 }
-bool loadTyniXmlParameter(float& param, const std::string& tag, tinyxml2::XMLNode& rootNode)
+bool loadTyniXmlParameter(float& param, const std::string& tag, tinyxml2::XMLElement& rootNode)
 {
   tinyxml2::XMLElement* element = rootNode.FirstChildElement(tag.c_str());
   if(!element)
@@ -112,7 +112,7 @@ bool loadTyniXmlParameter(float& param, const std::string& tag, tinyxml2::XMLNod
   std::cout << __PRETTY_FUNCTION__ << " " << tag << " : " << param << std::endl;
   return true;
 }
-bool loadTyniXmlParameter(double& param, const std::string& tag, tinyxml2::XMLNode& rootNode)
+bool loadTyniXmlParameter(double& param, const std::string& tag, tinyxml2::XMLElement& rootNode)
 {
   tinyxml2::XMLElement* element = rootNode.FirstChildElement(tag.c_str());
   if(!element)

@@ -262,9 +262,10 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error malformed config. local_offset is missing");
     throw "Invalid robot config file";
   }
-  //utilities::loadTyniXmlParameter(localXoffset, "x", element);
+  // if(!utilities::loadTyniXmlParameter(localXoffset, std::string("x"), *element))
+  //   throw "Invalid robot config file";
 
-  tinyxml2::XMLError result = element->QueryDoubleAttribute("x", &localXoffset);
+ tinyxml2::XMLError result = element->QueryDoubleAttribute("x", &localXoffset);
   if(result != tinyxml2::XML_SUCCESS)
   {
     std::cout << __PRETTY_FUNCTION__ << " error malformed config. local offset x loading failed" << std::endl;
@@ -405,11 +406,6 @@ else
   double        inc       = scan.angle_increment;
   double        angle_min = scan.angle_min;
   vector<float> ranges    = scan.ranges;
-  std::cout << __PRETTY_FUNCTION__ << " min inc " << angle_min << " " << inc << std::endl;
-  std::cout << __PRETTY_FUNCTION__ << " angle min + size * incr = " << angle_min + static_cast<double>(scan.ranges.size() - 1) * inc << std::endl;
-  std::cout << __PRETTY_FUNCTION__ << " angle max " << scan.angle_max << std::endl;
-
-
 
   if(scan.angle_increment < 0.0 && scan.angle_min > 0)
   {
@@ -448,7 +444,7 @@ else
     }
     catch(tf::TransformException& ex)
     {
-      ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " Error looking up static transorm " << ex.what() << " The node will use the sensor frame.");
+      ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " Error looking up static transform " << ex.what() << " The node will use the sensor frame.");
       _tfFrameSensorMount.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
       _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
     }

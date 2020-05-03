@@ -79,7 +79,7 @@ bool Registration::init(const std::string& configFileXml)
   tinyxml2::XMLDocument doc;
 
   doc.LoadFile(configFileXml.c_str());
-  tinyxml2::XMLNode* rootNode = doc.RootElement();
+  tinyxml2::XMLElement* rootNode = doc.RootElement();
 
   if(!rootNode)
   {

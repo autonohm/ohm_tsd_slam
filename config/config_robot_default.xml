@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config_robot>
+  <local_offset x = "0.0" y = "0.0" yaw = "0.0"/>
+  <range_thresh max = "30.0" min = "0.001" low_reflectivity = "2.0"/> 
+  <footprint width = "1.0" height = "1.0" x_offset = "0.28"/>
+  <tf_frame val="base_footprint"/>
+</config_robot>

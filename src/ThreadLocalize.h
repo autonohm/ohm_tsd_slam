@@ -265,7 +265,7 @@ private:
    */
   double _lasMinRange;
 
-  //tf::StampedTransform _tfFrameSensorMount;
+  tf::StampedTransform _tfFrameSensorMount;
 
   std::unique_ptr<Registration> _registration;
 

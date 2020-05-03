@@ -25,7 +25,7 @@ lamshort: 0.08
 maxAngleDiff: 1.5
 maxAnglePenalty: 0.5
 las_min_range: 0.26
-min_range: 0.0
+min_range: 0.001
 max_range: 30.0
 truncation_radius: 10
 use_object_inflation: true

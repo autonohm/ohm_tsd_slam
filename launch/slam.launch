@@ -41,5 +41,6 @@
         <param name="thresh_min_pose_change_lin" type = "double" value = "0.05"/>
         <param name="thresh_min_pose_change_lin" type = "double" value = "0.03"/>
         <param name="/tsd_pdf/config_file" type = "string" value = "$(find ohm_tsd_slam)/config/config_tsdf_pdf_matcher.xml"/> 
+        <param name="/file_config_robot" type = "string" value = "$(find ohm_tsd_slam)/config/config_robot_default.xml"/>
     </node>
 </launch>

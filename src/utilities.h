@@ -52,7 +52,7 @@ obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf); // TODO: utilit
 bool loadTyniXmlParameter(unsigned int& param, const std::string& tag, tinyxml2::XMLNode& rootNode);
 bool loadTyniXmlParameter(int& param, const std::string& tag, tinyxml2::XMLNode& rootNode);
 bool loadTyniXmlParameter(float& param, const std::string& tag, tinyxml2::XMLNode& rootNode);
-bool loadTyniXmlParameter(double& param, const std::string& tag, tinyxml2::XMLNode& rootNode);
+bool loadTyniXmlParameter(double& param, const std::string& tag, tinyxml2::XMLNode& rootNode); //toDO: change the node to element
 
 } // namespace utilities
 

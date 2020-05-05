@@ -76,7 +76,7 @@ SlamNode::SlamNode(void)
       continue;
     if(element->Name() == std::string("robot"))
     {
-      _localizers.push_back(new ThreadLocalize(_grid, _threadMapping, &_nh, element->DoubleAttribute("offset_x"), element->DoubleAttribute("offset_y"),
+      _localizers.push_back(new ThreadLocalize(_grid, _threadMapping, element->DoubleAttribute("offset_x"), element->DoubleAttribute("offset_y"),
                                                 element->Attribute("namespace")));
     }
     else

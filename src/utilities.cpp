@@ -1,6 +1,7 @@
 #include "utilities.h"
 #include <assert.h>
 #include <cmath>
+#include <ros/ros.h>
 
 namespace utilities
 {
@@ -74,6 +75,17 @@ obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf)
   return ob;
 }
 
+const tinyxml2::XMLElement* getTinyxmlChildElement(const std::string& tag, const tinyxml2::XMLElement* rootNode)
+{
+  const tinyxml2::XMLElement* element = rootNode->FirstChildElement(tag.c_str());
+  if(!element)
+  {
+    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error malformed config. local_offset is missing");
+    throw "Invalid robot config file";
+  }
+  return element;
+}
+
 bool loadTyniXmlParameter(unsigned int& param, const std::string& tag, tinyxml2::XMLElement& rootNode)
 {
   tinyxml2::XMLElement* element = rootNode.FirstChildElement(tag.c_str());
@@ -124,4 +136,17 @@ bool loadTyniXmlParameter(double& param, const std::string& tag, tinyxml2::XMLEl
   std::cout << __PRETTY_FUNCTION__ << " " << tag << " : " << param << std::endl;
   return true;
 }
+
+void loadTinyXmlAttribute(double& param, const std::string& tag, const tinyxml2::XMLElement& element)
+{
+  tinyxml2::XMLError result = element.QueryDoubleAttribute(tag.c_str(), &param);
+  if(result != tinyxml2::XML_SUCCESS)
+  {
+    ROS_ERROR_STREAM(__PRETTY_FUNCTION__  << " error malformed config. " << element.Value() << "->" << tag << " loading failed ");
+    throw "Invalid robot config file";
+  }
+  else
+    ROS_INFO_STREAM(__PRETTY_FUNCTION__<< tag << "  " << param);
+}
+
 } // namespace utilities

@@ -6,6 +6,7 @@
 #include <ros/ros.h>
 #include <tf/tf.h>
 #include <tinyxml2.h>
+#include <string>
 
 namespace utilities
 {
@@ -49,10 +50,13 @@ tf::Transform obviouslyMatrix3x3ToTf(obvious::Matrix& ob); // TODO: utilities
  */
 obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf); // TODO: utilities
 
+const tinyxml2::XMLElement* getTinyxmlChildElement(const std::string& tag, const tinyxml2::XMLElement* rootNode);
 bool loadTyniXmlParameter(unsigned int& param, const std::string& tag, tinyxml2::XMLElement& rootNode);
 bool loadTyniXmlParameter(int& param, const std::string& tag, tinyxml2::XMLElement& rootNode);
 bool loadTyniXmlParameter(float& param, const std::string& tag, tinyxml2::XMLElement& rootNode);
-bool loadTyniXmlParameter(double& param, const std::string& tag, tinyxml2::XMLElement& rootNode); //toDO: change the node to element
+bool loadTyniXmlParameter(double& param, const std::string& tag, tinyxml2::XMLElement& rootNode); //toDO: find a better name than parameter
+
+void loadTinyXmlAttribute(double& param, const std::string& tag, const tinyxml2::XMLElement& element);
 
 } // namespace utilities
 

@@ -16,7 +16,6 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/tf.h>
 #include <unistd.h>
-#include "utilities.h"
 
 /// todo whats TRACE kommt unten nochmal
 //#define TRACE
@@ -24,76 +23,57 @@
 namespace ohm_tsd_slam
 {
 
-ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, const double xOffset, const double yOffset,
-                                const std::string& nameSpace)
+ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, const double xOffset, const double yOffset, const std::string& nameSpace)
     : ThreadSLAM(*grid)
     , _nameSpace(nameSpace)
-    , _nh(nh)
     , _mapper(*mapper)
-    , _sensor(NULL)
-    , /// todo nullptr?
-    _initialized(false)
+    , _sensor(nullptr)
+    , _initialized(false)
     , _gridWidth(grid->getCellsX() * grid->getCellSize())
     , _gridHeight(grid->getCellsY() * grid->getCellSize())
     , _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset))
     , _gridOffSetY(-1.0 * (grid->getCellsY() * grid->getCellSize() * 0.5 + yOffset))
-    , _xOffset(xOffset)
-    , _yOffset(yOffset)
     , _offsetInitial(Eigen::Vector2d(xOffset, yOffset))
     , _stampLaser(ros::Time::now())
+    , _modelCoords(nullptr)
+    , _modelNormals(nullptr)
+    , _maskM(nullptr)
+    , _maskS(nullptr)
+    , _lastPose(std::make_unique<obvious::Matrix>(3, 3))
+    , _rayCaster(std::make_unique<obvious::RayCastPolar2D>()),
+    _reverseScan(false)
 {
   std::string topicPose;
   std::string topicPoseCov;
-  int         iVar = 0;
-
   std::string topicLaser;
   std::string topicStartStopSLAM;
 
-  // std::string::iterator it = _nameSpace.end() - 1; // stores last symbol of nameSpace
-  // if(*it != '/' && _nameSpace.size() > 0)
-  //   _nameSpace += "/";
-
+  ros::NodeHandle nh;
   ros::NodeHandle prvNh("~");
-
-  
 
   prvNh.param(_nameSpace + "topic_pose", topicPose, std::string("default_ns/pose"));
   prvNh.param<std::string>(_nameSpace + "topic_pose_cov", topicPoseCov, "default_ns/pose_cov");
   prvNh.param("tf_base_frame", _tfBaseFrameId, std::string("/map"));
-  prvNh.param(_nameSpace + "tf_child_frame", _tfChildFrameId, std::string("default_ns/laser"));
-  prvNh.param<double>("laser_min_range", _lasMinRange, 0.0); // TODO: this parameter applied in the push of obviously already
-  prvNh.param<int>(_nameSpace + "registration_mode", iVar, 4);
-
+  prvNh.param<double>("laser_min_range", _lasMinRange, 0.0); 
   prvNh.param<double>(_nameSpace + "thresh_min_pose_change_lin", _threshMinPoseChangeLin, 0.05); // TODO: this should not be a launch file parameter
   prvNh.param<double>(_nameSpace + "thresh_min_pose_change_ang", _threshMinPoseChangeAng, 0.03); // TODO: this should not be a launch file parameter
-
   prvNh.param<std::string>(_nameSpace + "topic_laser", topicLaser, _nameSpace + "/scan");
   prvNh.param<std::string>(_nameSpace + "topic_start_stop_slam", topicStartStopSLAM, _nameSpace + "/start_stop_slam");
 
   prvNh.param<double>(_nameSpace + "cov_matched", _covMatched, 1e-17);
   prvNh.param<double>(_nameSpace + "cov_error", _covError, 100.0);
 
-  _subsLaser     = _nh->subscribe(topicLaser, 1, &ThreadLocalize::callBackLaser, this);
-  _startStopSLAM = _nh->advertiseService(topicStartStopSLAM, &ThreadLocalize::callBackStartStopSLAM, this);
+  _subsLaser     = nh.subscribe(topicLaser, 1, &ThreadLocalize::callBackLaser, this);
+  _startStopSLAM = nh.advertiseService(topicStartStopSLAM, &ThreadLocalize::callBackStartStopSLAM, this);
 
-  _modelCoords  = NULL;
-  _modelNormals = NULL;
-  _maskM        = NULL;
+  _posePub                     = nh.advertise<geometry_msgs::PoseStamped>(topicPose, 1);
+  
 
-  //_scene     = NULL;
-  _maskS     = NULL;
-  _lastPose  = new obvious::Matrix(3, 3);
-  _rayCaster = new obvious::RayCastPolar2D();
-
-  _posePub                     = _nh->advertise<geometry_msgs::PoseStamped>(topicPose, 1);
+  _pubPoseStCov                   = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>(topicPoseCov, 1);
+  _poseStampedCov.header.frame_id = _tfBaseFrameId;
   _poseStamped.header.frame_id = _tfBaseFrameId;
   _tf.frame_id_                = _tfBaseFrameId;
-  _tf.child_frame_id_          = _nameSpace + _tfChildFrameId;
-
-  _pubPoseStCov                   = _nh->advertise<geometry_msgs::PoseWithCovarianceStamped>(topicPoseCov, 1);
-  _poseStampedCov.header.frame_id = _tfBaseFrameId;
-
-  _reverseScan = false;
+  
 }
 
 ThreadLocalize::~ThreadLocalize()
@@ -114,9 +94,9 @@ void ThreadLocalize::callBackLaser(const sensor_msgs::LaserScan& scan)
     if(iter < _lasMinRange)
       iter = 0.0;
     // if((std::isnan(iter)) || (std::isinf(iter)))
-    //   iter = 0.0;  
+    //   iter = 0.0;
   }
-  //std::reverse(scanCopy->ranges.begin(), scanCopy->ranges.end());
+  // std::reverse(scanCopy->ranges.begin(), scanCopy->ranges.end());
   //_reverseScan = true;
   if(!_initialized)
   {
@@ -144,8 +124,9 @@ bool ThreadLocalize::callBackStartStopSLAM(std_srvs::SetBool::Request& req, std_
 {
   if(req.data)
   {
+    ros::NodeHandle nh;
     std::cout << __PRETTY_FUNCTION__ << " stored toppic is " << _subsLaser.getTopic() << std::endl;
-    _subsLaser  = _nh->subscribe(_subsLaser.getTopic(), 1, &ThreadLocalize::callBackLaser, this);
+    _subsLaser  = nh.subscribe(_subsLaser.getTopic(), 1, &ThreadLocalize::callBackLaser, this);
     res.message = "started topic " + _subsLaser.getTopic();
   }
   else
@@ -186,7 +167,7 @@ void ThreadLocalize::eventLoop(void)
     const unsigned int measurementSize = _sensor->getRealMeasurementSize();
 
     // reconstruction
-    unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(&_grid, _sensor, _modelCoords, _modelNormals, _maskM);
+    unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(&_grid, _sensor.get(), _modelCoords, _modelNormals, _maskM);
     if(validModelPoints == 0)
     {
       ROS_ERROR_STREAM("Localizer (" << _nameSpace << ") error! Raycasting found no coordinates! \n");
@@ -215,10 +196,10 @@ void ThreadLocalize::eventLoop(void)
       obvious::Matrix curPose = _sensor->getTransformation();
       sendTransform(&curPose);
       // update map if necessary
-      if(utilities::isPoseChangeSignificant(_lastPose, &curPose, _threshMinPoseChangeLin, _threshMinPoseChangeAng))
+      if(utilities::isPoseChangeSignificant(_lastPose.get(), &curPose, _threshMinPoseChangeLin, _threshMinPoseChangeAng))
       {
         *_lastPose = curPose;
-        _mapper.queuePush(_sensor);
+        _mapper.queuePush(_sensor.get());
       }
     }
   }
@@ -240,9 +221,9 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   ros::NodeHandle prvNh("~");
   std::string     fileConfigRobot;
   prvNh.param<std::string>(_nameSpace + "file_config_robot", fileConfigRobot, "/home/phil/workspace/ros/src/ohm_tsd_slam/config/config_robot_default.xml");
-  
+
   tinyxml2::XMLDocument doc;
-  tinyxml2::XMLError loadState = doc.LoadFile(fileConfigRobot.c_str());
+  tinyxml2::XMLError    loadState = doc.LoadFile(fileConfigRobot.c_str());
   if(loadState != tinyxml2::XML_SUCCESS)
   {
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " load config file " << fileConfigRobot << " failed with state " << loadState);
@@ -254,150 +235,27 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
     ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " no node in xml file: " << fileConfigRobot.c_str());
     throw "Invalid robot config file";
   }
-  // if(rootNode->Value() != )  //toDo: put the namespace to this check wether the opened xml contains the correct root node
-  tinyxml2::XMLElement* element = nullptr;
-  element                       = rootNode->FirstChildElement("local_offset");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error malformed config. local_offset is missing");
-    throw "Invalid robot config file";
-  }
-  // if(!utilities::loadTyniXmlParameter(localXoffset, std::string("x"), *element))
-  //   throw "Invalid robot config file";
+  const tinyxml2::XMLElement* element = nullptr;
+  element                             = utilities::getTinyxmlChildElement(std::string("local_offset"), rootNode);
+  utilities::loadTinyXmlAttribute(localXoffset, std::string("x"), *element);
+  utilities::loadTinyXmlAttribute(localYoffset, std::string("y"), *element);
+  utilities::loadTinyXmlAttribute(localYawOffset, std::string("yaw"), *element);
 
- tinyxml2::XMLError result = element->QueryDoubleAttribute("x", &localXoffset);
-  if(result != tinyxml2::XML_SUCCESS)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " error malformed config. local offset x loading failed" << std::endl;
-    throw "Invalid robot config file";
-  }
-  else
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " local x offset " << localXoffset);
+  element = utilities::getTinyxmlChildElement(std::string("range_thresh"), rootNode);
+  utilities::loadTinyXmlAttribute(maxRange, std::string("max"), *element);
+  utilities::loadTinyXmlAttribute(minRange, std::string("min"), *element);
+  utilities::loadTinyXmlAttribute(lowReflectivityRange, std::string("low_reflectivity"), *element);
 
-  result = element->QueryDoubleAttribute("y", &localYoffset);
-  if(result != tinyxml2::XML_SUCCESS)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " error malformed config. local offset y loading failed" << std::endl;
-    throw "Invalid robot config file";
-  }
-  else
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " local y offset " << localYoffset);
+  element = utilities::getTinyxmlChildElement(std::string("footprint"), rootNode);
+  utilities::loadTinyXmlAttribute(footPrintWidth, std::string("width"), *element);
+  utilities::loadTinyXmlAttribute(footPrintHeight, std::string("height"), *element);
+  utilities::loadTinyXmlAttribute(footPrintXoffset, std::string("x_offset"), *element);
 
-  result = element->QueryDoubleAttribute("yaw", &localYawOffset);
-  if(result != tinyxml2::XML_SUCCESS)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " error malformed config. local offset yaw loading failed" << std::endl;
-    throw "Invalid robot config file";
-  }
-  else
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " local yaw offset " << localYawOffset);
-
-  element = nullptr;
-  element = rootNode->FirstChildElement("range_thresh");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error malformed config. range thresh is missing");
-    throw "Invalid robot config file";
-  }
-
-  result = element->QueryDoubleAttribute("max", &maxRange);
-  if(result != tinyxml2::XML_SUCCESS)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " error malformed config. Max range loading failed" << std::endl;
-    throw "Invalid robot config file";
-  }
-  else
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " maxrange " << maxRange);
-
-  result = element->QueryDoubleAttribute("min", &minRange);
-  if(result != tinyxml2::XML_SUCCESS)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " error malformed config. min range loading failed" << std::endl;
-    throw "Invalid robot config file";
-  }
-  else
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " min range " << minRange);
-
-  result = element->QueryDoubleAttribute("low_reflectivity", &lowReflectivityRange);
-  if(result != tinyxml2::XML_SUCCESS)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " error malformed config. Low_reflectivity range loading failed" << std::endl;
-    throw "Invalid robot config file";
-  }
-  else
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " low reflceljdf  " << lowReflectivityRange);
+  prvNh.param(_nameSpace + "tf_child_frame", _tfChildFrameId, std::string("default_ns/laser"));
   
-
-  element = nullptr;
-  element = rootNode->FirstChildElement("footprint");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error malformed config. Footprint is missing");
-    throw "Invalid robot config file";
-  }
-  result = element->QueryDoubleAttribute("width", &footPrintWidth);
-  if(result != tinyxml2::XML_SUCCESS)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " error malformed config. Footprint width loading failed" << std::endl;
-    throw "Invalid robot config file";
-  }
-  else
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " footprint width  " << footPrintWidth);
-
-  result = element->QueryDoubleAttribute("height", &footPrintHeight);
-  if(result != tinyxml2::XML_SUCCESS)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " error malformed config. Footprint height loading failed" << std::endl;
-    throw "Invalid robot config file";
-  }
-else
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " footprintheight " << footPrintHeight);
-
-  result = element->QueryDoubleAttribute("x_offset", &footPrintXoffset);
-  if(result != tinyxml2::XML_SUCCESS)
-  {
-    std::cout << __PRETTY_FUNCTION__ << " error malformed config. Footprint x offset loading failed" << std::endl;
-    throw "Invalid robot config file";
-  }
-  else
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " footprint x offset " << footPrintXoffset);
-
-  element = nullptr;
-  element = rootNode->FirstChildElement("tf_frame");
-  if(!element)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " error malformed config. Tf_frame is missing");
-    throw "Invalid robot config file";
-  }
-  
-  const char* var = element->Attribute("val");
-  if(!var)
-  {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " hallali");
-    throw "Invalid robot config file";
-  }
-  std::string tfFrame(var);
-  std::cout << __PRETTY_FUNCTION__ << " frame is " << tfFrame << std::endl;
-
-  std::cout << localXoffset << " " << localYoffset << " " << localYawOffset << " " << maxRange << " " << minRange << " " << lowReflectivityRange << " "
-            << footPrintWidth << " " << footPrintHeight << " " << footPrintXoffset << std::endl;
-
-  // prvNh.param<double>(_nameSpace + "local_offset_x", localXoffset, 0.0);
-  // prvNh.param<double>(_nameSpace + "local_offset_y", localYoffset, 0.0);
-  // prvNh.param<double>(_nameSpace + "local_offset_yaw", localYawOffset, 0.0);
-  // prvNh.param<double>(_nameSpace + "max_range", maxRange, 30.0);
-  // prvNh.param<double>(_nameSpace + "min_range", minRange, 0.001);
-  // prvNh.param<double>(_nameSpace + "low_reflectivity_range", lowReflectivityRange, 2.0);
-  // prvNh.param<double>(_nameSpace + "footprint_width", footPrintWidth, 1.0);
-  // prvNh.param<double>(_nameSpace + "footprint_height", footPrintHeight, 1.0);
-  // prvNh.param<double>(_nameSpace + "footprint_x_offset", footPrintXoffset, 0.28);
-
-  std::cout << localXoffset << " " << localYoffset << " " << localYawOffset << " " << maxRange << " " << minRange << " " << lowReflectivityRange << " "
-            << footPrintWidth << " " << footPrintHeight << " " << footPrintXoffset << std::endl;
-
   const double phi    = localYawOffset;
-  const double startX = _gridWidth * 0.5 + _xOffset + localXoffset;
-  const double startY = _gridHeight * 0.5 + _yOffset + localYoffset;
+  const double startX = _gridWidth * 0.5 + _offsetInitial.x() + localXoffset;
+  const double startY = _gridHeight * 0.5 + _offsetInitial.y() + localYoffset;
   double       tf[9]  = {std::cos(phi), -std::sin(phi), startX, std::sin(phi), std::cos(phi), startY, 0, 0, 1};
 
   obvious::Matrix Tinit(3, 3);
@@ -409,13 +267,13 @@ else
 
   if(scan.angle_increment < 0.0 && scan.angle_min > 0)
   {
-    std::cout << __PRETTY_FUNCTION__ << " reverse this shit" << std::endl;
+    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " localizer automatically set to reverse mode ");
     _reverseScan = true;
     inc          = -inc;
     angle_min    = -angle_min;
     std::reverse(ranges.begin(), ranges.end());
   }
-  _sensor = new obvious::SensorPolar2D(ranges.size(), inc, angle_min, maxRange, minRange, lowReflectivityRange);
+  _sensor = std::make_unique<obvious::SensorPolar2D>(ranges.size(), inc, angle_min, maxRange, minRange, lowReflectivityRange);
   _sensor->setRealMeasurementData(ranges, 1.0);
 
   _sensor->setStandardMask();
@@ -424,7 +282,7 @@ else
   if(!_grid.freeFootprint(t, footPrintWidth, footPrintHeight))
     ROS_ERROR_STREAM("Localizer (" << _nameSpace << ") warning! Footprint could not be freed! \n");
   if(!_mapper.initialized())
-    _mapper.initPush(_sensor);
+    _mapper.initPush(_sensor.get());
   _initialized = true;
   //_sensor->transform()
   _registration                      = std::make_unique<Registration>(_grid, *_sensor); // TODO: registration mode
@@ -436,28 +294,30 @@ else
   _maskM                             = new bool[measurementSize];
   *_lastPose                         = _sensor->getTransformation();
 
-  if(_tfListener.waitForTransform(scan.header.frame_id, tfFrame, ros::Time::now(), ros::Duration(3.0)))
+  if(_tfListener.waitForTransform(scan.header.frame_id, _tfChildFrameId, ros::Time::now(), ros::Duration(3.0)))
   {
     try
     {
-      _tfListener.lookupTransform(scan.header.frame_id, tfFrame, ros::Time(0), _tfFrameSensorMount);
+      _tfListener.lookupTransform(scan.header.frame_id, _tfChildFrameId, ros::Time(0), _tfFrameSensorMount);
     }
     catch(tf::TransformException& ex)
     {
       ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " Error looking up static transform " << ex.what() << " The node will use the sensor frame.");
       _tfFrameSensorMount.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
       _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+      _tfChildFrameId = scan.header.frame_id;
     }
-    _poseStamped.header.frame_id = tfFrame;
+    _poseStamped.header.frame_id = _tfChildFrameId;
   }
   else
   {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " Time out waiting for static transform from " << scan.header.frame_id << " to " << tfFrame);
+    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " Time out waiting for static transform from " << scan.header.frame_id << " to " << _tfChildFrameId);
     _tfFrameSensorMount.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
     _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-    _poseStamped.header.frame_id = scan.header.frame_id;
+    _tfChildFrameId = scan.header.frame_id;
   }
-
+  _tf.child_frame_id_ = _tfChildFrameId;
+  
   this->unblock(); // Method from ThreadSLAM to set a thread from sleep mode to run mode
 }
 
@@ -466,13 +326,13 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
   const double curTheta = utilities::calcAngle(T);
   const double posX     = (*T)(0, 2) + _gridOffSetX;
   const double posY     = (*T)(1, 2) + _gridOffSetY;
-  _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+  _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0)); //toDO: this is here bc of problems with gazebo. Should be removed later
 
   tf::Quaternion quat;
   quat.setEuler(0.0, 0.0, curTheta);
   _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
   _tf.setRotation(quat);
-  _tf.child_frame_id_ = _tfFrameSensorMount.child_frame_id_;
+  
   _tf.setData(_tf * _tfFrameSensorMount);
 
   //_poseStamped.header.stamp = ros::Time::now();
@@ -490,14 +350,11 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
   _posePub.publish(_poseStamped);
   _tfBroadcaster.sendTransform(_tf);
 
-  _poseStampedCov.header.stamp = _stampLaser;
-  _poseStampedCov.pose.pose = _poseStamped.pose;
-  _poseStampedCov.pose.covariance = {_covMatched,         0.0,         0.0,         0.0,         0.0,          0.0,
-                                             0.0, _covMatched,         0.0,         0.0,         0.0,          0.0,
-                                             0.0,         0.0, _covMatched,         0.0,         0.0,          0.0,
-                                             0.0,         0.0,         0.0, _covMatched,         0.0,          0.0,
-                                             0.0,         0.0,         0.0,         0.0, _covMatched,          0.0,
-                                             0.0,         0.0,         0.0,         0.0,         0.0,  _covMatched};
+  _poseStampedCov.header.stamp    = _stampLaser;
+  _poseStampedCov.pose.pose       = _poseStamped.pose;
+  _poseStampedCov.pose.covariance = {_covMatched, 0.0, 0.0,         0.0, 0.0,         0.0, 0.0, _covMatched, 0.0, 0.0,         0.0, 0.0,
+                                     0.0,         0.0, _covMatched, 0.0, 0.0,         0.0, 0.0, 0.0,         0.0, _covMatched, 0.0, 0.0,
+                                     0.0,         0.0, 0.0,         0.0, _covMatched, 0.0, 0.0, 0.0,         0.0, 0.0,         0.0, _covMatched};
   _pubPoseStCov.publish(_poseStampedCov);
 }
 
@@ -521,15 +378,12 @@ void ThreadLocalize::sendNanTransform()
   _posePub.publish(_poseStamped);
   _tfBroadcaster.sendTransform(_tf);
   _poseStampedCov.header.stamp = _stampLaser;
-  _poseStampedCov.pose.pose = _poseStamped.pose;
+  _poseStampedCov.pose.pose    = _poseStamped.pose;
 
-  _poseStampedCov.pose.covariance = {_covError,         0.0,         0.0,         0.0,         0.0,          0.0,
-                                             0.0, _covError,         0.0,         0.0,         0.0,          0.0,
-                                             0.0,         0.0, _covError,         0.0,         0.0,          0.0,
-                                             0.0,         0.0,         0.0, _covError,         0.0,          0.0,
-                                             0.0,         0.0,         0.0,         0.0, _covError,          0.0,
-                                             0.0,         0.0,         0.0,         0.0,         0.0,  _covError};
- _pubPoseStCov.publish(_poseStampedCov);
+  _poseStampedCov.pose.covariance = {_covError, 0.0, 0.0,       0.0, 0.0,       0.0, 0.0, _covError, 0.0, 0.0,       0.0, 0.0,
+                                     0.0,       0.0, _covError, 0.0, 0.0,       0.0, 0.0, 0.0,       0.0, _covError, 0.0, 0.0,
+                                     0.0,       0.0, 0.0,       0.0, _covError, 0.0, 0.0, 0.0,       0.0, 0.0,       0.0, _covError};
+  _pubPoseStCov.publish(_poseStampedCov);
 }
 
 } // namespace ohm_tsd_slam

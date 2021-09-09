@@ -147,9 +147,10 @@ add_executable(slam_node src/slam_node.cpp
 # )
 #SET(GRAPHICLIBS obgraphic vtkHybrid glut GL jpeg)
 target_link_libraries(slam_node
-                                 ${catkin_LIBRARIES}
+
+${catkin_LIBRARIES}
                                  obvision
-                                 obcore
+                                 obcore                                                                  
  #                                ${GRAPHICLIBS}
                                  gsl
                                  gslcblas
@@ -158,13 +159,15 @@ target_link_libraries(slam_node
                                  ${Boost_LIBRARIES}
                                  tinyxml2
                                  Eigen3::Eigen
+                                 lz4
                                  )
 
 target_link_libraries(test_reg
                                  ${catkin_LIBRARIES}                                 
-                                 obcore
+                                 
  #                                ${GRAPHICLIBS}
                                  obvision
+                                 obcore
                                  gsl
                                  gslcblas
                                  ann
@@ -172,6 +175,7 @@ target_link_libraries(test_reg
                                  ${Boost_LIBRARIES}
                                  tinyxml2
                                  Eigen3::Eigen
+                                 lz4
                                  )                                 
 
 #############

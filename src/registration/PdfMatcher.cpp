@@ -102,4 +102,5 @@ bool PdfMatcher::match(obvious::SensorPolar2D& sensor, obvious::Matrix* M, bool*
     return false;
   }
   T = _matcher->match(M, maskM, NULL, S, maskS, obvious::deg2rad(_ranPhiMax), _regTrnsMax, sensor.getAngularResolution());
+  return true;
 }

@@ -71,4 +71,5 @@ bool TsdPdfMatcher::match(obvious::SensorPolar2D& sensor, obvious::Matrix* M, bo
     return false;
   }
   T = _matcher->match(sensor.getTransformation(), M, maskM, NULL, S, maskS, obvious::deg2rad(_ranPhiMax), _transMax, sensor.getAngularResolution());
+  return true;
 }

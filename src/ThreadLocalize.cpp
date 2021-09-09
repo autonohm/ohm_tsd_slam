@@ -179,9 +179,9 @@ void ThreadLocalize::eventLoop(void)
 
     obvious::Matrix T(3, 3);
 
-    std::cout << __PRETTY_FUNCTION__ << " here? " << std::endl;
+    //std::cout << __PRETTY_FUNCTION__ << " here? " << std::endl;
     const bool regErrorT = _registration->doRegistration(T, _modelCoords, _modelNormals, _maskM, validModelPoints, _coordsScene, _maskS);
-    std::cout << __PRETTY_FUNCTION__ << " no" << std::endl;
+    //std::cout << __PRETTY_FUNCTION__ << " no" << std::endl;
 
     _tf.stamp_ = ros::Time::now();
 
@@ -298,6 +298,7 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   {
     try
     {
+      std::cout << __PRETTY_FUNCTION__ << " looking up " << scan.header.frame_id << " " <<_tfChildFrameId << std::endl;
       _tfListener.lookupTransform(scan.header.frame_id, _tfChildFrameId, ros::Time(0), _tfFrameSensorMount);
     }
     catch(tf::TransformException& ex)
@@ -305,8 +306,9 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
       ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " Error looking up static transform " << ex.what() << " The node will use the sensor frame.");
       _tfFrameSensorMount.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
       _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-      _tfChildFrameId = scan.header.frame_id;
+      //_tfChildFrameId = scan.header.frame_id;
     }
+    _tfFrameSensorMount.getOrigin().setZ(0.0);//   (tf::Vector3(_tfChildFrameId.  getOrigin().x(), _tfChildFrameId.getOrigin().y(), 0.0));
     _poseStamped.header.frame_id = _tfChildFrameId;
   }
   else
@@ -316,6 +318,7 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
     _tfFrameSensorMount.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
     _tfChildFrameId = scan.header.frame_id;
   }
+  std::cout << __PRETTY_FUNCTION__ << " tfchildframe " << _tfChildFrameId << std::endl;
   _tf.child_frame_id_ = _tfChildFrameId;
   
   this->unblock(); // Method from ThreadSLAM to set a thread from sleep mode to run mode
@@ -345,9 +348,10 @@ void ThreadLocalize::sendTransform(obvious::Matrix* T)
   _poseStamped.pose.orientation.x = _tf.getRotation().x();
   _poseStamped.pose.orientation.y = _tf.getRotation().y();
   _poseStamped.pose.orientation.z = _tf.getRotation().z();
-  //  _tf.stamp_ = ros::Time::now();
+    _tf.stamp_ = _stampLaser;
 
   _posePub.publish(_poseStamped);
+  //std::cout << __PRETTY_FUNCTION__ << "real frame id " << _tf.child_frame_id_ << std::endl;
   _tfBroadcaster.sendTransform(_tf);
 
   _poseStampedCov.header.stamp    = _stampLaser;

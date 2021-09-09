@@ -25,14 +25,16 @@
         <param name="map_size" type="int" value="$(arg map_size)" />    <!-- map size -->
         <param name="cellsize" type="double" value="$(arg cellsize)" />    <!-- cell size in meters -->
         <param name="occ_grid_time_interval" type="double" value="2.0" />    <!-- frequency to publish map -->
-        <param name="file_config_xml_slam" type="string" value="$(arg config_slam)"/>
+        <param name="file_config_xml_slam" type="string" value="$(find ohm_tsd_slam)/config/config_slam.xml"/>
+        <param name="registration/config_file" type="string" value = "$(find ohm_tsd_slam)/config/config_registration.xml"/>
+        <param name="tsd_pdf/config_file" type = "string" value = "$(find ohm_tsd_slam)/config/config_tsdf_pdf_matcher.xml"/>
         <param name="tf_base_frame" type="string" value="$(arg tf_base_frame)" />
 <!-- robot parameters use namespaces for multi slam -->   <!-- TODO: pass namespace to slam config xml -->
         
         <param name="topic_pose" type="string" value="pose" />    <!-- topic for robot's pose -->
         <param name="topic_laser" type="string" value="/scan" />    <!-- topic to receive laser scan -->
         
-        <param name="tf_child_frame" type="string" value="laser" />
+        <param name="tf_child_frame" type="string" value="base_footprint" />
         <param name="tf_odom_frame"  type="string" value="odom_combined" />
         <param name="footprint_width"    type="double"  value="1.0" />    <!-- width of robot in meters -->
         <param name="footprint_height"   type="double"  value="1.0" />    <!-- length of robot in meters -->

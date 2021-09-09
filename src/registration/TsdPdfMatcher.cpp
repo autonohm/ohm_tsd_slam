@@ -8,7 +8,7 @@ TsdPdfMatcher::TsdPdfMatcher(obvious::SensorPolar2D& sensor, obvious::TsdGrid& g
 {
   ros::NodeHandle prvNh("~");
   prvNh.param<std::string>(nameSpace + "/tsd_pdf/config_file", _configXml,
-                           "/home/phil/workspace/ros/src/ohm_tsd_slam/config/"
+                           "/home/user/workspace/ros/src/ohm_tsd_slam/config/"
                            "config_tsdf_pdf_matcher.xml");
   if(!_configXml.size())
     throw "config not found";

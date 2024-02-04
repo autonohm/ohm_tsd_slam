@@ -3,20 +3,27 @@
  *
  *  Created on: Dec 6, 2018
  *      Refactured by: jasmin
+ *      Refactored by: Christian Wendt
  */
+#pragma once
 
-#ifndef ODOMETRYANALYZER_H_
-#define ODOMETRYANALYZER_H_
+#include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
+#include <memory>
+#include <rclcpp/node.hpp>
+#include <rclcpp/rclcpp.hpp>
 
-#include <ros/ros.h>
+#include <sensor_msgs/msg/laser_scan.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <tf2/transform_datatypes.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-#include "ThreadLocalize.h"
-#include "obvision/reconstruct/grid/TsdGrid.h"
-#include <sensor_msgs/LaserScan.h>
-#include <tf/transform_broadcaster.h>
-#include <tf/transform_listener.h>
 #include <string>
 
+#include "obvision/reconstruct/grid/TsdGrid.h"
+
+#include "ThreadLocalize.h"
 
 namespace ohm_tsd_slam
 {
@@ -29,7 +36,7 @@ namespace ohm_tsd_slam
 class OdometryAnalyzer
 {
 public:
-  OdometryAnalyzer(obvious::TsdGrid& grid);
+  OdometryAnalyzer(obvious::TsdGrid& grid, const std::shared_ptr<rclcpp::Node>& node);
 
   virtual ~OdometryAnalyzer();
 
@@ -55,7 +62,7 @@ private:
    * @param tf tf matrix to convert
    * @return obviously matrix
    */
-  obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf);
+  obvious::Matrix tfToObviouslyMatrix3x3(const tf2::Stamped<tf2::Transform>& tf);
 
   /**
    * Method to analyze 2D transformation matrix.
@@ -69,9 +76,10 @@ private:
 
   //pointer to ThreadLocalize to use its calcAngle method
 
-  tf::TransformListener _tfListener;
+  std::unique_ptr<tf2_ros::TransformListener> _tfTransformListener;
+  std::unique_ptr<tf2_ros::Buffer> _tfBuffer;
   //Container for reading tfs
-  tf::StampedTransform _tfReader;
+  geometry_msgs::msg::TransformStamped _tfReader;
 
   //ros tf frame ids
   std::string _tfFootprintFrameId;
@@ -80,22 +88,22 @@ private:
   std::string _tfChildFrameId;
 
   //Transform from base footprint to laser
-  tf::Transform _tfLaser;
+  tf2::Stamped<tf2::Transform> _tfLaser;
 
   //Odom Transforms
-  tf::Transform _tfOdomOld;
-  tf::Transform _tfOdom;
-  tf::Transform _tfRelativeOdom;
+  tf2::Stamped<tf2::Transform> _tfOdomOld;
+  tf2::Stamped<tf2::Transform> _tfOdom;
+  tf2::Stamped<tf2::Transform> _tfRelativeOdom;
 
   //Laser time stamps
-  ros::Time _stampLaser;
-  ros::Time _stampLaserOld;
+  rclcpp::Time _stampLaser;
+  rclcpp::Time _stampLaserOld;
 
   //state of current odom tf
   bool _odomTfIsValid;
 
   //time to wait for synced odom tf
-  ros::Duration _waitForOdomTf;
+  rclcpp::Duration _waitForOdomTf;
 
   //ICP translation threshold
   double _trnsMax;
@@ -105,8 +113,7 @@ private:
   double _rotMax;
   double _rotVelocityMax;
 
+  std::shared_ptr<rclcpp::Node> _node;
 };
 
 } /* namespace ohm_tsd_slam_ref */
-
-#endif /* ODOMETRYANALYZER_H_ */

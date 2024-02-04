@@ -1,12 +1,14 @@
-#ifndef THREADMAPPING_H_
-#define THREADMAPPING_H_
+/*
+ * ThreadMapping.h
+ *
+ * Refactored by: Christian Wendt
+ */
+#pragma once
 
 #include "ThreadSLAM.h"
 
-#include "sensor_msgs/LaserScan.h"
-
-#include "obvision/reconstruct/grid/SensorPolar2D.h"
-#include "obvision/reconstruct/grid/TsdGrid.h"
+#include <obvision/reconstruct/grid/SensorPolar2D.h>
+#include <obvision/reconstruct/grid/TsdGrid.h>
 
 #include <boost/thread.hpp>
 #include <deque>
@@ -84,5 +86,3 @@ private:
 };
 
 } /* namespace */
-
-#endif /* THREADMAPPING_H_ */

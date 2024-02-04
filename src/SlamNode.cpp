@@ -3,104 +3,129 @@
  *
  *  Created on: 05.05.2014
  *      Author: phil
+ * Refactored by: Christian Wendt
  */
 
 #include "SlamNode.h"
 #include "ThreadMapping.h"
 #include "ThreadGrid.h"
 
-
-
-
 #include "obcore/math/mathbase.h"
-
+#include <functional>
+#include <memory>
+#include <rclcpp/create_timer.hpp>
+#include <rclcpp/duration.hpp>
+#include <rclcpp/logging.hpp>
+#include <rclcpp/time.hpp>
 
 namespace ohm_tsd_slam
 {
-SlamNode::SlamNode(void)
+SlamNode::SlamNode()
+  : Node("slam_node")
+{ }
+
+void SlamNode::initialize()
 {
-  ros::NodeHandle prvNh("~");
   int iVar                   = 0;
   double gridPublishInterval = 0.0;
-  double loopRateVar         = 0.0;
   double truncationRadius    = 0.0;
   double cellSize            = 0.0;
   unsigned int octaveFactor  = 0;
   double xOffset = 0.0;
   double yOffset = 0.0;
-  std::string topicLaser;
-  std::string topicServiceStartStop;
-  prvNh.param<int>("robot_nbr", iVar, 1);
+  const std::string topicLaser = std::string(get_name()) + "/laser";
+  const std::string topicServiceStartStop = "start_stop_slam";
+  std::string nameSpace = get_name();
+
+  declare_parameter<int>("robot_nbr", 1);
+  declare_parameter<double>("x_off_factor", 0.5);
+  declare_parameter<double>("y_off_factor", 0.5);
+  declare_parameter<double>("x_offset", 0.0);
+  declare_parameter<double>("y_offset", 0.0);
+
+  iVar = get_parameter("robot_nbr").as_int();
   unsigned int robotNbr = static_cast<unsigned int>(iVar);
-  prvNh.param<double>("x_off_factor", _xOffFactor, 0.5);
-  prvNh.param<double>("y_off_factor", _yOffFactor, 0.5);
-  prvNh.param<double>("x_offset", xOffset, 0.0);
-  prvNh.param<double>("y_offset", yOffset, 0.0);
+  _xOffFactor = get_parameter("x_off_factor").as_double();
+  _yOffFactor = get_parameter("y_off_factor").as_double();
+  xOffset = get_parameter("x_offset").as_double();
+  yOffset = get_parameter("y_offset").as_double();
 
+  declare_parameter<int>("map_size", 10);
+  declare_parameter<double>("cellsize", 0.025);
+  declare_parameter<int>("truncation_radius", 3);
+  declare_parameter<double>("occ_grid_time_interval", 2.0);
+  // declare_parameter<std::string>("topic_service_start_stop", "start_stop_slam");
+  declare_parameter<std::string>("tf_map_frame", "map");
 
-  prvNh.param<int>("map_size", iVar, 10);
+  iVar = get_parameter("map_size").as_int();
   octaveFactor = static_cast<unsigned int>(iVar);
-  prvNh.param<double>("cellsize", cellSize, 0.025);
-  prvNh.param<int>("truncation_radius", iVar, 3);
+  cellSize = get_parameter("cellsize").as_double();
+  iVar = get_parameter("truncation_radius").as_int();
   truncationRadius = static_cast<double>(iVar);
-  prvNh.param<double>("occ_grid_time_interval", gridPublishInterval, 2.0);
-  prvNh.param<double>("loop_rate", loopRateVar, 40.0);
-  prvNh.param<std::string>("laser_topic", topicLaser, "scan");
-  prvNh.param<std::string>("topic_service_start_stop", topicServiceStartStop, "start_stop_slam");
+  gridPublishInterval = get_parameter("occ_grid_time_interval").as_double();
+  // topicLaser = get_parameter("laser_topic").as_string(); // TODO: code smell! Should be configured via topic remapping.
+  // topicServiceStartStop = get_parameter("topic_service_start_stop").as_string();
 
-  _loopRate = new ros::Rate(loopRateVar);
-  _gridInterval = new ros::Duration(gridPublishInterval);
+  _gridInterval = std::make_unique<rclcpp::Duration>(rclcpp::Duration::from_seconds(gridPublishInterval));
 
   if(octaveFactor > 15)
   {
-    ROS_ERROR_STREAM("Error! Unknown map size -> set to default!" << std::endl);
+    RCLCPP_ERROR_STREAM(get_logger(), "Error! Unknown map size -> set to default!");
     octaveFactor = 10;
   }
   //instanciate representation
   _grid = new obvious::TsdGrid(cellSize, obvious::LAYOUT_32x32, static_cast<obvious::EnumTsdGridLayout>(octaveFactor));  //obvious::LAYOUT_8192x8192
   _grid->setMaxTruncation(truncationRadius * cellSize);
-  unsigned int cellsPerSide = pow(2, octaveFactor);
-  double sideLength = static_cast<double>(cellsPerSide) * cellSize;
-  ROS_INFO_STREAM("Creating representation with " << cellsPerSide << "x" << cellsPerSide << "cells, representating " <<
-                  sideLength << "x" << sideLength << "m^2" << std::endl);
+  // unsigned int cellsPerSide = pow(2, octaveFactor);
+  // double sideLength = static_cast<double>(cellsPerSide) * cellSize;
+  RCLCPP_INFO_STREAM(get_logger(), "Creating representation with " << _grid->getCellsX() << "x" << _grid->getCellsY() << "cells, representating " <<
+                     _grid->getCellsX() * _grid->getCellSize() << "x" << _grid->getCellsY() * _grid->getCellSize() << "m^2");
+
   //instanciate mapping threads
   _threadMapping = new ThreadMapping(_grid);
-  _threadGrid    = new ThreadGrid(_grid, &_nh, xOffset, yOffset);
+  _threadGrid    = new ThreadGrid(_grid, shared_from_this(), xOffset, yOffset);
 
-  ThreadLocalize* threadLocalize = NULL;
+  ThreadLocalize* threadLocalize = nullptr;
   TaggedSubscriber subs;
-  std::string nameSpace = "";
 
   //instanciate localization threads
   if(robotNbr == 1)  //single slam
   {
-    threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, nameSpace, xOffset, yOffset);
-    subs = TaggedSubscriber(topicLaser, *threadLocalize, _nh);
+    threadLocalize = new ThreadLocalize(_grid, _threadMapping, shared_from_this(), "", xOffset, yOffset);
+    subs = TaggedSubscriber(topicLaser, *threadLocalize, shared_from_this());
     subs.switchOn();
-    //subs = _nh.subscribe(topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
     _subsLaser.push_back(subs);
     _localizers.push_back(threadLocalize);
-    ROS_INFO_STREAM("Single SLAM started" << std::endl);
+    RCLCPP_INFO_STREAM(get_logger(), "Single SLAM started");
   }
   else
   {
+    // TODO: not tested after change to ROS2!
     for(unsigned int i = 0; i < robotNbr; i++)   //multi slam
     {
+      // get parameter robot_i.name and use it as namespace for each robot
       std::stringstream sstream;
-      sstream << "robot";
-      sstream << i << "/namespace";
-      std::string dummy = sstream.str();
-      prvNh.param(dummy, nameSpace, std::string("default_ns"));
-      threadLocalize = new ThreadLocalize(_grid, _threadMapping, &_nh, nameSpace, xOffset, yOffset);
-//      subs = _nh.subscribe(nameSpace + "/" + topicLaser, 1, &ThreadLocalize::laserCallBack, threadLocalize);
-      subs = TaggedSubscriber(nameSpace + "/" + topicLaser, *threadLocalize, _nh);
+      sstream << "robot_" << i;
+      const std::string name_parameter_robot = sstream.str();
+      const std::string parameter_name =  name_parameter_robot + "/name";
+      declare_parameter<std::string>(parameter_name, name_parameter_robot);
+      const std::string robot_name = get_parameter(parameter_name).as_string();
+      nameSpace = std::string(get_name()) + "/" + robot_name;
+
+      threadLocalize = new ThreadLocalize(_grid, _threadMapping, shared_from_this(), robot_name, xOffset, yOffset);
+      subs = TaggedSubscriber(nameSpace + "/" + topicLaser, *threadLocalize, shared_from_this());
       _subsLaser.push_back(subs);
       _localizers.push_back(threadLocalize);
-      ROS_INFO_STREAM("started for thread for " << nameSpace << std::endl);
+      RCLCPP_INFO_STREAM(get_logger(), "started for thread for " << nameSpace);
     }
-    ROS_INFO_STREAM("Multi SLAM started!");
+    RCLCPP_INFO_STREAM(get_logger(), "Multi SLAM started!");
   }
-  _serviceStartStopSLAM = _nh.advertiseService(topicServiceStartStop, &SlamNode::callBackServiceStartStopSLAM, this);
+
+  _serviceStartStopSLAM = create_service<ohm_tsd_slam::srv::StartStopSLAM>(
+    topicServiceStartStop,
+    std::bind(&SlamNode::callBackServiceStartStopSLAM, this, std::placeholders::_1, std::placeholders::_2)
+  );
+  _timer = rclcpp::create_timer(this, get_clock(), *_gridInterval, std::bind(&SlamNode::timedGridPub, this));
 }
 
 SlamNode::~SlamNode()
@@ -113,8 +138,7 @@ SlamNode::~SlamNode()
       usleep(THREAD_TERM_MS);
     delete *iter;
   }
-  delete _loopRate;
-  delete _gridInterval;
+
   //stop mapping threads
   _threadGrid->terminateThread();
   while(_threadGrid->alive(THREAD_TERM_MS))
@@ -127,54 +151,38 @@ SlamNode::~SlamNode()
   delete _grid;
 }
 
-void SlamNode::timedGridPub(void)
+void SlamNode::timedGridPub()
 {
-  static ros::Time lastMap = ros::Time::now();
-  ros::Time curTime = ros::Time::now();
-  if((curTime - lastMap).toSec() > _gridInterval->toSec())
-  {
-    _threadGrid->unblock();
-    lastMap = ros::Time::now();
-  }
+  _threadGrid->unblock();
 }
 
-void SlamNode::run(void)
-{
-  ROS_INFO_STREAM("Waiting for first laser scan to initialize node...\n");
-  while(ros::ok())
-  {
-    ros::spinOnce();
-    this->timedGridPub();
-    _loopRate->sleep();
-  }
-}
-
-bool SlamNode::callBackServiceStartStopSLAM(ohm_tsd_slam::StartStopSLAM::Request& req, ohm_tsd_slam::StartStopSLAM::Response& res)
+bool SlamNode::callBackServiceStartStopSLAM(const std::shared_ptr<ohm_tsd_slam::srv::StartStopSLAM::Request> req,
+                                            std::shared_ptr<ohm_tsd_slam::srv::StartStopSLAM::Response>)
 {
   TaggedSubscriber* subsCur = NULL;
   for(auto iter = _subsLaser.begin(); iter < _subsLaser.end(); iter++)
   {
-    if(iter->topic(req.topic))
+    if(iter->topic(req->topic))
       subsCur = &*iter;
   }
   if(!subsCur)
   {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " Error! Topic " << req.topic << " invalid!");
+    RCLCPP_ERROR_STREAM(get_logger(), __PRETTY_FUNCTION__ << " Error! Topic " << req->topic << " invalid!");
     return false;
   }
-  if(req.startStop == req.START)
+  if(req->start_stop == req->START)
   {
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " Started SLAM for topic " << req.topic);
+    RCLCPP_INFO_STREAM(get_logger(), __PRETTY_FUNCTION__ << " Started SLAM for topic " << req->topic);
     subsCur->switchOn();
   }
-  else if(req.startStop == req.STOP)
+  else if(req->start_stop == req->STOP)
   {
-    ROS_INFO_STREAM(__PRETTY_FUNCTION__ << " Stopped SLAM for topic " << req.topic);
+    RCLCPP_INFO_STREAM(get_logger(), __PRETTY_FUNCTION__ << " Stopped SLAM for topic " << req->topic);
     subsCur->switchOff();
   }
   else
   {
-    ROS_ERROR_STREAM(__PRETTY_FUNCTION__ << " Error. Unknown request for service");
+    RCLCPP_ERROR_STREAM(get_logger(), __PRETTY_FUNCTION__ << " Error. Unknown request for service");
     return false;
   }
   return true;

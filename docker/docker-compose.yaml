@@ -1,0 +1,16 @@
+version: "3.0"
+
+services:
+    francor-slam:
+        image: franc0r/slam:humble
+        container_name: franc0r-slam
+        user: user
+        restart: always
+        privileged: true
+        ipc: host
+        pid: host
+        network_mode: host
+        mem_limit: 300mb
+        command: ros2 launch launch_content/slam.launch.py
+        volumes:
+            - ./launch_content:/home/user/launch_content:r

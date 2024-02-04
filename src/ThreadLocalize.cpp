@@ -8,13 +8,21 @@
 #include "ThreadLocalize.h"
 #include "SlamNode.h"
 #include "ThreadMapping.h"
-#include "obcore/math/linalg/linalg.h"
-#include "obcore/base/Logger.h"
+
+#include <geometry_msgs/msg/detail/pose_stamped__struct.hpp>
+#include <limits>
+#include <memory>
+#include <obcore/math/linalg/linalg.h>
+#include <obcore/base/Logger.h>
+
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <rclcpp/logging.hpp>
+#include <rclcpp/time.hpp>
+
 #include <boost/bind.hpp>
 #include <cstring>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <unistd.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <tf/tf.h>
 
 ///todo whats TRACE kommt unten nochmal
 //#define TRACE
@@ -22,28 +30,28 @@
 namespace ohm_tsd_slam
 {
 
-ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
-    const double xOffset, const double yOffset):
-										    ThreadSLAM(*grid),
-										    _nh(nh),
-										    _mapper(*mapper),
-										    _sensor(NULL),		///todo nullptr?
-										    _initialized(false),
-										    _gridWidth(grid->getCellsX() * grid->getCellSize()),
-										    _gridHeight(grid->getCellsY() * grid->getCellSize()),
-										    _gridOffSetX(-1.0 * (grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
-										    _gridOffSetY(-1.0 * (grid->getCellsY() * grid->getCellSize() * 0.5 + yOffset)),
-										    _xOffset(xOffset),
-										    _yOffset(yOffset),
-										    _nameSpace(nameSpace),
-										    _stampLaser(ros::Time::now())
+ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, const std::shared_ptr<rclcpp::Node>& node, 
+                               const std::string& robot_name, const double xOffset, const double yOffset)
+  : ThreadSLAM(*grid),
+		_node(node),
+		_mapper(*mapper),
+		_sensor(nullptr),
+		_initialized(false),
+		_gridWidth(grid->getCellsX() * grid->getCellSize()),
+		_gridHeight(grid->getCellsY() * grid->getCellSize()),
+		_gridOffSetX(-(grid->getCellsX() * grid->getCellSize() * 0.5 + xOffset)),
+		_gridOffSetY(-(grid->getCellsY() * grid->getCellSize() * 0.5 + yOffset)),
+		_xOffset(xOffset),
+		_yOffset(yOffset),
+		_robotName(robot_name),
+		_stampLaser(node->get_clock()->now()),
+    _waitForOdomTf(rclcpp::Duration::from_seconds(1.0))
 {
   // ThreadLocalize* threadLocalize = NULL;		///todo wofür hab ich das hier eig. variable wird nicht benutzt?
 
   double distFilterMax  		= 0.0;
   double distFilterMin			= 0.0;
   int icpIterations				= 0;
-  std::string poseTopic;
   double durationWaitForOdom	= 0.0;
   ///RandomMatcher options
   int trials					= 0;
@@ -65,56 +73,104 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
   int iVar 						= 0;
 
   /*** Read parameters from ros parameter server. Use namespace if provided. Multirobot use. ***/
-  _nameSpace = nameSpace;
-  std::string::iterator it = _nameSpace.end() - 1;		//stores last symbol of nameSpace
-  if(*it != '/' && _nameSpace.size()>0)
-    _nameSpace += "/";
-  //pose
-  poseTopic = _nameSpace + poseTopic;
+  _robotName = robot_name;
+  std::string::iterator it = _robotName.end() - 1;		//stores last symbol of nameSpace
+  if(*it != '/' && _robotName.size()>0)
+    _robotName += "/";
+  const std::string node_name = std::string(node->get_name()) + "/";
+  const std::string name_space = node_name + _robotName;
+  _nameSpace = name_space;
+  const std::string poseTopic = name_space + "estimated_pose";
 
-  ros::NodeHandle prvNh("~");
   //ICP Options
-  prvNh.param<double>(_nameSpace + "dist_filter_max", distFilterMax, DIST_FILT_MAX);
-  prvNh.param<double>(_nameSpace + "dist_filter_min", distFilterMin, DIST_FILT_MIN);
-  prvNh.param<int>(_nameSpace + "icp_iterations", icpIterations, ICP_ITERATIONS);
+  _node->declare_parameter<double>(_robotName + "dist_filter_max", DIST_FILT_MAX);
+  _node->declare_parameter<double>(_robotName + "dist_filter_min", DIST_FILT_MIN);
+  _node->declare_parameter<int>(_robotName + "icp_iterations", ICP_ITERATIONS);
 
-  prvNh.param(_nameSpace + "pose_topic", poseTopic, std::string("default_ns/pose"));
-  prvNh.param("tf_base_frame", _tfBaseFrameId, std::string("/map"));
-  prvNh.param(_nameSpace + "tf_child_frame", _tfChildFrameId, std::string("default_ns/laser"));
-  // prvNh.param("tf_odom_frame", _tfOdomFrameId, std::string("wheelodom"));
-  prvNh.param("tf_footprint_frame", _tfFootprintFrameId, std::string("base_footprint"));
-  prvNh.param<double>("reg_trs_max", _trnsMax, TRNS_THRESH);
-  prvNh.param<double>("reg_sin_rot_max", _rotMax, ROT_THRESH);
-  prvNh.param<double>("max_velocity_lin", _trnsVelocityMax, TRNS_VEL_MAX);
-  prvNh.param<double>("max_velocity_rot", _rotVelocityMax, ROT_VEL_MAX);
-  prvNh.param<bool>("ude_odom_rescue", _useOdomRescue, false);
-  prvNh.param<double>("wait_for_odom_tf", durationWaitForOdom, 1.0);
-  prvNh.param<double>("laser_min_range", _lasMinRange, 0.0);
-  prvNh.param<int>("trials", trials, 100);
-  prvNh.param<int>("sizeControlSet", sizeControlSet, 140);
-  prvNh.param<double>("epsThresh", epsThresh, 0.15);
-  prvNh.param<double>("zhit", zhit, 0.45);
-  prvNh.param<double>("zphi", zphi, 0);
-  prvNh.param<double>("zshort", zshort, 0.25);
-  prvNh.param<double>("zmax", zmax, 0.05);
-  prvNh.param<double>("zrand", zrand, 0.25);
-  prvNh.param<double>("percentagePointsInC", percentagePointsInC, 0.9);
-  prvNh.param<double>("rangemax", rangemax, 20);
-  prvNh.param<double>("sigphi", sigphi, M_PI / 180.0 * 3);
-  prvNh.param<double>("sighit", sighit, 0.2);
-  prvNh.param<double>("lamshort", lamshort, 0.08);
-  prvNh.param<double>("maxAngleDiff", maxAngleDiff, 3.0);
-  prvNh.param<double>("maxAnglePenalty", maxAnglePenalty, 0.5);
+  _node->declare_parameter<std::string>(_robotName + "tf_laser_frame", _robotName + "laser");
+  _node->declare_parameter<std::string>(_robotName + "tf_odom_frame", _robotName + "odom");
+  _node->declare_parameter<std::string>(_robotName + "tf_footprint_frame", _robotName + "base_footprint");
+
+  try {
+    // Only declare if not declared yet.
+    // _node->declare_parameter<std::string>("tf_map_frame", "map")
+
+    _node->declare_parameter<double>("reg_trs_max", TRNS_THRESH);
+    _node->declare_parameter<double>("reg_sin_rot_max", ROT_THRESH);
+    _node->declare_parameter<double>("max_velocity_lin", TRNS_VEL_MAX);
+    _node->declare_parameter<double>("max_velocity_rot", ROT_VEL_MAX);
+    _node->declare_parameter<bool>  ("ude_odom_rescue", false);
+    _node->declare_parameter<double>("wait_for_odom_tf", 1.0);
+    _node->declare_parameter<double>("laser_min_range", 0.0);
+    _node->declare_parameter<int>   ("trials", 100);
+    _node->declare_parameter<int>   ("sizeControlSet", 140);
+    _node->declare_parameter<double>("epsThresh", 0.15);
+    _node->declare_parameter<double>("zhit", 0.45);
+    _node->declare_parameter<double>("zphi", 0);
+    _node->declare_parameter<double>("zshort", 0.25);
+    _node->declare_parameter<double>("zmax", 0.05);
+    _node->declare_parameter<double>("zrand", 0.25);
+    _node->declare_parameter<double>("percentagePointsInC", 0.9);
+    _node->declare_parameter<double>("rangemax", 20);
+    _node->declare_parameter<double>("sigphi", M_PI / 180.0 * 3);
+    _node->declare_parameter<double>("sighit", 0.2);
+    _node->declare_parameter<double>("lamshort", 0.08);
+    _node->declare_parameter<double>("maxAngleDiff", 3.0);
+    _node->declare_parameter<double>("maxAnglePenalty", 0.5);
+  }
+  catch (rclcpp::exceptions::ParameterAlreadyDeclaredException& ex) {
+    // All fine! In case of an multislam these paramters are declared multiple times.
+  }
+
+  _node->declare_parameter<int>(_robotName + "ransac_trials", RANSAC_TRIALS);
+  _node->declare_parameter<double>(_robotName + "ransac_eps_thresh", RANSAC_EPS_THRESH);
+  _node->declare_parameter<int>(_robotName + "ransac_ctrlset_size", RANSAC_CTRL_SET_SIZE);
+  _node->declare_parameter<double>(_robotName + "ransac_phi_max", 30.0);
+  _node->declare_parameter<int>(_robotName + "registration_mode", ICP);
+
+
+  distFilterMax = _node->get_parameter(_robotName + "dist_filter_max").as_double();
+  distFilterMin = _node->get_parameter(_robotName + "dist_filter_min").as_double();
+  icpIterations = _node->get_parameter(_robotName + "icp_iterations").as_int();
+  
+  _tfLaserFrameId = _node->get_parameter(_robotName + "tf_laser_frame").as_string();
+  _tfMapFrameId = _node->get_parameter("tf_map_frame").as_string();
+  _tfOdomFrameId = _node->get_parameter(_robotName + "tf_odom_frame").as_string();
+  _tfFootprintFrameId = _node->get_parameter(_robotName + "tf_footprint_frame").as_string();
+
+  _trnsMax = _node->get_parameter("reg_trs_max").as_double();
+  _rotMax = _node->get_parameter("reg_sin_rot_max").as_double();
+  _trnsVelocityMax = _node->get_parameter("max_velocity_lin").as_double();
+  _rotVelocityMax = _node->get_parameter("max_velocity_rot").as_double();
+  _useOdomRescue = _node->get_parameter("ude_odom_rescue").as_bool();
+  durationWaitForOdom = _node->get_parameter("wait_for_odom_tf").as_double();
+  _lasMinRange = _node->get_parameter("laser_min_range").as_double();
+  trials = _node->get_parameter("trials").as_int();
+  sizeControlSet = _node->get_parameter("sizeControlSet").as_int();
+  epsThresh = _node->get_parameter("epsThresh").as_double();
+  zhit = _node->get_parameter("zhit").as_double();
+  zphi = _node->get_parameter("zphi").as_double();
+  zshort = _node->get_parameter("zshort").as_double();
+  zmax = _node->get_parameter("zmax").as_double();
+  zrand = _node->get_parameter("zrand").as_double();
+  percentagePointsInC = _node->get_parameter("percentagePointsInC").as_double();
+  rangemax = _node->get_parameter("rangemax").as_double();
+  sigphi = _node->get_parameter("sigphi").as_double();
+  sighit = _node->get_parameter("sighit").as_double();
+  lamshort = _node->get_parameter("lamshort").as_double();
+  maxAngleDiff = _node->get_parameter("maxAngleDiff").as_double();
+  maxAnglePenalty = _node->get_parameter("maxAnglePenalty").as_double();
+
   //ransac options
-  prvNh.param<int>(nameSpace + "ransac_trials", paramInt, RANSAC_TRIALS);						///todo WARUM HIER nameSpace und nicht _nameSpace wie unten
+  paramInt = _node->get_parameter(_robotName + "ransac_trials").as_int();
   _ranTrials = static_cast<unsigned int>(paramInt);
-  prvNh.param<double>(nameSpace + "ransac_eps_thresh", _ranEpsThresh, RANSAC_EPS_THRESH);
-  prvNh.param<int>(nameSpace + "ransac_ctrlset_size", paramInt, RANSAC_CTRL_SET_SIZE);
+
+  _ranEpsThresh = _node->get_parameter(_robotName + "ransac_eps_thresh").as_double(); 
+  paramInt = _node->get_parameter(_robotName + "ransac_ctrlset_size").as_int();
   _ranSizeCtrlSet = static_cast<unsigned int>(paramInt);
-  prvNh.param<double>(_nameSpace + "ransac_phi_max", _ranPhiMax, 30.0);
 
-  prvNh.param<int>(_nameSpace + "registration_mode", iVar, ICP);
-
+  _ranPhiMax = _node->get_parameter(_robotName + "ransac_phi_max").as_double();
+  iVar = _node->get_parameter(_robotName + "registration_mode").as_int();
   _regMode = static_cast<EnumRegModes>(iVar);
 
   //Align laserscans
@@ -134,43 +190,46 @@ ThreadLocalize::ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ro
     _TSD_PDFMatcher 		= new obvious::TSD_PDFMatching(_grid, trials, epsThresh, sizeControlSet, zrand);
     break;
   default:
-    ROS_ERROR_STREAM("Unknown registration mode " << _regMode << " use default = ICP." << std::endl);
+    RCLCPP_ERROR_STREAM(_node->get_logger(), "Unknown registration mode " << _regMode << " use default = ICP.");
   }
 
   //_odomAnalyzer 		= NULL;			///todo nullptr? unten auch?
-  _waitForOdomTf 		= ros::Duration(durationWaitForOdom);
+  _tfBroadcaster    = std::make_unique<tf2_ros::TransformBroadcaster>(*_node);
+  _tf_buffer = std::make_unique<tf2_ros::Buffer>(_node->get_clock());
+  _tf_transform_listener = std::make_unique<tf2_ros::TransformListener>(*_tf_buffer);
+  _waitForOdomTf 		= rclcpp::Duration::from_seconds(durationWaitForOdom);
   _odomTfIsValid 		= false;
-  _regMode 				= static_cast<EnumRegModes>(iVar);
-  _modelCoords			= NULL;
-  _modelNormals			= NULL;
-  _maskM				= NULL;
-  _rayCaster			= NULL;			///todo wofür wird der genullt? wird gleich hier unten initialisiert
-  _scene				= NULL;
-  _maskS				= NULL;
-  _lastPose				= new obvious::Matrix(3, 3);
-  _rayCaster			= new obvious::RayCastPolar2D();
-  _assigner				= new obvious::FlannPairAssignment(2);
-  _filterDist			= new obvious::DistanceFilter(distFilterMax, distFilterMin, icpIterations - 10);
-  _filterReciprocal		= new obvious::ReciprocalFilter();
-  _estimator 			= new obvious::ClosedFormEstimator2D();
+  _regMode 				  = static_cast<EnumRegModes>(iVar);
+  _modelCoords			= nullptr;
+  _modelNormals			= nullptr;
+  _maskM				    = nullptr;
+  _rayCaster			  = nullptr;			///todo wofür wird der genullt? wird gleich hier unten initialisiert
+  _scene				    = nullptr;
+  _maskS				    = nullptr;
+  _lastPose				  = new obvious::Matrix(3, 3);
+  _rayCaster			  = new obvious::RayCastPolar2D();
+  _assigner				  = new obvious::FlannPairAssignment(2);
+  _filterDist			  = new obvious::DistanceFilter(distFilterMax, distFilterMin, icpIterations - 10);
+  _filterReciprocal	= new obvious::ReciprocalFilter();
+  _estimator 			  = new obvious::ClosedFormEstimator2D();
 
 
   //configure ICP
-  _filterBounds 		= new obvious::OutOfBoundsFilter2D(grid->getMinX(), grid->getMaxX(), grid->getMinY(), grid->getMaxY());
+  _filterBounds = new obvious::OutOfBoundsFilter2D(grid->getMinX(), grid->getMaxX(), grid->getMinY(), grid->getMaxY());
   _assigner->addPreFilter(_filterBounds);
   _assigner->addPostFilter(_filterDist);
   _assigner->addPostFilter(_filterReciprocal);
-  _icp					= new obvious::Icp(_assigner, _estimator);
+  _icp = new obvious::Icp(_assigner, _estimator);
   _icp->setMaxRMS(0.0);
   _icp->setMaxIterations(icpIterations);
   _icp->setConvergenceCounter(icpIterations);
 
-  _posePub						= _nh->advertise<geometry_msgs::PoseStamped>(poseTopic, 1);
-  _poseStamped.header.frame_id	= _tfBaseFrameId;
-  _tf.frame_id_					= _tfBaseFrameId;
-  _tf.child_frame_id_			= _nameSpace + _tfChildFrameId;
+  _posePub = _node->create_publisher<geometry_msgs::msg::PoseStamped>(poseTopic, rclcpp::QoS(1).reliable()); // TODO: clarify OoS that should be used here.
+  _poseStamped.header.frame_id	= _tfMapFrameId;
+  _tf.header.frame_id	= _tfMapFrameId;
+  _tf.child_frame_id = _robotName + _tfOdomFrameId;
+  _reverseScan = false;
 
-  _reverseScan					= false;
   //_odomAnalyzer = new OdometryAnalyzer(_grid);
 }
 
@@ -181,18 +240,15 @@ ThreadLocalize::~ThreadLocalize()
   delete _PDFMatcher;
   delete _TSD_PDFMatcher;
 
-  for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
-    delete *iter;
-
   _stayActive = false;
   _thread->join();
   _laserData.clear();
 }
 
-void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
+void ThreadLocalize::laserCallBack(const std::shared_ptr<sensor_msgs::msg::LaserScan> scan)
 {
-  sensor_msgs::LaserScan* scanCopy = new sensor_msgs::LaserScan;
-  *scanCopy = scan;
+  auto scanCopy = std::make_shared<sensor_msgs::msg::LaserScan>();
+  scanCopy = scan;
   for(auto& iter : scanCopy->ranges)
   {
     if(iter < _lasMinRange)
@@ -200,15 +256,14 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
   }
   if(!_initialized)
   {
-    ROS_INFO_STREAM("Localizer(" << _nameSpace << ") received first scan. Initialize node...\n");
+    RCLCPP_INFO_STREAM(_node->get_logger(), "Localizer(" << _nameSpace << ") received first scan. Initialize node...");
     this->init(*scanCopy);
-    ROS_INFO_STREAM("Localizer(" << _nameSpace << ") initialized -> running...\n");
+    RCLCPP_INFO_STREAM(_node->get_logger(), "Localizer(" << _nameSpace << ") initialized -> running...");
 
     //	    if(_useOdomRescue)
     //	        std::cout << __PRETTY_FUNCTION__ << "......................initialize OdometryAnalyzer.............. \n" << std::endl;
     //	    	_odomAnalyzer->odomRescueInit();
-
-    _stampLaserOld = scan.header.stamp;
+    _stampLaserOld = scan->header.stamp;
   }
   else
   {
@@ -220,20 +275,24 @@ void ThreadLocalize::laserCallBack(const sensor_msgs::LaserScan& scan)
   }
 }
 
-tf::Transform ThreadLocalize::obviouslyMatrix3x3ToTf(obvious::Matrix& ob)
+tf2::Transform ThreadLocalize::obviouslyMatrix3x3ToTf(obvious::Matrix& ob)
 {
-  tf::Transform tf;
-  tf.setOrigin(tf::Vector3(ob(0,2), ob(1,2), 0.0));
-  tf.setRotation(tf::createQuaternionFromYaw(asin(ob(0,1))));
+  tf2::Transform tf;
+  tf.setOrigin(tf2::Vector3(ob(0,2), ob(1,2), 0.0));
+  tf2::Quaternion rot;
+  rot.setEuler(std::asin(ob(0,1)), 0.0, 0.0);
+  tf.setRotation(rot);
+
   return tf;
 }
 
-obvious::Matrix ThreadLocalize::tfToObviouslyMatrix3x3(const tf::Transform& tf)
+obvious::Matrix ThreadLocalize::tfToObviouslyMatrix3x3(const tf2::Transform& tf)
 {
   obvious::Matrix ob(3,3);
   ob.setIdentity();
-
-  double theta = tf::getYaw(tf.getRotation());
+  const auto q = tf.getRotation();
+  // https://stackoverflow.com/questions/5782658/extracting-yaw-from-a-quaternion
+  double theta = std::atan2(2.0*(q.y()*q.z() + q.w()*q.x()), q.w()*q.w() - q.x()*q.x() - q.y()*q.y() + q.z()*q.z());
   double x = tf.getOrigin().getX();
   double y = tf.getOrigin().getY();
 
@@ -269,8 +328,6 @@ void ThreadLocalize::eventLoop(void)
     _sensor->setRealMeasurementData(ranges);
     _sensor->setStandardMask();
 
-    for(std::deque<sensor_msgs::LaserScan*>::iterator iter = _laserData.begin(); iter < _laserData.end(); iter++)
-      delete *iter;
     _laserData.clear();
     _dataMutex.unlock();
 
@@ -296,7 +353,7 @@ void ThreadLocalize::eventLoop(void)
     unsigned int validModelPoints = _rayCaster->calcCoordsFromCurrentViewMask(&_grid, _sensor, _modelCoords, _modelNormals, _maskM);
     if(validModelPoints == 0)
     {
-      ROS_ERROR_STREAM("Localizer (" << _nameSpace << ") error! Raycasting found no coordinates! \n");
+      RCLCPP_ERROR_STREAM(_node->get_logger(), "Localizer (" << _nameSpace << ") error! Raycasting found no coordinates!");
       continue;
     }
 
@@ -320,12 +377,12 @@ void ThreadLocalize::eventLoop(void)
     T = doRegistration(_sensor, &M, &Mvalid, &N, &Nvalid, &S, &Svalid);
 
     //analyze registration result
-    _tf.stamp_ = ros::Time::now();
+    _tf.header.stamp = _node->get_clock()->now();
     const bool regErrorT = isRegistrationError(&T, _trnsMax, _rotMax);
 
     if(regErrorT)
     {
-      ROS_ERROR_STREAM("Localizer(" << _nameSpace << ") registration error! \n");
+      RCLCPP_ERROR_STREAM(_node->get_logger(), "Localizer(" << _nameSpace << ") registration error!");
       sendNanTransform();
     }
     else 		//transformation valid -> transform sensor and publish new sensor pose
@@ -351,7 +408,7 @@ void ThreadLocalize::eventLoop(void)
   }
 }
 
-void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
+void ThreadLocalize::init(const sensor_msgs::msg::LaserScan& scan)
 {
   double localXoffset			= 0.0;
   double localYoffset			= 0.0;
@@ -364,17 +421,26 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   double footPrintXoffset		= 0.0;
   //std::string frameSensorMount;
 
-  ros::NodeHandle prvNh("~");
+  _node->declare_parameter<double>(_nameSpace + "local_offset_x", 0.0);
+  _node->declare_parameter<double>(_nameSpace + "local_offset_y", 0.0);
+  _node->declare_parameter<double>(_nameSpace + "local_offset_yaw", 0.0);
+  _node->declare_parameter<double>(_nameSpace + "max_range", 30.0);
+  _node->declare_parameter<double>(_nameSpace + "min_range", 0.001);
+  _node->declare_parameter<double>(_nameSpace + "low_reflectivity_range", 2.0);
+  _node->declare_parameter<double>(_nameSpace + "footprint_width", 1.0);
+  _node->declare_parameter<double>(_nameSpace + "footprint_height", 1.0);
+  _node->declare_parameter<double>(_nameSpace + "footprint_x_offset", 0.28);
 
-  prvNh.param<double>(_nameSpace + "local_offset_x",localXoffset, 0.0);
-  prvNh.param<double>(_nameSpace + "local_offset_y", localYoffset, 0.0);
-  prvNh.param<double>(_nameSpace + "local_offset_yaw", localYawOffset, 0.0);
-  prvNh.param<double>(_nameSpace + "max_range", maxRange, 30.0);
-  prvNh.param<double>(_nameSpace + "min_range", minRange, 0.001);
-  prvNh.param<double>(_nameSpace + "low_reflectivity_range", lowReflectivityRange, 2.0);
-  prvNh.param<double>(_nameSpace + "footprint_width", footPrintWidth, 1.0);
-  prvNh.param<double>(_nameSpace + "footprint_height", footPrintHeight, 1.0);
-  prvNh.param<double>(_nameSpace + "footprint_x_offset", footPrintXoffset, 0.28);
+  localXoffset = _node->get_parameter(_nameSpace + "local_offset_x").as_double();
+  localYoffset = _node->get_parameter(_nameSpace + "local_offset_y").as_double();
+  localYawOffset = _node->get_parameter(_nameSpace + "local_offset_yaw").as_double();
+  maxRange = _node->get_parameter(_nameSpace + "max_range").as_double();
+  minRange = _node->get_parameter(_nameSpace + "min_range").as_double();
+  lowReflectivityRange = _node->get_parameter(_nameSpace + "low_reflectivity_range").as_double();
+  footPrintWidth = _node->get_parameter(_nameSpace + "footprint_width").as_double();
+  footPrintHeight = _node->get_parameter(_nameSpace + "footprint_height").as_double();
+  footPrintXoffset = _node->get_parameter(_nameSpace + "footprint_x_offset").as_double();
+
   //prvNh.param<std::string>(_nameSpace + "frame_sensor_mount", frameSensorMount, "base_link");
 
 //  if(!_tfListener.waitForTransform(scan.header.frame_id, frameSensorMount, ros::Time::now(), ros::Duration(0.5)))
@@ -436,7 +502,7 @@ void ThreadLocalize::init(const sensor_msgs::LaserScan& scan)
   _sensor->transform(&Tinit);
   obfloat t[2] = {startX + footPrintXoffset, startY};
   if(!_grid.freeFootprint(t, footPrintWidth, footPrintHeight))
-    ROS_ERROR_STREAM("Localizer (" << _nameSpace << ") warning! Footprint could not be freed! \n");
+    RCLCPP_ERROR_STREAM(_node->get_logger(), "Localizer (" << _nameSpace << ") warning! Footprint could not be freed!");
   if(!_mapper.initialized())
     _mapper.initPush(_sensor);
   _initialized = true;
@@ -533,57 +599,117 @@ bool ThreadLocalize::isRegistrationError(obvious::Matrix* T, const double trnsMa
   return (trnsAbs > trnsMax) || (std::abs(std::sin(deltaPhi)) > rotMax);
 }
 
+// static tf
+
 void ThreadLocalize::sendTransform(obvious::Matrix* T)
 {
-//  obvious::Matrix Tbla(3, 3);
-//    Tbla = this->tfToObviouslyMatrix3x3(_tfFrameSensorMount);
-//    *T = Tbla * *T;
-
   const double curTheta		= this->calcAngle(T);
   const double posX			= (*T)(0, 2) + _gridOffSetX;
   const double posY			= (*T)(1, 2) + _gridOffSetY;
 
+  tf2::Quaternion orientation;
+  orientation.setEuler(0.0, 0.0, curTheta);
+  tf2::Transform pose;
+  pose.setOrigin(tf2::Vector3(posX, posY, 0.0));
+  pose.setRotation(orientation);
+  _tf.child_frame_id = _tfOdomFrameId;
+  _tf.header.frame_id = _tfMapFrameId;
 
+  // Correction of laser to base_footprint.
+  try {
+    geometry_msgs::msg::TransformStamped tf_transform = _tf_buffer->lookupTransform(
+      _tfLaserFrameId, _tfFootprintFrameId, tf2::TimePointZero
+    );
+    
+    // Transform is available. Add to pose the transformation between laser and base_footprint.
+    tf2::Transform t_laser_to_base_link;
+    tf2::fromMsg(tf_transform.transform, t_laser_to_base_link);
+    tf2::Transform t_map_base_link;
+    // t_map_base_link.mult(pose, t_laser_to_base_link.inverse());
+    t_map_base_link.mult(pose, t_laser_to_base_link);    
+    pose = t_map_base_link;    
+    // _tf.child_frame_id = _tfFootprintFrameId;
+    // _tf.header.frame_id = _tfMapFrameId;
+  }
+  catch (const tf2::TransformException & ex) {
+    // No transform available. Skip transforming into base_footprint.
+    RCLCPP_INFO(_node->get_logger(), "No transfrom from laser to footprint available.");
+    RCLCPP_INFO(_node->get_logger(), "Exception = %s", ex.what());
+
+    // _tf.child_frame_id = _tfLaserFrameId;
+    // return;
+  }
+
+  // Correction of odom.
+  try {
+    geometry_msgs::msg::TransformStamped tf_transform = _tf_buffer->lookupTransform(
+      _tfFootprintFrameId, _tfOdomFrameId, tf2::TimePointZero
+    );
+
+    // Transform is available. Coorect odom frame by publishing map --> odom.
+    tf2::Transform t_base_link_to_odom;
+    tf2::fromMsg(tf_transform.transform, t_base_link_to_odom);
+    tf2::Transform t_map_odom;
+    t_map_odom.mult(pose, t_base_link_to_odom);
+    pose = t_map_odom;
+    _tf.child_frame_id = _tfOdomFrameId;
+    _tf.header.frame_id = _tfMapFrameId;
+    _tf.transform = tf2::toMsg(pose);        
+  }
+  catch (const tf2::TransformException & ex) {
+    // No transform available. Skip transforming into base_footprint.
+    RCLCPP_INFO(_node->get_logger(), "No transfrom from footprint to odom available.");
+    RCLCPP_INFO(_node->get_logger(), "Exception = %s", ex.what());
+    // return;
+  }
 
   //_poseStamped.header.stamp = ros::Time::now();
   _poseStamped.header.stamp		= _stampLaser;
   _poseStamped.pose.position.x	= posX;
   _poseStamped.pose.position.y	= posY;
   _poseStamped.pose.position.z	= 0.0;
-  tf::Quaternion quat;
+
+  tf2::Quaternion quat;
   quat.setEuler(0.0, 0.0, curTheta);
   _poseStamped.pose.orientation.w	= quat.w();
   _poseStamped.pose.orientation.x	= quat.x();
   _poseStamped.pose.orientation.y	= quat.y();
   _poseStamped.pose.orientation.z	= quat.z();
   //  _tf.stamp_ = ros::Time::now();
-  _tf.stamp_ 	= _stampLaser;
-  _tf.setOrigin(tf::Vector3(posX, posY, 0.0));
-  _tf.setRotation(quat);
 
-  _posePub.publish(_poseStamped);
-  _tfBroadcaster.sendTransform(_tf);
+  // tf2::Transform transfrom;
+  // transfrom.setRotation(quat);
+  // transfrom.setOrigin(tf2::Vector3(posX, posY, 0.0));
+  _tf.header.stamp = _stampLaser;
+  // _tf.header.stamp = _node->get_clock()->now();
+
+
+  _posePub->publish(_poseStamped);
+  _tfBroadcaster->sendTransform(_tf);
 }
 
 void ThreadLocalize::sendNanTransform()
 {
-  _poseStamped.header.stamp 	= ros::Time::now();		//todo warum setzen wir hier ros time now und oben in sendtransform den stamplaser?
-  _poseStamped.pose.position.x	= NAN;
-  _poseStamped.pose.position.y 	= NAN;
-  _poseStamped.pose.position.z	= NAN;
-  tf::Quaternion quat;
-  quat.setEuler(NAN, NAN, NAN);
+  _poseStamped.header.stamp 	 = _node->get_clock()->now();		//todo warum setzen wir hier ros time now und oben in sendtransform den stamplaser?
+  _poseStamped.pose.position.x = std::numeric_limits<double>::quiet_NaN();
+  _poseStamped.pose.position.y = std::numeric_limits<double>::quiet_NaN();
+  _poseStamped.pose.position.z = std::numeric_limits<double>::quiet_NaN();
+
+  tf2::Quaternion quat;
+  quat.setEuler(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
   _poseStamped.pose.orientation.w	= quat.w();
   _poseStamped.pose.orientation.x	= quat.x();
   _poseStamped.pose.orientation.y	= quat.y();
   _poseStamped.pose.orientation.z	= quat.z();
 
-  _tf.stamp_	= ros::Time::now();						//todo warum setzen wir hier ros time now und oben in sendtransform den stamplaser?
-  _tf.setOrigin(tf::Vector3(NAN, NAN, NAN));
-  _tf.setRotation(quat);
+  tf2::Transform transfrom;
+  transfrom.setRotation(quat);
+  transfrom.setOrigin(tf2::Vector3(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()));
+  _tf.header.stamp = _node->get_clock()->now(); //todo warum setzen wir hier ros time now und oben in sendtransform den stamplaser?
+  _tf.transform = tf2::toMsg(transfrom);
 
-  _posePub.publish(_poseStamped);
-  _tfBroadcaster.sendTransform(_tf);
+  _posePub->publish(_poseStamped);
+  _tfBroadcaster->sendTransform(_tf);
 }
 
 double ThreadLocalize::calcAngle(obvious::Matrix* T)

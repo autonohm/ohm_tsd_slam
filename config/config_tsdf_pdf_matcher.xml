@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<tsdf_pdf_config>
-  <trials>100</trials> 
-  <epsthresh>0.15f</epsthresh>
-  <sizeControlSet>360</sizeControlSet>
-  <zrand>0.05</zrand>
-</tsdf_pdf_config>

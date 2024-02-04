@@ -1,0 +1,79 @@
+/tsd_multi_slam:
+  ros__parameters:
+    # general parameters
+    cellsize: 0.025
+    epsThresh: 0.15
+    lamshort: 0.08
+    laser_min_range: 0.26
+    map_size: 11
+    maxAngleDiff: 1.5
+    maxAnglePenalty: 0.5
+    max_velocity_lin: 1.0
+    max_velocity_rot: 6.283185307179586
+    object_inflation_factor: 1
+    occ_grid_time_interval: 2.0
+    percentagePointsInC: 0.6
+    pub_tsd_color_map: true
+    qos_overrides:
+      /parameter_events:
+        publisher:
+          depth: 1000
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+      /tf:
+        publisher:
+          depth: 100
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+    rangemax: 30.0
+    reg_sin_rot_max: 0.5
+    reg_trs_max: 1.0
+    sighit: 0.1
+    sigphi: 0.05235987755982989
+    sizeControlSet: 360
+    tf_base_frame: map
+    tf_footprint_frame: base_footprint
+    trials: 100
+    truncation_radius: 3
+    ude_odom_rescue: false
+    use_object_inflation: false
+    use_sim_time: false
+    wait_for_odom_tf: 1.0
+    x_off_factor: 0.5
+    x_offset: 0.0
+    y_off_factor: 0.5
+    y_offset: 0.0
+    zrand: 0.05
+    zhit: 0.2
+    zphi: 0.2
+    zshort: 0.2
+    zmax: 0.2
+    # robot specific parameters
+    ## enable two robots with names georg and simon
+    robot_nbr: 2 # number of robots represented in SLAM
+    robot_0/name: georg
+    robot_1/name: simon
+    ## robot georg
+    georg:
+      dist_filter_max: 0.4
+      dist_filter_min: 0.02
+      icp_iterations: 30
+      ransac_phi_max: 45.0
+      registration_mode: 0
+      tf_child_frame: default_ns/laser
+      ransac_ctrlset_size: 180
+      ransac_eps_thresh: 0.15
+      ransac_trials: 50
+    ## robot simon
+    simon:
+      dist_filter_max: 0.4
+      dist_filter_min: 0.02
+      icp_iterations: 30
+      ransac_phi_max: 45.0
+      registration_mode: 0
+      tf_child_frame: default_ns/laser
+      ransac_ctrlset_size: 180
+      ransac_eps_thresh: 0.15
+      ransac_trials: 50

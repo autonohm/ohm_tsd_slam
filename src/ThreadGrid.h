@@ -1,13 +1,24 @@
-#ifndef THREADGRID_H_
-#define THREADGRID_H_
+/*
+ * ThreadGrid.h
+ *
+ * Refactored by: Christian Wendt
+ */
+#pragma once
 
 #include "ThreadSLAM.h"
 
 #include "obvision/reconstruct/grid/TsdGrid.h"
 
-#include <ros/ros.h>
-#include <nav_msgs/OccupancyGrid.h>
-#include <nav_msgs/GetMap.h>
+#include <rclcpp/node.hpp>
+#include <rclcpp/publisher.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/service.hpp>
+
+#include <nav_msgs/msg/occupancy_grid.hpp>
+#include <nav_msgs/srv/get_map.hpp>
+
+#include <sensor_msgs/msg/detail/image__struct.hpp>
+#include <sensor_msgs/msg/image.hpp>
 
 namespace ohm_tsd_slam
 {
@@ -27,7 +38,7 @@ public:
    * @param nh Ros nodehandle
    * @param parentNode Pointer to main mapping instance
    */
-  ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffset, const double yOffset);
+  ThreadGrid(obvious::TsdGrid* grid, const std::shared_ptr<rclcpp::Node>& node, const double xOffset, const double yOffset);
 
   /**
    * Destructor
@@ -40,7 +51,7 @@ protected:
    * eventLoop
    * Thread event loop
    */
-  virtual void eventLoop(void);
+  virtual void eventLoop();
 
 private:
 
@@ -51,17 +62,23 @@ private:
    * @param res Response
    * @return true in case of success
    */
-  bool getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res);
+  bool getMapServCallBack(const std::shared_ptr<nav_msgs::srv::GetMap::Request> req,
+                          std::shared_ptr<nav_msgs::srv::GetMap::Response> res);
+
+  /**
+   * Node instance used for communication and parameter handling.
+   */
+  std::shared_ptr<rclcpp::Node> _node;
 
   /**
    * Occupancy grid
    */
-  nav_msgs::OccupancyGrid* _occGrid;
+  std::shared_ptr<nav_msgs::msg::OccupancyGrid> _occGrid;
 
   /**
    * Ros get map service
    */
-  ros::ServiceServer _getMapServ;
+  std::shared_ptr<rclcpp::Service<nav_msgs::srv::GetMap>> _getMapServ;
 
   /**
    * Buffer for occupancy grid content
@@ -91,9 +108,8 @@ private:
   /**
    * Occupancy grid publisher
    */
-  ros::Publisher _gridPub;
-
-  ros::Publisher _pubColorImage;
+  std::shared_ptr<rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>> _gridPub;
+  std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::Image>> _pubColorImage;
 
   bool _pubTsdColorMap;
 
@@ -109,5 +125,3 @@ private:
 };
 
 } /* namespace ohm_tsd_slam */
-
-#endif /* THREADGRID_H_ */

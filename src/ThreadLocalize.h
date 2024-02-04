@@ -4,17 +4,26 @@
  *  Created on: Nov 6, 2018
  *      Refactured by: jasmin
  */
-
-#ifndef THREADLOCALIZE_H_
-#define THREADLOCALIZE_H_
-
+#pragma once
 #include "ThreadSLAM.h"
-#include "OdometryAnalyzer.h"
+// #include "OdometryAnalyzer.h"
 
-#include <sensor_msgs/LaserScan.h>
-#include <ros/ros.h>
-#include <tf/transform_broadcaster.h>
-#include <tf/transform_listener.h>
+#include <geometry_msgs/msg/detail/pose_stamped__struct.hpp>
+#include <geometry_msgs/msg/detail/transform_stamped__struct.hpp>
+#include <memory>
+#include <rclcpp/duration.hpp>
+#include <rclcpp/node.hpp>
+#include <rclcpp/publisher.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
+#include <sensor_msgs/msg/detail/laser_scan__struct.hpp>
+#include <sensor_msgs/msg/laser_scan.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 
 #include "obvision/reconstruct/grid/SensorPolar2D.h"
 #include "obvision/reconstruct/grid/TsdGrid.h"
@@ -25,8 +34,8 @@
 #include "obvision/registration/ransacMatching/PDFMatching.h"
 #include "obvision/registration/ransacMatching/TSD_PDFMatching.h"
 
-#include "obgraphic/Obvious2D.h" //debugging tsd_pdf
-#include "obcore/base/tools.h" //debugging tsd_pdf
+// #include <obgraphic/Obvious2D.h> //debugging tsd_pdf
+#include <obcore/base/tools.h> //debugging tsd_pdf
 #include <iostream> //debugging tsd_pdf
 #include <fstream> //debugging tsd_pdf
 
@@ -81,8 +90,8 @@ public:
    * @param xOffset Origin x position
    * @param yOffset Origin y position
    */
-  ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, ros::NodeHandle* nh, std::string nameSpace,
-  				const double xOffset, const double yOffset);
+  ThreadLocalize(obvious::TsdGrid* grid, ThreadMapping* mapper, const std::shared_ptr<rclcpp::Node>& node,
+                 const std::string& robot_name, const double xOffset, const double yOffset);
 
   /**
    * Destructor
@@ -92,7 +101,7 @@ public:
    * Callback method for laserscans
    * @param scan Laserscan data
    */
-  void laserCallBack(const sensor_msgs::LaserScan& scan);
+  void laserCallBack(const std::shared_ptr<sensor_msgs::msg::LaserScan> scan);
 
 protected:
   /**
@@ -106,7 +115,7 @@ private:
    * Init function automatically called by first received laser data.
    * @param scan Initial scan used to initialize all parameters of the thread
    */
-  void init(const sensor_msgs::LaserScan& scan);
+  void init(const sensor_msgs::msg::LaserScan& scan);
 
   /**
    * Method to analyze 2D transformation matrix.
@@ -192,19 +201,19 @@ private:
    * @param ob obvious::Matrix input to be converted
    * @return tf matrix tf::Transform
    */
-  tf::Transform obviouslyMatrix3x3ToTf(obvious::Matrix& ob);
+  tf2::Transform obviouslyMatrix3x3ToTf(obvious::Matrix& ob);
 
   /**
    * Converts a tf matrix to a 3x3 obvious::Matrix
    * @param tf matrix to be converted
    * @return converted obvious::Matrix
    */
-  obvious::Matrix tfToObviouslyMatrix3x3(const tf::Transform& tf);
+  obvious::Matrix tfToObviouslyMatrix3x3(const tf2::Transform& tf);
 
   /**
    * Pointer to main NodeHandle
    */
-  ros::NodeHandle* _nh;
+  std::shared_ptr<rclcpp::Node> _node;
   /**
    * Pointer to mapping thread
    */
@@ -244,11 +253,12 @@ private:
   /**
    * namespace for all topics and services
    */
+  std::string _robotName;
   std::string _nameSpace;
   /**
    * Laser time stamp now
    */
-  ros::Time _stampLaser;
+  rclcpp::Time _stampLaser;
 
 
   /**
@@ -309,7 +319,7 @@ private:
   /**
    * Container for laser sensor data (filled by callback)
    */
-  std::deque<sensor_msgs::LaserScan*> _laserData;
+  std::deque<std::shared_ptr<sensor_msgs::msg::LaserScan>> _laserData;
   /**
    * Buffer for model coordinates
    */
@@ -378,39 +388,41 @@ private:
   /**
    * ROS pose publisher
    */
-  ros::Publisher _posePub;
+  std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::PoseStamped>> _posePub;
   /**
    * ROS current pose
    */
-  geometry_msgs::PoseStamped _poseStamped;
+  geometry_msgs::msg::PoseStamped _poseStamped;
   /**
    * ROS tf interface - broadcaster
    */
-  tf::TransformBroadcaster _tfBroadcaster;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> _tfBroadcaster;
   /**
    * ROS tf interface - listener
    */
-  tf::TransformListener _tfListener;
+  std::unique_ptr<tf2_ros::TransformListener> _tf_transform_listener;
+  std::unique_ptr<tf2_ros::Buffer> _tf_buffer;
   /**
    * Containre for reading tfs
    */
-  tf::StampedTransform _tfReader;
+  
+  tf2::Transform _tfReader;
   /**
    * ROS current transform
    */
-  tf::StampedTransform _tf;
+  geometry_msgs::msg::TransformStamped _tf;
   /**
    * ROS tf Transform from base_footprint to laser
    */
-  tf::Transform _tfLaser;
+  tf2::Transform _tfLaser;
   /**
    * ROS tf frame ids
    */
-  std::string _tfBaseFrameId;
+  std::string _tfLaserFrameId;
   /**
    * ROS tf frame ids
    */
-  std::string _tfChildFrameId;
+  std::string _tfMapFrameId;
   /**
    * ROS tf frame ids
    */
@@ -430,11 +442,11 @@ private:
   /**
    * time to wait for synchronized odom tf
    */
-  ros::Duration _waitForOdomTf;
+  rclcpp::Duration _waitForOdomTf;
   /**
    * Laser time stamp old
    */
-  ros::Time _stampLaserOld;
+  rclcpp::Time _stampLaserOld;
   /**
    * Scan passed in clockwise rotation (mathematically negative increment)
    */
@@ -444,10 +456,7 @@ private:
    */
   double _lasMinRange;
 
-  tf::StampedTransform _tfFrameSensorMount;
-
+  geometry_msgs::msg::TransformStamped _tfFrameSensorMount;
 };
 
 } /* namespace ohm_tsd_slam_ref */
-
-#endif /* THREADLOCALIZE_H_ */

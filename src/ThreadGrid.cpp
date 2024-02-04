@@ -1,20 +1,22 @@
 #include "ThreadGrid.h"
-#include "SlamNode.h"
+// #include "SlamNode.h"
 
+#include <functional>
+#include <memory>
 #include <string>
+
+#include <sensor_msgs/image_encodings.hpp>
 
 #include "obvision/reconstruct/grid/RayCastAxisAligned2D.h"
 #include "obcore/base/Logger.h"
 
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/image_encodings.h>
-
 
 namespace ohm_tsd_slam
 {
-ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const double xOffset, const double yOffset):
+ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, const std::shared_ptr<rclcpp::Node>& node, const double xOffset, const double yOffset):
         ThreadSLAM(*grid),
-        _occGrid(new nav_msgs::OccupancyGrid),
+        _node(node),
+        _occGrid(std::make_shared<nav_msgs::msg::OccupancyGrid>()),
         _occGridContent(new char[grid->getCellsX() * grid->getCellsY()]),
         _gridCoords(new double[grid->getCellsX() * grid->getCellsY()]),
         _width(grid->getCellsX()),
@@ -28,51 +30,48 @@ ThreadGrid::ThreadGrid(obvious::TsdGrid* grid, ros::NodeHandle* const nh, const 
   _occGrid->info.resolution           = static_cast<double>(_grid.getCellSize());
   _occGrid->info.width                = _grid.getCellsX();
   _occGrid->info.height               = _grid.getCellsY();
-  _occGrid->info.origin.orientation.w = 0.0;
+  _occGrid->info.origin.orientation.w = 1.0;
   _occGrid->info.origin.orientation.x = 0.0;
   _occGrid->info.origin.orientation.y = 0.0;
   _occGrid->info.origin.orientation.z = 0.0;
-  _occGrid->info.origin.position.x    = 0.0 - (static_cast<double>(_grid.getCellsX()) * static_cast<double>(_grid.getCellSize()) * 0.5 + xOffset);
-  _occGrid->info.origin.position.y    = 0.0 - (static_cast<double>(_grid.getCellsY()) * static_cast<double>(_grid.getCellSize()) * 0.5 + yOffset);
+  _occGrid->info.origin.position.x    = -(static_cast<double>(_grid.getCellsX()) * static_cast<double>(_grid.getCellSize()) * 0.5 + xOffset);
+  _occGrid->info.origin.position.y    = -(static_cast<double>(_grid.getCellsY()) * static_cast<double>(_grid.getCellSize()) * 0.5 + yOffset);
   _occGrid->info.origin.position.z    = 0.0;
   _occGrid->data.resize(_grid.getCellsX() * _grid.getCellsY());
 
-  ros::NodeHandle prvNh("~");
-  std::string mapTopic;
-  std::string getMapTopic;
-  std::string topicTsdColorMap;
-  std::string tfBaseFrame;
-  int intVar         = 0;
-  prvNh.param<bool>("pub_tsd_color_map", _pubTsdColorMap, true);
-  prvNh.param("map_topic", mapTopic, std::string("map"));
-  prvNh.param("get_map_topic", getMapTopic, std::string("map"));
-  prvNh.param<std::string>("topic_tsd_color_map", topicTsdColorMap, "tsd");
-  prvNh.param<std::string>("tf_base_frame", tfBaseFrame, "map");
-  _occGrid->header.frame_id = tfBaseFrame;
+  node->declare_parameter<bool>("pub_tsd_color_map", true);
+  // node->declare_parameter<std::string>("map_topic", "map");
+  // node->declare_parameter<std::string>("get_map_topic", "map");
+  // node->declare_parameter<std::string>("topic_tsd_color_map", "tsd");
+  node->declare_parameter<int>("object_inflation_factor", 2);
+  node->declare_parameter<bool>("use_object_inflation", false);
 
-  prvNh.param<int>("object_inflation_factor", intVar, 2);
-  prvNh.param<bool>("use_object_inflation", _objectInflation, false);  //toDo: exchange with if inflation > 0
+  _occGrid->header.frame_id = node->get_parameter("tf_map_frame").as_string();
 
+  _objectInflation = node->get_parameter("use_object_inflation").as_bool(); //toDo: exchange with if inflation > 0
+  _objInflateFactor = static_cast<unsigned int>(node->get_parameter("object_inflation_factor").as_int());
 
-  _gridPub          = nh->advertise<nav_msgs::OccupancyGrid>(mapTopic, 1);
-  _pubColorImage = nh->advertise<sensor_msgs::Image>(topicTsdColorMap, 1);
-  _getMapServ       = nh->advertiseService(getMapTopic, &ThreadGrid::getMapServCallBack, this);
-  _objInflateFactor = static_cast<unsigned int>(intVar);
+  const std::string node_name = _node->get_name();
+  _gridPub = node->create_publisher<nav_msgs::msg::OccupancyGrid>(node_name + "/map", rclcpp::QoS(1).reliable().transient_local());
+  _pubColorImage = node->create_publisher<sensor_msgs::msg::Image>(node_name + "/map/image", rclcpp::QoS(1).best_effort());
+
+  _getMapServ = node->create_service<nav_msgs::srv::GetMap>(
+    node_name + "/get_map",
+    std::bind(&ThreadGrid::getMapServCallBack, this, std::placeholders::_1, std::placeholders::_2)
+  );
 }
 
 ThreadGrid::~ThreadGrid()
 {
   _stayActive = false;
   _thread->join();
-  delete _occGrid;
-  delete _occGridContent;
-  delete _gridCoords;
+  delete[] _occGridContent;
+  delete[] _gridCoords;
 }
 
-void ThreadGrid::eventLoop(void)
+void ThreadGrid::eventLoop()
 {
-  static unsigned int frameId = 0;
-  sensor_msgs::Image image;
+  sensor_msgs::msg::Image image;
   image.header.frame_id = "map";
   unsigned char* colorBuffer = new unsigned char[_grid.getCellsX() * _grid.getCellsY() * 3];
   image.data.resize(_grid.getCellsX() * _grid.getCellsY() * 3);
@@ -84,11 +83,11 @@ void ThreadGrid::eventLoop(void)
     obvious::RayCastAxisAligned2D raycasterMap;
     raycasterMap.calcCoords(&_grid, _gridCoords, NULL, &mapSize, _occGridContent);
     if(mapSize == 0)
-      ROS_INFO_STREAM("OccupancyGridThread: Warning! Raycasting returned with no coordinates, map contains no data yet!\n");
+      
+      RCLCPP_WARN(_node->get_logger(), "OccupancyGridThread: Warning! Raycasting returned with no coordinates, map contains no data yet!\n");
 
-    _occGrid->header.stamp       = ros::Time::now();
-    _occGrid->header.seq         = frameId++;
-    _occGrid->info.map_load_time = ros::Time::now();
+    _occGrid->header.stamp       = _node->get_clock()->now();
+    _occGrid->info.map_load_time = _node->get_clock()->now();
     const unsigned int gridSize        = _width * _height;
 
     for(unsigned int i = 0; i < gridSize ; ++i)
@@ -117,9 +116,8 @@ void ThreadGrid::eventLoop(void)
         }
       }
     }
-    _gridPub.publish(*_occGrid);
-    image.header.stamp = ros::Time::now();
-    image.header.seq++;
+    _gridPub->publish(*_occGrid);
+    image.header.stamp = _occGrid->header.stamp;
     image.height = _occGrid->info.height;
     image.width = _occGrid->info.width;
     image.encoding = sensor_msgs::image_encodings::RGB8;
@@ -129,18 +127,17 @@ void ThreadGrid::eventLoop(void)
     {
       image.data[i] = colorBuffer[i];
     }
-    _pubColorImage.publish(image);
+    _pubColorImage->publish(image);
   }
-  delete colorBuffer;
+  delete[] colorBuffer;
 }
 
-bool ThreadGrid::getMapServCallBack(nav_msgs::GetMap::Request& req, nav_msgs::GetMap::Response& res)
+bool ThreadGrid::getMapServCallBack(const std::shared_ptr<nav_msgs::srv::GetMap::Request>,
+                                    std::shared_ptr<nav_msgs::srv::GetMap::Response> res)
 {
-  static unsigned int frameId = 0;
-  res.map = *_occGrid;
-  res.map.header.stamp = ros::Time::now();
-  _occGrid->header.seq = frameId++;
-  _occGrid->info.map_load_time = ros::Time::now();
+  res->map = *_occGrid;
+  res->map.header.stamp = _node->get_clock()->now();
+  _occGrid->info.map_load_time = _node->get_clock()->now();
   return(true);
 }
 

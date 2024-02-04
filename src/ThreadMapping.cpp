@@ -1,8 +1,8 @@
 #include "ThreadMapping.h"
 #include "SlamNode.h"
 
-#include "obcore/base/Logger.h"
-#include "obcore/math/mathbase.h"
+#include <obcore/base/Logger.h>
+#include <obcore/math/mathbase.h>
 
 #include <cmath>
 

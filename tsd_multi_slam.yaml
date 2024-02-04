@@ -1,0 +1,61 @@
+/tsd_multi_slam:
+  ros__parameters:
+    cellsize: 0.025
+    dist_filter_max: 1.0
+    dist_filter_min: 0.1
+    epsThresh: 0.15
+    icp_iterations: 25
+    lamshort: 0.08
+    laser_min_range: 0.0
+    map_size: 10
+    maxAngleDiff: 3.0
+    maxAnglePenalty: 0.5
+    max_velocity_lin: 1.5
+    max_velocity_rot: 6.283185307179586
+    object_inflation_factor: 2
+    occ_grid_time_interval: 2.0
+    percentagePointsInC: 0.9
+    pub_tsd_color_map: true
+    qos_overrides:
+      /parameter_events:
+        publisher:
+          depth: 1000
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+      /tf:
+        publisher:
+          depth: 100
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+    rangemax: 20.0
+    ransac_ctrlset_size: 180
+    ransac_eps_thresh: 0.15
+    ransac_phi_max: 30.0
+    ransac_trials: 50
+    reg_sin_rot_max: 0.17
+    reg_trs_max: 0.25
+    registration_mode: 0
+    robot_nbr: 1
+    sighit: 0.2
+    sigphi: 0.05235987755982989
+    sizeControlSet: 140
+    tf_base_frame: map
+    tf_child_frame: laser
+    tf_footprint_frame: base_footprint
+    trials: 100
+    truncation_radius: 3
+    ude_odom_rescue: false
+    use_object_inflation: false
+    use_sim_time: false
+    wait_for_odom_tf: 1.0
+    x_off_factor: 0.5
+    x_offset: 0.0
+    y_off_factor: 0.5
+    y_offset: 0.0
+    zhit: 0.45
+    zmax: 0.05
+    zphi: 0.0
+    zrand: 0.25
+    zshort: 0.25
